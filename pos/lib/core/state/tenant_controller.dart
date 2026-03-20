@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/app_config.dart';
 import '../storage/tenant_storage.dart';
 import '../storage/token_storage.dart';
 import '../../features/pos/data/offline_sales_storage.dart';
@@ -16,7 +17,8 @@ class TenantController extends ChangeNotifier {
   String? _apiBaseUrl;
   String? _posUrl;
   String? _licenseKey;
-  String _saasBaseUrl = 'http://127.0.0.1:8000';
+  String _saasBaseUrl =
+      AppConfig.apiBaseUrl.replaceFirst(RegExp(r'/api/?$'), '');
 
   bool get initializing => _initializing;
   bool get isConfigured => _apiBaseUrl != null && _apiBaseUrl!.isNotEmpty;
