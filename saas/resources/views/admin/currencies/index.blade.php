@@ -1,0 +1,44 @@
+@extends('admin.layout')
+
+@section('content')
+    <div class="row" style="justify-content: space-between; align-items: center;">
+        <div>
+            <h1>Currencies</h1>
+            <p class="muted">Manage available currencies.</p>
+        </div>
+        <a class="btn" href="{{ route('admin.currencies.create') }}">New Currency</a>
+    </div>
+
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Code</th>
+                    <th>Symbol</th>
+                    <th>Active</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($currencies as $currency)
+                    <tr>
+                        <td>{{ $currency->id }}</td>
+                        <td>{{ $currency->name }}</td>
+                        <td>{{ $currency->code }}</td>
+                        <td>{{ $currency->symbol }}</td>
+                        <td>{{ $currency->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            <a class="btn secondary" href="{{ route('admin.currencies.edit', $currency) }}">Edit</a>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 12px;">
+        {{ $currencies->links() }}
+    </div>
+@endsection

@@ -1,0 +1,5 @@
+﻿Put Microsoft Visual C++ Redistributable 2015-2022 (x64) here:
+
+- vcredist_x64.exe
+
+The installer will run it silently if the runtime is missing.
