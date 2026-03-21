@@ -16,6 +16,7 @@ cd saas
 composer install --no-dev --optimize-autoloader
 cp .env.example .env
 php artisan key:generate
+
 npm install
 npm run build
 ```

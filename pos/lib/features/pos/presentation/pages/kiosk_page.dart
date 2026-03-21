@@ -18,6 +18,35 @@ String _formatCurrency(double value, String symbol, bool symbolOnRight) {
   return symbolOnRight ? '$formatted $trimmedSymbol' : '$trimmedSymbol $formatted';
 }
 
+class _KioskStrings {
+  const _KioskStrings({required this.isFrench});
+
+  final bool isFrench;
+
+  String get backToPos => isFrench ? 'Retour POS' : 'Back to POS';
+  String get kioskMenu => isFrench ? 'Menu borne' : 'Kiosk Menu';
+  String get all => isFrench ? 'Tous' : 'All';
+  String get noProducts =>
+      isFrench ? 'Aucun produit disponible.' : 'No products available.';
+  String get selectProduct =>
+      isFrench ? 'Sélectionnez un produit' : 'Select a product';
+  String get extras => isFrench ? 'Suppléments' : 'Extras';
+  String get notes => isFrench ? 'Remarques' : 'Notes';
+  String cartSummary(int count) {
+    if (isFrench) {
+      return 'Panier : $count article${count > 1 ? 's' : ''}';
+    }
+    return 'Cart: $count item${count == 1 ? '' : 's'}';
+  }
+
+  String get addToCart =>
+      isFrench ? 'Ajouter au panier' : 'Add to cart';
+  String get checkout => isFrench ? 'Payer' : 'Checkout';
+  String get order => isFrench ? 'Commander' : 'Place order';
+  String get addRequired =>
+      isFrench ? 'Ajoutez un produit avant de continuer.' : 'Add a product first.';
+}
+
 class KioskPage extends StatefulWidget {
   const KioskPage({super.key});
 
@@ -27,6 +56,9 @@ class KioskPage extends StatefulWidget {
 
 class _KioskPageState extends State<KioskPage> {
   Product? _selectedProduct;
+  bool _isFrench = false;
+
+  _KioskStrings get _strings => _KioskStrings(isFrench: _isFrench);
 
   Product? _resolveSelected(List<Product> products) {
     if (products.isEmpty) {
@@ -48,6 +80,7 @@ class _KioskPageState extends State<KioskPage> {
         final categories = pos.categories;
         final products = pos.products;
         final selectedProduct = _resolveSelected(products);
+        final strings = _strings;
 
         return Scaffold(
           backgroundColor: const Color(0xFFF1F3F7),
@@ -71,6 +104,7 @@ class _KioskPageState extends State<KioskPage> {
                               onProductSelected: (product) {
                                 setState(() => _selectedProduct = product);
                               },
+                              strings: strings,
                             ),
                           ),
                           SizedBox(width: panelSpacing),
@@ -81,12 +115,23 @@ class _KioskPageState extends State<KioskPage> {
                               symbolOnRight: pos.isCurrencySymbolRight,
                               cartCount: pos.totalQuantity,
                               cartTotal: pos.grandTotal,
+                              strings: strings,
                               onAdd: () {
                                 final selected = selectedProduct;
                                 if (selected != null) {
                                   pos.addProduct(selected);
                                 }
                               },
+                              onCheckout: () => _handleSubmit(
+                                pos,
+                                selectedProduct,
+                                markUnpaid: false,
+                              ),
+                              onOrder: () => _handleSubmit(
+                                pos,
+                                selectedProduct,
+                                markUnpaid: true,
+                              ),
                             ),
                           ),
                         ],
@@ -104,6 +149,7 @@ class _KioskPageState extends State<KioskPage> {
                             onProductSelected: (product) {
                               setState(() => _selectedProduct = product);
                             },
+                            strings: strings,
                           ),
                           SizedBox(height: panelSpacing),
                           _KioskDetailPanel(
@@ -112,32 +158,57 @@ class _KioskPageState extends State<KioskPage> {
                             symbolOnRight: pos.isCurrencySymbolRight,
                             cartCount: pos.totalQuantity,
                             cartTotal: pos.grandTotal,
+                            strings: strings,
                             onAdd: () {
                               final selected = selectedProduct;
                               if (selected != null) {
                                 pos.addProduct(selected);
                               }
                             },
+                            onCheckout: () => _handleSubmit(
+                              pos,
+                              selectedProduct,
+                              markUnpaid: false,
+                            ),
+                            onOrder: () => _handleSubmit(
+                              pos,
+                              selectedProduct,
+                              markUnpaid: true,
+                            ),
                           ),
                         ],
                       );
 
                 return Padding(
                   padding: const EdgeInsets.all(20),
-                  child: Stack(
+                  child: Column(
                     children: [
-                      Align(
-                        alignment: Alignment.topLeft,
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.arrow_back),
-                          label: const Text('Retour POS'),
-                        ),
+                      Row(
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.arrow_back),
+                            label: Text(strings.backToPos),
+                          ),
+                          const Spacer(),
+                          ToggleButtons(
+                            isSelected: [_isFrench == false, _isFrench == true],
+                            onPressed: (index) =>
+                                setState(() => _isFrench = index == 1),
+                            borderRadius: BorderRadius.circular(12),
+                            constraints: const BoxConstraints(
+                              minWidth: 48,
+                              minHeight: 36,
+                            ),
+                            children: const [
+                              Text('EN'),
+                              Text('FR'),
+                            ],
+                          ),
+                        ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 52),
-                        child: content,
-                      ),
+                      const SizedBox(height: 20),
+                      Expanded(child: content),
                     ],
                   ),
                 );
@@ -147,6 +218,36 @@ class _KioskPageState extends State<KioskPage> {
         );
       },
     );
+  }
+
+  Future<void> _handleSubmit(
+    PosController pos,
+    Product? selected,
+    {required bool markUnpaid}
+  ) async {
+    if (pos.cartItems.isEmpty && selected == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_strings.addRequired)),
+      );
+      return;
+    }
+
+    if (pos.cartItems.isEmpty && selected != null) {
+      pos.addProduct(selected);
+    }
+
+    await pos.checkout(
+      paymentTypeId: 1,
+      paymentStatusId: markUnpaid ? 2 : 1,
+    );
+    if (!mounted) return;
+    final message = pos.errorMessage ?? pos.successMessage;
+    if (message != null && message.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+      pos.clearMessages();
+    }
   }
 }
 
@@ -185,6 +286,7 @@ class _KioskMenuPanel extends StatelessWidget {
     required this.isLoading,
     required this.onCategorySelected,
     required this.onProductSelected,
+    required this.strings,
   });
 
   final List<ProductCategory> categories;
@@ -193,6 +295,7 @@ class _KioskMenuPanel extends StatelessWidget {
   final bool isLoading;
   final ValueChanged<int?> onCategorySelected;
   final ValueChanged<Product> onProductSelected;
+  final _KioskStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -234,7 +337,7 @@ class _KioskMenuPanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Kiosk Menu',
+                  strings.kioskMenu,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -247,7 +350,7 @@ class _KioskMenuPanel extends StatelessWidget {
               runSpacing: 10,
               children: [
                 _CategoryChip(
-                  label: 'All',
+                  label: strings.all,
                   selected: selectedCategoryId == null,
                   onTap: () => onCategorySelected(null),
                 ),
@@ -264,7 +367,7 @@ class _KioskMenuPanel extends StatelessWidget {
               child: isLoading && products.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : products.isEmpty
-                      ? const Center(child: Text('No products available.'))
+                      ? Center(child: Text(strings.noProducts))
                       : SingleChildScrollView(
                           child: Wrap(
                             spacing: 14,
@@ -297,6 +400,9 @@ class _KioskDetailPanel extends StatelessWidget {
     required this.cartCount,
     required this.cartTotal,
     required this.onAdd,
+    required this.onCheckout,
+    required this.onOrder,
+    required this.strings,
   });
 
   final Product? product;
@@ -305,6 +411,9 @@ class _KioskDetailPanel extends StatelessWidget {
   final int cartCount;
   final double cartTotal;
   final VoidCallback onAdd;
+  final VoidCallback onCheckout;
+  final VoidCallback onOrder;
+  final _KioskStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -313,6 +422,7 @@ class _KioskDetailPanel extends StatelessWidget {
     final priceLabel = hasProduct
         ? _formatCurrency(product!.price, currencySymbol, symbolOnRight)
         : '--';
+    final canSubmit = cartCount > 0 || hasProduct;
 
     return _KioskPanelShell(
       child: Padding(
@@ -347,7 +457,7 @@ class _KioskDetailPanel extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              product?.name ?? 'Select a product',
+              product?.name ?? strings.selectProduct,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
@@ -367,13 +477,13 @@ class _KioskDetailPanel extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _OptionButton(
-              label: 'Adicionais',
+              label: strings.extras,
               icon: Icons.add,
               onTap: hasProduct ? () {} : null,
             ),
             const SizedBox(height: 12),
             _OptionButton(
-              label: 'Considerações',
+              label: strings.notes,
               icon: Icons.edit,
               onTap: hasProduct ? () {} : null,
             ),
@@ -384,7 +494,8 @@ class _KioskDetailPanel extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Cart: $cartCount items', style: theme.textTheme.bodyMedium),
+                    Text(strings.cartSummary(cartCount),
+                        style: theme.textTheme.bodyMedium),
                     Text(
                       _formatCurrency(cartTotal, currencySymbol, symbolOnRight),
                       style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -405,11 +516,45 @@ class _KioskDetailPanel extends StatelessWidget {
                 ),
                 onPressed: hasProduct ? onAdd : null,
                 icon: const Icon(Icons.shopping_cart_outlined),
-                label: const Text(
-                  'Adicionar ao carrinho',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                label: Text(
+                  strings.addToCart,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: canSubmit ? onOrder : null,
+                    icon: const Icon(Icons.receipt_long),
+                    label: Text(strings.order),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: canSubmit ? onCheckout : null,
+                    icon: const Icon(Icons.payments_outlined),
+                    label: Text(strings.checkout),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

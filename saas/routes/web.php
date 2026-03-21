@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Admin\PrintingController as AdminPrintingController;
 use App\Http\Controllers\Admin\StoreController as AdminStoreController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\TenantController;
@@ -168,6 +169,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::post('/permissions', [AdminPermissionController::class, 'store'])->name('permissions.store');
     Route::get('/permissions/{permission}/edit', [AdminPermissionController::class, 'edit'])->name('permissions.edit');
     Route::put('/permissions/{permission}', [AdminPermissionController::class, 'update'])->name('permissions.update');
+
+    Route::get('/printing', [AdminPrintingController::class, 'index'])->name('printing.index');
 
     Route::get('/reports', [AdminReportController::class, 'index'])->name('reports.index');
 });

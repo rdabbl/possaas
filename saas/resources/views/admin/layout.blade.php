@@ -235,6 +235,12 @@
                 </span>
                 Permissions
             </a>
+            <a href="{{ route('admin.printing.index') }}" class="{{ request()->routeIs('admin.printing.*') ? 'active' : '' }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><rect x="6" y="14" width="12" height="8" rx="1"></rect><rect x="4" y="9" width="16" height="6" rx="2"></rect></svg>
+                </span>
+                Printing
+            </a>
             <a href="{{ route('admin.reports.index') }}" class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M3 3v18h18"></path><path d="M7 14l3-3 4 4 5-6"></path></svg>

@@ -50,7 +50,9 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthController>();
     _offlineToggle = auth.offlineMode;
+    final accent = const Color(0xFFF7C045);
     return Scaffold(
+      backgroundColor: const Color(0xFFF3F4F6),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -60,10 +62,18 @@ class _LoginPageState extends State<LoginPage> {
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
-                  child: Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFEFEFEF)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x14000000),
+                          blurRadius: 16,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(32),
@@ -73,10 +83,27 @@ class _LoginPageState extends State<LoginPage> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text(
-                              'Connexion POS',
-                              style: Theme.of(context).textTheme.headlineSmall,
-                              textAlign: TextAlign.center,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: accent,
+                                  child: const Text(
+                                    'POS',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Connexion POS',
+                                  style:
+                                      Theme.of(context).textTheme.headlineSmall,
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 24),
                             if (auth.recentUsers.isNotEmpty)
@@ -86,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
                                   return Padding(
                                     padding: const EdgeInsets.only(bottom: 12),
                                     child: InkWell(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(16),
                                       onTap: () {
                                         setState(() {
                                           _identifierController.text =
@@ -100,22 +127,17 @@ class _LoginPageState extends State<LoginPage> {
                                           vertical: 12,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .surfaceVariant,
+                                          color: const Color(0xFFF3F4F6),
                                           borderRadius:
-                                              BorderRadius.circular(12),
+                                              BorderRadius.circular(16),
                                         ),
                                         child: Row(
                                           children: [
                                             CircleAvatar(
-                                              backgroundColor:
-                                                  Theme.of(context)
-                                                      .colorScheme
-                                                      .primary,
+                                              backgroundColor: accent,
                                               child: const Icon(
                                                 Icons.person,
-                                                color: Colors.white,
+                                                color: Colors.black,
                                               ),
                                             ),
                                             const SizedBox(width: 12),
@@ -161,10 +183,24 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             TextFormField(
                               controller: _identifierController,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: 'Email ou nom d\'utilisateur',
-                                prefixIcon: Icon(Icons.person_outline),
-                                border: OutlineInputBorder(),
+                                prefixIcon: const Icon(Icons.person_outline),
+                                filled: true,
+                                fillColor: const Color(0xFFF9FAFB),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide:
+                                      const BorderSide(color: Color(0xFFF7C045)),
+                                ),
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -180,7 +216,21 @@ class _LoginPageState extends State<LoginPage> {
                               decoration: InputDecoration(
                                 labelText: 'Mot de passe',
                                 prefixIcon: const Icon(Icons.lock_outline),
-                                border: const OutlineInputBorder(),
+                                filled: true,
+                                fillColor: const Color(0xFFF9FAFB),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide:
+                                      const BorderSide(color: Color(0xFFF7C045)),
+                                ),
                                 suffixIcon: IconButton(
                                   onPressed: () => setState(() =>
                                       _obscurePassword = !_obscurePassword),
@@ -206,18 +256,35 @@ class _LoginPageState extends State<LoginPage> {
                                 style: const TextStyle(color: Colors.red),
                               ),
                             const SizedBox(height: 8),
-                            SwitchListTile(
-                              title: const Text('Mode hors ligne'),
-                              subtitle: const Text(
-                                  'Utiliser le cache et différer la synchro'),
-                              value: _offlineToggle,
-                              onChanged: (value) async {
-                                setState(() => _offlineToggle = value);
-                                await auth.setOfflineMode(value);
-                              },
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(16),
+                                border:
+                                    Border.all(color: const Color(0xFFE5E7EB)),
+                              ),
+                              child: SwitchListTile(
+                                title: const Text('Mode hors ligne'),
+                                subtitle: const Text(
+                                    'Utiliser le cache et différer la synchro'),
+                                value: _offlineToggle,
+                                onChanged: (value) async {
+                                  setState(() => _offlineToggle = value);
+                                  await auth.setOfflineMode(value);
+                                },
+                              ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: accent,
+                                foregroundColor: Colors.black,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
                               onPressed:
                                   auth.isSubmitting ? null : _handleLogin,
                               child: auth.isSubmitting
@@ -227,7 +294,12 @@ class _LoginPageState extends State<LoginPage> {
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2),
                                     )
-                                  : const Text('Se connecter'),
+                                  : const Text(
+                                      'Se connecter',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                             ),
                           ],
                         ),

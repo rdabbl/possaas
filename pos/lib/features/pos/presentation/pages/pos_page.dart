@@ -1191,78 +1191,78 @@ class _TopActionButtonsState extends State<_TopActionButtons> {
   @override
   Widget build(BuildContext context) {
     final accent = const Color(0xFFF7C045);
-    final icons = <Widget>[
-      _ActionIcon(
+    final actions = [
+      _ActionMenuItem(
         icon: Icons.refresh,
-        tooltip: 'Actualiser',
+        label: 'Actualiser',
         onTap: widget.onRefresh,
       ),
-      _ActionIcon(
+      _ActionMenuItem(
         icon: Icons.history,
-        tooltip: 'Historique des commandes',
+        label: 'Historique',
         onTap: _openOrderHistory,
       ),
-      _ActionIcon(
+      _ActionMenuItem(
         icon: Icons.calculate_outlined,
-        tooltip: 'Calculatrice',
+        label: 'Calculatrice',
         onTap: _openCalculator,
       ),
-      _ActionIcon(
+      _ActionMenuItem(
         icon: _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-        tooltip: _isFullScreen ? 'Quitter le plein ecran' : 'Plein ecran',
+        label: _isFullScreen ? 'Quitter plein écran' : 'Plein écran',
         onTap: _toggleFullScreen,
       ),
-      _ActionIcon(
+      _ActionMenuItem(
         icon: Icons.attach_money,
-        tooltip: 'Modifier cash en caisse',
+        label: 'Cash en caisse',
         onTap: widget.onCashInHand,
       ),
-      _ActionIcon(
+      _ActionMenuItem(
         icon: Icons.tune,
-        tooltip: 'Apparence',
+        label: 'Apparence',
         onTap: _openAppearanceSettings,
       ),
-      _ActionIcon(
+      _ActionMenuItem(
         icon: Icons.sync,
-        tooltip: widget.lastSyncAt != null
-            ? 'Synchroniser maintenant (dernière sync: ${widget.lastSyncAt!.toLocal()})'
-            : 'Synchroniser maintenant',
+        label: 'Synchroniser',
         onTap: widget.onSync,
       ),
-      _ActionIcon(
+      _ActionMenuItem(
         icon: Icons.print_outlined,
-        tooltip: 'Parametres imprimante',
+        label: 'Imprimante',
         onTap: _openPrinterSettings,
       ),
-      _ActionIcon(
+      _ActionMenuItem(
         icon: Icons.settings_applications_outlined,
-        tooltip: 'Configuration POS',
+        label: 'Config POS',
         onTap: _openPosConfiguration,
       ),
-      _ActionIcon(
+      _ActionMenuItem(
         icon: Icons.store_mall_directory_outlined,
-        tooltip: 'Interface borne',
+        label: 'Interface borne',
         onTap: _openKioskPage,
       ),
-      _ActionIcon(
-        icon: Icons.cloud_off,
-        tooltip: widget.offlineMode ? 'Mode hors ligne' : 'Connecté',
+      _ActionMenuItem(
+        icon: widget.offlineMode ? Icons.cloud_off : Icons.cloud_done,
+        label: widget.offlineMode ? 'Mode hors ligne' : 'Connecté',
         onTap: widget.offlineMode ? widget.onReconnect : null,
         color: widget.offlineMode ? Colors.orange : const Color(0xFF22C55E),
         background: widget.offlineMode ? accent : const Color(0xFFF3F4F6),
       ),
-      _ActionIcon(
+      _ActionMenuItem(
         icon: Icons.logout,
-        tooltip: 'Deconnexion',
+        label: 'Déconnexion',
         onTap: widget.onLogout,
       ),
     ];
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.end,
-      children: icons,
+    return Align(
+      alignment: Alignment.centerRight,
+      child: _ActionIcon(
+        icon: Icons.menu,
+        tooltip: 'Menu actions',
+        onTap: () => _showActionMenu(context, actions),
+      ),
     );
   }
 }
@@ -1310,6 +1310,124 @@ class _ActionIcon extends StatelessWidget {
     }
     return tile;
   }
+}
+
+class _ActionMenuItem {
+  const _ActionMenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+    this.background,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final Color? color;
+  final Color? background;
+}
+
+Future<void> _showActionMenu(
+  BuildContext context,
+  List<_ActionMenuItem> items,
+) async {
+  if (items.isEmpty) return;
+  await showModalBottomSheet(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (sheetContext) {
+      final theme = Theme.of(sheetContext);
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Actions',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 0.9,
+                ),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final enabled = item.onTap != null;
+                  final labelStyle = theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: enabled
+                        ? theme.colorScheme.onSurface
+                        : theme.colorScheme.onSurface.withOpacity(0.4),
+                  );
+                  return InkWell(
+                    onTap: enabled
+                        ? () {
+                            Navigator.of(context).pop();
+                            item.onTap?.call();
+                          }
+                        : null,
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: item.background ??
+                            theme.colorScheme.surfaceVariant.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              color: item.background ??
+                                  theme.colorScheme.primary.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              item.icon,
+                              size: 30,
+                              color:
+                                  item.color ?? theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            item.label,
+                            textAlign: TextAlign.center,
+                            style: labelStyle,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 class _CartPanel extends StatelessWidget {
@@ -2668,7 +2786,6 @@ class _HeaderIconToolbar extends StatefulWidget {
 
 class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
   bool _isFullScreen = false;
-  bool _showActions = false;
 
   bool get _isDesktop =>
       !kIsWeb &&
@@ -2768,71 +2885,72 @@ class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
 
   @override
   Widget build(BuildContext context) {
-    final icons = Wrap(
-      alignment: WrapAlignment.start,
-      spacing: 12,
-      runSpacing: 8,
-      children: [
-        _IconTile(
-          icon: Icons.refresh,
-          onTap: widget.onRefresh,
-          tooltip: 'Actualiser',
-        ),
-        _IconTile(
-          icon: Icons.history,
-          onTap: _openOrderHistory,
-          tooltip: 'Historique des commandes',
-        ),
-        _IconTile(
-          icon: Icons.calculate_outlined,
-          onTap: _openCalculator,
-          tooltip: 'Calculatrice',
-        ),
-        _IconTile(
-          icon: _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-          onTap: _toggleFullScreen,
-          tooltip: _isFullScreen ? 'Quitter le plein ecran' : 'Plein ecran',
-        ),
-        _IconTile(
-          icon: Icons.attach_money,
-          onTap: widget.onCashInHand,
-          tooltip: 'Modifier cash en caisse',
-        ),
-        _IconTile(
-          icon: Icons.tune,
-          onTap: _openAppearanceSettings,
-          tooltip: 'Apparence',
-        ),
-        _IconTile(
-          icon: Icons.sync,
-          onTap: widget.onSync,
-          tooltip: widget.lastSyncAt != null
-              ? 'Synchroniser maintenant (dernière sync: ${widget.lastSyncAt!.toLocal()})'
-              : 'Synchroniser maintenant',
-        ),
-        _IconTile(
-          icon: Icons.print_outlined,
-          onTap: _openPrinterSettings,
-          tooltip: 'Parametres imprimante',
-        ),
-        _IconTile(
-          icon: Icons.settings_applications_outlined,
-          onTap: _openPosConfiguration,
-          tooltip: 'Configuration POS',
-        ),
-        _IconTile(
-          icon: Icons.store_mall_directory_outlined,
-          onTap: _openKioskPage,
-          tooltip: 'Interface borne',
-        ),
-        const _ConnectionStatusIcon(),
-        _IconTile(
-          icon: Icons.logout,
-          onTap: widget.onLogout,
-          tooltip: 'Deconnexion',
-        ),
-      ],
-    );
+    final actions = [
+      _ActionMenuItem(
+        icon: Icons.refresh,
+        label: 'Actualiser',
+        onTap: widget.onRefresh,
+      ),
+      _ActionMenuItem(
+        icon: Icons.history,
+        label: 'Historique',
+        onTap: _openOrderHistory,
+      ),
+      _ActionMenuItem(
+        icon: Icons.calculate_outlined,
+        label: 'Calculatrice',
+        onTap: _openCalculator,
+      ),
+      _ActionMenuItem(
+        icon: _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
+        label: _isFullScreen ? 'Quitter plein écran' : 'Plein écran',
+        onTap: _toggleFullScreen,
+      ),
+      _ActionMenuItem(
+        icon: Icons.attach_money,
+        label: 'Cash en caisse',
+        onTap: widget.onCashInHand,
+      ),
+      _ActionMenuItem(
+        icon: Icons.tune,
+        label: 'Apparence',
+        onTap: _openAppearanceSettings,
+      ),
+      _ActionMenuItem(
+        icon: Icons.sync,
+        label: 'Synchroniser',
+        onTap: widget.onSync,
+      ),
+      _ActionMenuItem(
+        icon: Icons.print_outlined,
+        label: 'Imprimante',
+        onTap: _openPrinterSettings,
+      ),
+      _ActionMenuItem(
+        icon: Icons.settings_applications_outlined,
+        label: 'Config POS',
+        onTap: _openPosConfiguration,
+      ),
+      _ActionMenuItem(
+        icon: Icons.store_mall_directory_outlined,
+        label: 'Interface borne',
+        onTap: _openKioskPage,
+      ),
+      _ActionMenuItem(
+        icon: widget.offlineMode ? Icons.cloud_off : Icons.cloud_done,
+        label: widget.offlineMode ? 'Mode hors ligne' : 'Connecté',
+        onTap: widget.offlineMode ? widget.onReconnect : null,
+        color: widget.offlineMode ? Colors.orange : const Color(0xFF22C55E),
+        background: widget.offlineMode
+            ? const Color(0xFFFFF7ED)
+            : const Color(0xFFF3F4F6),
+      ),
+      _ActionMenuItem(
+        icon: Icons.logout,
+        label: 'Déconnexion',
+        onTap: widget.onLogout,
+      ),
+    ];
 
     final greeting = widget.userLabel != null
         ? Text(
@@ -2846,8 +2964,8 @@ class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
     final toggleButton = FloatingActionButton.small(
       heroTag: 'header-actions-toggle',
       backgroundColor: Theme.of(context).colorScheme.primary,
-      onPressed: () => setState(() => _showActions = !_showActions),
-      child: Icon(_showActions ? Icons.close : Icons.grid_view_rounded),
+      onPressed: () => _showActionMenu(context, actions),
+      child: const Icon(Icons.menu),
     );
 
     return Column(
@@ -2888,7 +3006,6 @@ class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
               ],
             ),
           ),
-        if (_showActions) icons,
       ],
     );
   }
