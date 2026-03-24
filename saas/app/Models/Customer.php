@@ -10,7 +10,7 @@ class Customer extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'tenant_id',
+        'manager_id',
         'name',
         'email',
         'phone',
@@ -23,9 +23,9 @@ class Customer extends Model
         'is_active' => 'boolean',
     ];
 
-    public function tenant()
+    public function manager()
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Manager::class);
     }
 
     public function sales()

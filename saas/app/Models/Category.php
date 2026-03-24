@@ -10,7 +10,7 @@ class Category extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'tenant_id',
+        'manager_id',
         'parent_id',
         'name',
         'image_path',
@@ -21,9 +21,9 @@ class Category extends Model
         'is_active' => 'boolean',
     ];
 
-    public function tenant()
+    public function manager()
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Manager::class);
     }
 
     public function parent()

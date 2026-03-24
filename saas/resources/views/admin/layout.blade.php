@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>POS SaaS Admin</title>
+    <title>{{ t("POS SaaS Admin") }}</title>
     <style>
         :root {
             color-scheme: light;
@@ -136,116 +136,128 @@
 <div class="layout">
     <aside class="sidebar">
         <div class="brand">
-            <a href="{{ route('admin.dashboard') }}">POS SaaS Admin</a>
+            <a href="{{ route('admin.dashboard') }}">{{ t("POS SaaS Admin") }}</a>
         </div>
         <nav>
             <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path></svg>
                 </span>
-                Dashboard
+                {{ t("Dashboard") }}
             </a>
-            <a href="{{ route('admin.tenants.index') }}" class="{{ request()->routeIs('admin.tenants.*') ? 'active' : '' }}">
+            <a href="{{ route('admin.managers.index') }}" class="{{ request()->routeIs('admin.managers.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </span>
-                Tenants
+                {{ t("Managers") }}
             </a>
             <a href="{{ route('admin.plans.index') }}" class="{{ request()->routeIs('admin.plans.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path></svg>
                 </span>
-                Plans
+                {{ t("Plans") }}
             </a>
             <a href="{{ route('admin.stores.index') }}" class="{{ request()->routeIs('admin.stores.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M3 9l2-5h14l2 5"></path><path d="M5 9v11h14V9"></path><path d="M9 20v-6h6v6"></path></svg>
                 </span>
-                Stores
+                {{ t("Stores") }}
             </a>
             <a href="{{ route('admin.devices.index') }}" class="{{ request()->routeIs('admin.devices.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>
                 </span>
-                Devices
+                {{ t("Devices") }}
             </a>
             <a href="{{ route('admin.payment_methods.index') }}" class="{{ request()->routeIs('admin.payment_methods.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>
                 </span>
-                Payment Methods
+                {{ t("Payment Methods") }}
             </a>
             <a href="{{ route('admin.currencies.index') }}" class="{{ request()->routeIs('admin.currencies.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9a4 4 0 0 0 0 8h6a4 4 0 0 1 0 8H6"></path></svg>
                 </span>
-                Currencies
+                {{ t("Currencies") }}
             </a>
             <a href="{{ route('admin.categories.index') }}" class="{{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M20.59 13.41L11 3.83V2h-3v3l9.59 9.59a2 2 0 0 0 2.83 0l.17-.17a2 2 0 0 0 0-2.83z"></path><circle cx="7.5" cy="7.5" r="1.5"></circle></svg>
                 </span>
-                Categories
+                {{ t("Categories") }}
             </a>
             <a href="{{ route('admin.ingredient_categories.index') }}" class="{{ request()->routeIs('admin.ingredient_categories.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
                 </span>
-                Ingredient Categories
+                {{ t("Ingredient Categories") }}
             </a>
             <a href="{{ route('admin.ingredients.index') }}" class="{{ request()->routeIs('admin.ingredients.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M6 2h12"></path><path d="M9 2v6l-5 9a4 4 0 0 0 3.5 6h9a4 4 0 0 0 3.5-6l-5-9V2"></path></svg>
                 </span>
-                Ingredients
+                {{ t("Ingredients") }}
             </a>
             <a href="{{ route('admin.products.index') }}" class="{{ request()->routeIs('admin.products.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3.27 6.96L12 12l8.73-5.04"></path><path d="M12 22V12"></path></svg>
                 </span>
-                Products
+                {{ t("Products") }}
             </a>
             <a href="{{ route('admin.customers.index') }}" class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </span>
-                Customers
+                {{ t("Customers") }}
             </a>
             <a href="{{ route('admin.taxes.index') }}" class="{{ request()->routeIs('admin.taxes.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg>
                 </span>
-                Taxes
+                {{ t("Taxes") }}
             </a>
             <a href="{{ route('admin.discounts.index') }}" class="{{ request()->routeIs('admin.discounts.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"></path><path d="M16 5h6v6"></path><path d="M10 14l12-12"></path></svg>
                 </span>
-                Discounts
+                {{ t("Discounts") }}
             </a>
             <a href="{{ route('admin.roles.index') }}" class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"></path></svg>
                 </span>
-                Roles
+                {{ t("Roles") }}
             </a>
             <a href="{{ route('admin.permissions.index') }}" class="{{ request()->routeIs('admin.permissions.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M21 8v6"></path><path d="M3 8v6"></path><rect x="7" y="8" width="10" height="10" rx="2"></rect><path d="M12 8V5a3 3 0 0 1 6 0"></path></svg>
                 </span>
-                Permissions
+                {{ t("Permissions") }}
             </a>
             <a href="{{ route('admin.printing.index') }}" class="{{ request()->routeIs('admin.printing.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><rect x="6" y="14" width="12" height="8" rx="1"></rect><rect x="4" y="9" width="16" height="6" rx="2"></rect></svg>
                 </span>
-                Printing
+                {{ t("Printing") }}
             </a>
             <a href="{{ route('admin.reports.index') }}" class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M3 3v18h18"></path><path d="M7 14l3-3 4 4 5-6"></path></svg>
                 </span>
-                Reports
+                {{ t("Reports") }}
+            </a>
+            <a href="{{ route('admin.languages.index') }}" class="{{ request()->routeIs('admin.languages.*') ? 'active' : '' }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M2 5h12"></path><path d="M2 9h12"></path><path d="M2 13h6"></path><path d="M14 17l4-10 4 10"></path><path d="M16 13h4"></path></svg>
+                </span>
+                {{ t("Languages") }}
+            </a>
+            <a href="{{ route('admin.translations.index') }}" class="{{ request()->routeIs('admin.translations.*') ? 'active' : '' }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M4 4h16v10H4z"></path><path d="M8 20l4-4 4 4"></path></svg>
+                </span>
+                {{ t("Translations") }}
             </a>
         </nav>
     </aside>
@@ -256,7 +268,7 @@
                     <div class="user-chip">{{ auth()->user()->name }}</div>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button class="btn secondary" type="submit">Logout</button>
+                        <button class="btn secondary" type="submit">{{ t("Logout") }}</button>
                     </form>
                 @endif
             </div>

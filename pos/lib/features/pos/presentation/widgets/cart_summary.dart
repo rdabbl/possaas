@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/models/cart_item.dart';
 import '../../../../core/models/customer.dart';
+import 'package:pos_nimirik/core/i18n/i18n.dart';
 
 class CartSummary extends StatefulWidget {
   const CartSummary({
@@ -109,10 +110,10 @@ class _CartSummaryState extends State<CartSummary> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Panier',
+                        tr('Panier'),
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
-                      Text('${widget.items.length} article(s)'),
+                      Text('${widget.items.length} ${tr('article(s)')}'),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -124,10 +125,10 @@ class _CartSummaryState extends State<CartSummary> {
                     ),
                   const SizedBox(height: 8),
                   if (widget.items.isEmpty)
-                    const SizedBox(
+                    SizedBox(
                       height: 120,
                       child: Center(
-                        child: Text('Ajoutez un produit pour démarrer la vente.'),
+                        child: Text(tr('Ajoutez un produit pour démarrer la vente.')),
                       ),
                     )
                   else
@@ -156,7 +157,7 @@ class _CartSummaryState extends State<CartSummary> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 IconButton(
-                                  tooltip: 'Supprimer',
+                                  tooltip: tr('Supprimer'),
                                   onPressed: () => widget.onRemove(item.id),
                                   icon: const Icon(Icons.delete_outline),
                                 ),
@@ -188,8 +189,8 @@ class _CartSummaryState extends State<CartSummary> {
                   const SizedBox(height: 16),
                   DropdownButtonFormField<Customer>(
                     value: widget.selectedCustomer,
-                    decoration: const InputDecoration(
-                      labelText: 'Client',
+                    decoration: InputDecoration(
+                      labelText: tr('Client'),
                     ),
                     items: widget.customers
                         .map(
@@ -207,8 +208,8 @@ class _CartSummaryState extends State<CartSummary> {
                       Expanded(
                         child: TextField(
                           controller: _discountController,
-                          decoration: const InputDecoration(
-                            labelText: 'Remise',
+                          decoration: InputDecoration(
+                            labelText: tr('Remise'),
                             prefixIcon: Icon(Icons.percent_outlined),
                           ),
                           keyboardType: TextInputType.number,
@@ -220,8 +221,8 @@ class _CartSummaryState extends State<CartSummary> {
                       Expanded(
                         child: TextField(
                           controller: _shippingController,
-                          decoration: const InputDecoration(
-                            labelText: 'Livraison',
+                          decoration: InputDecoration(
+                            labelText: tr('Livraison'),
                             prefixIcon: Icon(Icons.local_shipping_outlined),
                           ),
                           keyboardType: TextInputType.number,
@@ -236,25 +237,25 @@ class _CartSummaryState extends State<CartSummary> {
                     controller: widget.noteController,
                     minLines: 2,
                     maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes',
+                    decoration: InputDecoration(
+                      labelText: tr('Notes'),
                     ),
                   ),
                   const SizedBox(height: 16),
                   _TotalsRow(
-                    label: 'Sous-total',
+                    label: tr('Sous-total'),
                     value: _currency.format(widget.subTotal),
                   ),
                   _TotalsRow(
-                    label: 'TVA',
+                    label: tr('TVA'),
                     value: _currency.format(widget.taxTotal),
                   ),
                   _TotalsRow(
-                    label: 'Livraison',
+                    label: tr('Livraison'),
                     value: _currency.format(widget.shipping),
                   ),
                   _TotalsRow(
-                    label: 'Total',
+                    label: tr('Total'),
                     value: _currency.format(widget.grandTotal),
                     emphasized: true,
                   ),

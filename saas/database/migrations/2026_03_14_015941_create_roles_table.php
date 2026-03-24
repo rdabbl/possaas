@@ -13,14 +13,14 @@ return new class extends Migration
     {
         Schema::create('roles', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('manager_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name');
             $table->string('description')->nullable();
             $table->boolean('is_system')->default(false);
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['tenant_id', 'name']);
+            $table->unique(['manager_id', 'name']);
         });
     }
 

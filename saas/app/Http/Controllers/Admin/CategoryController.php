@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\Tenant;
+use App\Models\Manager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -13,47 +13,44 @@ class CategoryController extends Controller
 {
     public function index(Request $request)
     {
-        $tenantId = $request->query('tenant_id');
+        $managerId = $request->query('manager_id');
 
-        $query = Category::query()->with(['tenant', 'parent'])->orderBy('id', 'desc');
-        if ($tenantId) {
-            $query->where('tenant_id', $tenantId);
+        $query = Category::query()->with(['manager', 'parent'])->orderBy('id', 'desc');
+        if ($managerId) {
+            $query->where('manager_id', $managerId);
         }
 
         $categories = $query->paginate(20)->withQueryString();
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
 
-        return view('admin.categories.index', compact('categories', 'tenants', 'tenantId'));
+        return view('admin.categories.index', compact('categories', 'managers', 'managerId'));
     }
 
     public function create()
     {
-        $tenants = Tenant::orderBy('name')->get();
-        $categories = Category::with('tenant')->orderBy('name')->get();
+        $categories = Category::whereNull('manager_id')->orderBy('name')->get();
 
-        return view('admin.categories.create', compact('tenants', 'categories'));
+        return view('admin.categories.create', compact('categories'));
     }
 
     public function store(Request $request)
     {
-        $tenantId = $request->input('tenant_id');
-
         $data = $request->validate([
-            'tenant_id' => ['required', 'exists:tenants,id'],
             'parent_id' => [
                 'nullable',
-                Rule::exists('categories', 'id')->where('tenant_id', $tenantId),
+                Rule::exists('categories', 'id')->whereNull('manager_id'),
             ],
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('categories', 'name')->where('tenant_id', $tenantId),
+                Rule::unique('categories', 'name')->whereNull('manager_id'),
             ],
             'image' => ['nullable', 'image', 'max:4096'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
+        $data['manager_id'] = null;
         $data['is_active'] = $data['is_active'] ?? true;
         if ($request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('categories', 'public');
@@ -67,7 +64,14 @@ class CategoryController extends Controller
 
     public function edit(Category $category)
     {
-        $categories = Category::where('tenant_id', $category->tenant_id)
+        $categories = Category::where(function ($query) use ($category) {
+            if ($category->manager_id) {
+                $query->whereNull('manager_id')
+                    ->orWhere('manager_id', $category->manager_id);
+                return;
+            }
+            $query->whereNull('manager_id');
+        })
             ->where('id', '!=', $category->id)
             ->orderBy('name')
             ->get();
@@ -77,18 +81,33 @@ class CategoryController extends Controller
 
     public function update(Request $request, Category $category)
     {
-        $tenantId = $category->tenant_id;
+        $managerId = $category->manager_id;
+        $parentScope = function ($query) use ($managerId) {
+            if ($managerId) {
+                $query->whereNull('manager_id')
+                    ->orWhere('manager_id', $managerId);
+                return;
+            }
+            $query->whereNull('manager_id');
+        };
+        $nameScope = function ($query) use ($managerId) {
+            if ($managerId) {
+                $query->where('manager_id', $managerId);
+                return;
+            }
+            $query->whereNull('manager_id');
+        };
 
         $data = $request->validate([
             'parent_id' => [
                 'nullable',
-                Rule::exists('categories', 'id')->where('tenant_id', $tenantId),
+                Rule::exists('categories', 'id')->where($parentScope),
             ],
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('categories', 'name')->where('tenant_id', $tenantId)->ignore($category->id),
+                Rule::unique('categories', 'name')->where($nameScope)->ignore($category->id),
             ],
             'image' => ['nullable', 'image', 'max:4096'],
             'is_active' => ['nullable', 'boolean'],

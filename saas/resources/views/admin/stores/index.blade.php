@@ -3,27 +3,27 @@
 @section('content')
     <div class="row" style="justify-content: space-between; align-items: center;">
         <div>
-            <h1>Stores</h1>
-            <p class="muted">Manage tenant stores.</p>
+            <h1>{{ t("Stores") }}</h1>
+            <p class="muted">{{ t("Manage manager stores.") }}</p>
         </div>
-        <a class="btn" href="{{ route('admin.stores.create') }}">New Store</a>
+        <a class="btn" href="{{ route('admin.stores.create') }}">{{ t("New Store") }}</a>
     </div>
 
     <div class="card" style="margin-bottom: 16px;">
         <form method="GET" action="{{ route('admin.stores.index') }}" class="row">
             <div style="min-width: 220px;">
-                <label>Filter by Tenant</label>
-                <select name="tenant_id">
-                    <option value="">All Tenants</option>
-                    @foreach ($tenants as $tenant)
-                        <option value="{{ $tenant->id }}" {{ (string) $tenantId === (string) $tenant->id ? 'selected' : '' }}>
-                            {{ $tenant->name }}
+                <label>{{ t("Filter by Manager") }}</label>
+                <select name="manager_id">
+                    <option value="">{{ t("All Managers") }}</option>
+                    @foreach ($managers as $manager)
+                        <option value="{{ $manager->id }}" {{ (string) $managerId === (string) $manager->id ? 'selected' : '' }}>
+                            {{ $manager->name }}
                         </option>
                     @endforeach
                 </select>
             </div>
             <div style="align-self: end;">
-                <button class="btn" type="submit">Filter</button>
+                <button class="btn" type="submit">{{ t("Filter") }}</button>
             </div>
         </form>
     </div>
@@ -32,19 +32,19 @@
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Tenant</th>
-                    <th>Name</th>
-                    <th>Code</th>
-                    <th>Stock</th>
-                    <th>Active</th>
+                    <th>{{ t("ID") }}</th>
+                    <th>{{ t("Manager") }}</th>
+                    <th>{{ t("Name") }}</th>
+                    <th>{{ t("Code") }}</th>
+                    <th>{{ t("Stock") }}</th>
+                    <th>{{ t("Active") }}</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($stores as $store)
                     <tr>
                         <td>{{ $store->id }}</td>
-                        <td>{{ $store->tenant?->name }}</td>
+                        <td>{{ $store->manager?->name }}</td>
                         <td>{{ $store->name }}</td>
                         <td>{{ $store->code }}</td>
                         <td>{{ $store->stock_enabled ? 'Enabled' : 'Disabled' }}</td>

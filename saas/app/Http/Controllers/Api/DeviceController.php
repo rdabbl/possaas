@@ -11,9 +11,9 @@ class DeviceController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $devices = Device::where('tenant_id', $tenant->id)
+        $devices = Device::where('manager_id', $manager->id)
             ->orderBy('id', 'desc')
             ->get();
 
@@ -22,13 +22,13 @@ class DeviceController extends BaseApiController
 
     public function store(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        if ($tenant->max_devices !== null) {
-            $count = Device::where('tenant_id', $tenant->id)->count();
-            if ($count >= $tenant->max_devices) {
+        if ($manager->max_devices !== null) {
+            $count = Device::where('manager_id', $manager->id)->count();
+            if ($count >= $manager->max_devices) {
                 return response()->json([
-                    'message' => 'Device limit reached for this tenant.',
+                    'message' => 'Device limit reached for this manager.',
                 ], 422);
             }
         }
@@ -36,7 +36,7 @@ class DeviceController extends BaseApiController
         $data = $request->validate([
             'store_id' => [
                 'required',
-                Rule::exists('stores', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('stores', 'id')->where('manager_id', $manager->id),
             ],
             'name' => ['required', 'string', 'max:255'],
             'type' => ['nullable', Rule::in(['pos', 'kiosk'])],
@@ -44,7 +44,7 @@ class DeviceController extends BaseApiController
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $data['tenant_id'] = $tenant->id;
+        $data['manager_id'] = $manager->id;
         $data['uuid'] = (string) Str::uuid();
         $data['secret'] = Str::random(64);
         $data['type'] = $data['type'] ?? 'pos';
@@ -58,13 +58,13 @@ class DeviceController extends BaseApiController
 
     public function register(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        if ($tenant->max_devices !== null) {
-            $count = Device::where('tenant_id', $tenant->id)->count();
-            if ($count >= $tenant->max_devices) {
+        if ($manager->max_devices !== null) {
+            $count = Device::where('manager_id', $manager->id)->count();
+            if ($count >= $manager->max_devices) {
                 return response()->json([
-                    'message' => 'Device limit reached for this tenant.',
+                    'message' => 'Device limit reached for this manager.',
                 ], 422);
             }
         }
@@ -72,7 +72,7 @@ class DeviceController extends BaseApiController
         $data = $request->validate([
             'store_id' => [
                 'required',
-                Rule::exists('stores', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('stores', 'id')->where('manager_id', $manager->id),
             ],
             'name' => ['required', 'string', 'max:255'],
             'type' => ['nullable', Rule::in(['pos', 'kiosk'])],
@@ -80,7 +80,7 @@ class DeviceController extends BaseApiController
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $data['tenant_id'] = $tenant->id;
+        $data['manager_id'] = $manager->id;
         $data['uuid'] = (string) Str::uuid();
         $data['secret'] = Str::random(64);
         $data['type'] = $data['type'] ?? 'pos';
@@ -113,7 +113,7 @@ class DeviceController extends BaseApiController
 
         return response()->json([
             'device' => $device,
-            'tenant_id' => $device->tenant_id,
+            'manager_id' => $device->manager_id,
             'store_id' => $device->store_id,
         ]);
     }

@@ -10,10 +10,13 @@ class TaxController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
         $perPage = (int) $request->query('per_page', 50);
 
-        $taxes = Tax::where('tenant_id', $tenant->id)
+        $taxes = Tax::where(function ($query) use ($manager) {
+            $query->whereNull('manager_id')
+                ->orWhere('manager_id', $manager->id);
+        })
             ->orderBy('id', 'desc')
             ->paginate($perPage);
 
@@ -22,30 +25,33 @@ class TaxController extends BaseApiController
 
     public function show(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $tax = Tax::where('tenant_id', $tenant->id)->findOrFail($id);
+        $tax = Tax::where(function ($query) use ($manager) {
+            $query->whereNull('manager_id')
+                ->orWhere('manager_id', $manager->id);
+        })->findOrFail($id);
 
         return response()->json($tax);
     }
 
     public function store(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
         $data = $request->validate([
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('taxes', 'name')->where('tenant_id', $tenant->id),
+                Rule::unique('taxes', 'name')->where('manager_id', $manager->id),
             ],
             'rate' => ['required', 'numeric', 'min:0'],
             'type' => ['required', Rule::in(['percent', 'fixed'])],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $data['tenant_id'] = $tenant->id;
+        $data['manager_id'] = $manager->id;
         $data['is_active'] = $data['is_active'] ?? true;
 
         $tax = Tax::create($data);
@@ -55,16 +61,16 @@ class TaxController extends BaseApiController
 
     public function update(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $tax = Tax::where('tenant_id', $tenant->id)->findOrFail($id);
+        $tax = Tax::where('manager_id', $manager->id)->findOrFail($id);
 
         $data = $request->validate([
             'name' => [
                 'sometimes',
                 'string',
                 'max:255',
-                Rule::unique('taxes', 'name')->where('tenant_id', $tenant->id)->ignore($tax->id),
+                Rule::unique('taxes', 'name')->where('manager_id', $manager->id)->ignore($tax->id),
             ],
             'rate' => ['sometimes', 'numeric', 'min:0'],
             'type' => ['sometimes', Rule::in(['percent', 'fixed'])],
@@ -78,9 +84,9 @@ class TaxController extends BaseApiController
 
     public function destroy(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $tax = Tax::where('tenant_id', $tenant->id)->findOrFail($id);
+        $tax = Tax::where('manager_id', $manager->id)->findOrFail($id);
         $tax->delete();
 
         return response()->json(['message' => 'Deleted']);

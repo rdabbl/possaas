@@ -11,7 +11,7 @@ class Product extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'tenant_id',
+        'manager_id',
         'category_id',
         'tax_id',
         'uuid',
@@ -35,9 +35,9 @@ class Product extends Model
         'is_active' => 'boolean',
     ];
 
-    public function tenant()
+    public function manager()
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Manager::class);
     }
 
     public function category()

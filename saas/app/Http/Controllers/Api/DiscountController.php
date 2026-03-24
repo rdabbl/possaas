@@ -10,10 +10,13 @@ class DiscountController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
         $perPage = (int) $request->query('per_page', 50);
 
-        $discounts = Discount::where('tenant_id', $tenant->id)
+        $discounts = Discount::where(function ($query) use ($manager) {
+            $query->whereNull('manager_id')
+                ->orWhere('manager_id', $manager->id);
+        })
             ->orderBy('id', 'desc')
             ->paginate($perPage);
 
@@ -22,23 +25,26 @@ class DiscountController extends BaseApiController
 
     public function show(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $discount = Discount::where('tenant_id', $tenant->id)->findOrFail($id);
+        $discount = Discount::where(function ($query) use ($manager) {
+            $query->whereNull('manager_id')
+                ->orWhere('manager_id', $manager->id);
+        })->findOrFail($id);
 
         return response()->json($discount);
     }
 
     public function store(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
         $data = $request->validate([
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('discounts', 'name')->where('tenant_id', $tenant->id),
+                Rule::unique('discounts', 'name')->where('manager_id', $manager->id),
             ],
             'type' => ['required', Rule::in(['percent', 'fixed'])],
             'value' => ['required', 'numeric', 'min:0'],
@@ -46,7 +52,7 @@ class DiscountController extends BaseApiController
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $data['tenant_id'] = $tenant->id;
+        $data['manager_id'] = $manager->id;
         $data['is_active'] = $data['is_active'] ?? true;
 
         $discount = Discount::create($data);
@@ -56,16 +62,16 @@ class DiscountController extends BaseApiController
 
     public function update(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $discount = Discount::where('tenant_id', $tenant->id)->findOrFail($id);
+        $discount = Discount::where('manager_id', $manager->id)->findOrFail($id);
 
         $data = $request->validate([
             'name' => [
                 'sometimes',
                 'string',
                 'max:255',
-                Rule::unique('discounts', 'name')->where('tenant_id', $tenant->id)->ignore($discount->id),
+                Rule::unique('discounts', 'name')->where('manager_id', $manager->id)->ignore($discount->id),
             ],
             'type' => ['sometimes', Rule::in(['percent', 'fixed'])],
             'value' => ['sometimes', 'numeric', 'min:0'],
@@ -80,9 +86,9 @@ class DiscountController extends BaseApiController
 
     public function destroy(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $discount = Discount::where('tenant_id', $tenant->id)->findOrFail($id);
+        $discount = Discount::where('manager_id', $manager->id)->findOrFail($id);
         $discount->delete();
 
         return response()->json(['message' => 'Deleted']);

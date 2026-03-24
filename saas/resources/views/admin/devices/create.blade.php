@@ -1,57 +1,57 @@
 @extends('admin.layout')
 
 @section('content')
-    <h1>New Device</h1>
+    <h1>{{ t("New Device") }}</h1>
 
     <div class="card">
         <form method="POST" action="{{ route('admin.devices.store') }}">
             @csrf
             <div class="field">
-                <label>Tenant</label>
-                <select name="tenant_id" required>
-                    <option value="">Select Tenant</option>
-                    @foreach ($tenants as $tenant)
-                        <option value="{{ $tenant->id }}" {{ old('tenant_id') == $tenant->id ? 'selected' : '' }}>
-                            {{ $tenant->name }}
+                <label>{{ t("Manager") }}</label>
+                <select name="manager_id" required>
+                    <option value="">{{ t("Select Manager") }}</option>
+                    @foreach ($managers as $manager)
+                        <option value="{{ $manager->id }}" {{ old('manager_id') == $manager->id ? 'selected' : '' }}>
+                            {{ $manager->name }}
                         </option>
                     @endforeach
                 </select>
             </div>
             <div class="field">
-                <label>Store</label>
+                <label>{{ t("Store") }}</label>
                 <select name="store_id" required>
-                    <option value="">Select Store</option>
+                    <option value="">{{ t("Select Store") }}</option>
                     @foreach ($stores as $store)
                         <option value="{{ $store->id }}" {{ old('store_id') == $store->id ? 'selected' : '' }}>
-                            {{ $store->name }} ({{ $store->tenant?->name }})
+                            {{ $store->name }} ({{ $store->manager?->name }})
                         </option>
                     @endforeach
                 </select>
             </div>
             <div class="field">
-                <label>Name</label>
+                <label>{{ t("Name") }}</label>
                 <input name="name" value="{{ old('name') }}" required>
             </div>
             <div class="field">
-                <label>Type</label>
+                <label>{{ t("Type") }}</label>
                 <select name="type">
-                    <option value="pos" selected>POS</option>
-                    <option value="kiosk">Kiosk</option>
+                    <option value="pos" selected>{{ t("POS") }}</option>
+                    <option value="kiosk">{{ t("Kiosk") }}</option>
                 </select>
             </div>
             <div class="field">
-                <label>Platform</label>
+                <label>{{ t("Platform") }}</label>
                 <input name="platform" value="{{ old('platform', 'android') }}">
             </div>
             <div class="field">
-                <label>Active</label>
+                <label>{{ t("Active") }}</label>
                 <select name="is_active">
-                    <option value="1" selected>Yes</option>
-                    <option value="0">No</option>
+                    <option value="1" selected>{{ t("Yes") }}</option>
+                    <option value="0">{{ t("No") }}</option>
                 </select>
             </div>
-            <button class="btn" type="submit">Create Device</button>
-            <a class="btn secondary" href="{{ route('admin.devices.index') }}">Cancel</a>
+            <button class="btn" type="submit">{{ t("Create Device") }}</button>
+            <a class="btn secondary" href="{{ route('admin.devices.index') }}">{{ t("Cancel") }}</a>
         </form>
     </div>
 @endsection

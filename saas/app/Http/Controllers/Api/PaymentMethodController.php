@@ -10,10 +10,10 @@ class PaymentMethodController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $this->managerOrFail($request);
         $perPage = (int) $request->query('per_page', 50);
 
-        $methods = PaymentMethod::where('tenant_id', $tenant->id)
+        $methods = PaymentMethod::whereNull('manager_id')
             ->orderBy('id', 'desc')
             ->paginate($perPage);
 
@@ -22,30 +22,33 @@ class PaymentMethodController extends BaseApiController
 
     public function show(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $this->managerOrFail($request);
 
-        $method = PaymentMethod::where('tenant_id', $tenant->id)->findOrFail($id);
+        $method = PaymentMethod::whereNull('manager_id')->findOrFail($id);
 
         return response()->json($method);
     }
 
     public function store(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $user = $request->user();
+        if (!$user?->is_super_admin) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
         $data = $request->validate([
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('payment_methods', 'name')->where('tenant_id', $tenant->id),
+                Rule::unique('payment_methods', 'name')->whereNull('manager_id'),
             ],
             'type' => ['nullable', Rule::in(['cash', 'card', 'bank', 'other'])],
             'is_active' => ['nullable', 'boolean'],
             'is_default' => ['nullable', 'boolean'],
         ]);
 
-        $data['tenant_id'] = $tenant->id;
+        $data['manager_id'] = null;
         $data['type'] = $data['type'] ?? 'cash';
         $data['is_active'] = $data['is_active'] ?? true;
         $data['is_default'] = $data['is_default'] ?? false;
@@ -57,16 +60,19 @@ class PaymentMethodController extends BaseApiController
 
     public function update(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $user = $request->user();
+        if (!$user?->is_super_admin) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
-        $method = PaymentMethod::where('tenant_id', $tenant->id)->findOrFail($id);
+        $method = PaymentMethod::whereNull('manager_id')->findOrFail($id);
 
         $data = $request->validate([
             'name' => [
                 'sometimes',
                 'string',
                 'max:255',
-                Rule::unique('payment_methods', 'name')->where('tenant_id', $tenant->id)->ignore($method->id),
+                Rule::unique('payment_methods', 'name')->whereNull('manager_id')->ignore($method->id),
             ],
             'type' => ['sometimes', Rule::in(['cash', 'card', 'bank', 'other'])],
             'is_active' => ['nullable', 'boolean'],
@@ -80,9 +86,12 @@ class PaymentMethodController extends BaseApiController
 
     public function destroy(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $user = $request->user();
+        if (!$user?->is_super_admin) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
-        $method = PaymentMethod::where('tenant_id', $tenant->id)->findOrFail($id);
+        $method = PaymentMethod::whereNull('manager_id')->findOrFail($id);
         $method->delete();
 
         return response()->json(['message' => 'Deleted']);

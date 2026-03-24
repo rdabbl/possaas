@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tax;
-use App\Models\Tenant;
+use App\Models\Manager;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -12,43 +12,39 @@ class TaxController extends Controller
 {
     public function index(Request $request)
     {
-        $tenantId = $request->query('tenant_id');
+        $managerId = $request->query('manager_id');
 
-        $query = Tax::query()->with('tenant')->orderBy('id', 'desc');
-        if ($tenantId) {
-            $query->where('tenant_id', $tenantId);
+        $query = Tax::query()->with('manager')->orderBy('id', 'desc');
+        if ($managerId) {
+            $query->where('manager_id', $managerId);
         }
 
         $taxes = $query->paginate(20)->withQueryString();
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
 
-        return view('admin.taxes.index', compact('taxes', 'tenants', 'tenantId'));
+        return view('admin.taxes.index', compact('taxes', 'managers', 'managerId'));
     }
 
     public function create()
     {
-        $tenants = Tenant::orderBy('name')->get();
-
-        return view('admin.taxes.create', compact('tenants'));
+        return view('admin.taxes.create');
     }
 
     public function store(Request $request)
     {
-        $tenantId = $request->input('tenant_id');
-
         $data = $request->validate([
-            'tenant_id' => ['required', 'exists:tenants,id'],
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('taxes', 'name')->where('tenant_id', $tenantId),
+                Rule::unique('taxes', 'name')->whereNull('manager_id'),
             ],
             'rate' => ['required', 'numeric', 'min:0'],
             'type' => ['required', Rule::in(['percent', 'fixed'])],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
+        $data['manager_id'] = null;
         $data['is_active'] = $data['is_active'] ?? true;
 
         Tax::create($data);
@@ -64,14 +60,21 @@ class TaxController extends Controller
 
     public function update(Request $request, Tax $tax)
     {
-        $tenantId = $tax->tenant_id;
+        $managerId = $tax->manager_id;
+        $nameScope = function ($query) use ($managerId) {
+            if ($managerId) {
+                $query->where('manager_id', $managerId);
+                return;
+            }
+            $query->whereNull('manager_id');
+        };
 
         $data = $request->validate([
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('taxes', 'name')->where('tenant_id', $tenantId)->ignore($tax->id),
+                Rule::unique('taxes', 'name')->where($nameScope)->ignore($tax->id),
             ],
             'rate' => ['required', 'numeric', 'min:0'],
             'type' => ['required', Rule::in(['percent', 'fixed'])],

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Store;
-use App\Models\Tenant;
+use App\Models\Manager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -14,31 +14,31 @@ class StoreController extends Controller
 {
     public function index(Request $request)
     {
-        $tenantId = $request->query('tenant_id');
+        $managerId = $request->query('manager_id');
 
-        $query = Store::query()->with('tenant')->orderBy('id', 'desc');
-        if ($tenantId) {
-            $query->where('tenant_id', $tenantId);
+        $query = Store::query()->with('manager')->orderBy('id', 'desc');
+        if ($managerId) {
+            $query->where('manager_id', $managerId);
         }
 
         $stores = $query->paginate(20)->withQueryString();
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
 
-        return view('admin.stores.index', compact('stores', 'tenants', 'tenantId'));
+        return view('admin.stores.index', compact('stores', 'managers', 'managerId'));
     }
 
     public function create()
     {
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
         $currencies = Currency::where('is_active', true)->orderBy('name')->get();
 
-        return view('admin.stores.create', compact('tenants', 'currencies'));
+        return view('admin.stores.create', compact('managers', 'currencies'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'tenant_id' => ['required', 'exists:tenants,id'],
+            'manager_id' => ['required', 'exists:managers,id'],
             'currency_id' => [
                 'required',
                 Rule::exists('currencies', 'id')->where('is_active', true),
@@ -48,7 +48,7 @@ class StoreController extends Controller
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('stores', 'code')->where('tenant_id', $request->input('tenant_id')),
+                Rule::unique('stores', 'code')->where('manager_id', $request->input('manager_id')),
             ],
             'phone' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -59,11 +59,11 @@ class StoreController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $tenant = Tenant::findOrFail($data['tenant_id']);
-        if ($tenant->max_stores !== null) {
-            $count = Store::where('tenant_id', $tenant->id)->count();
-            if ($count >= $tenant->max_stores) {
-                return back()->withErrors(['tenant_id' => 'Store limit reached for this tenant.'])->withInput();
+        $manager = Manager::findOrFail($data['manager_id']);
+        if ($manager->max_stores !== null) {
+            $count = Store::where('manager_id', $manager->id)->count();
+            if ($count >= $manager->max_stores) {
+                return back()->withErrors(['manager_id' => 'Store limit reached for this manager.'])->withInput();
             }
         }
 

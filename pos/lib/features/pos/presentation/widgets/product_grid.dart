@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/models/product.dart';
 import '../../state/appearance_controller.dart';
+import 'package:pos_nimirik/core/i18n/i18n.dart';
 
 class ProductGrid extends StatelessWidget {
   const ProductGrid({
@@ -49,7 +50,7 @@ class ProductGrid extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh),
-              label: const Text('Actualiser'),
+              label: Text(tr('Actualiser')),
             ),
           ],
         ),

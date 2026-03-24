@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Permission;
 use App\Models\Role;
-use App\Models\Tenant;
+use App\Models\Manager;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -13,38 +13,38 @@ class RoleController extends Controller
 {
     public function index(Request $request)
     {
-        $tenantId = $request->query('tenant_id');
+        $managerId = $request->query('manager_id');
 
-        $query = Role::query()->with('tenant')->orderBy('id', 'desc');
-        if ($tenantId) {
-            $query->where('tenant_id', $tenantId);
+        $query = Role::query()->with('manager')->orderBy('id', 'desc');
+        if ($managerId) {
+            $query->where('manager_id', $managerId);
         }
 
         $roles = $query->paginate(20)->withQueryString();
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
 
-        return view('admin.roles.index', compact('roles', 'tenants', 'tenantId'));
+        return view('admin.roles.index', compact('roles', 'managers', 'managerId'));
     }
 
     public function create()
     {
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
         $permissions = Permission::orderBy('name')->get();
 
-        return view('admin.roles.create', compact('tenants', 'permissions'));
+        return view('admin.roles.create', compact('managers', 'permissions'));
     }
 
     public function store(Request $request)
     {
-        $tenantId = $request->input('tenant_id');
+        $managerId = $request->input('manager_id');
 
         $data = $request->validate([
-            'tenant_id' => ['nullable', 'exists:tenants,id'],
+            'manager_id' => ['nullable', 'exists:managers,id'],
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('roles', 'name')->where('tenant_id', $tenantId),
+                Rule::unique('roles', 'name')->where('manager_id', $managerId),
             ],
             'description' => ['nullable', 'string', 'max:255'],
             'is_system' => ['nullable', 'boolean'],
@@ -75,14 +75,14 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
-        $tenantId = $role->tenant_id;
+        $managerId = $role->manager_id;
 
         $data = $request->validate([
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('roles', 'name')->where('tenant_id', $tenantId)->ignore($role->id),
+                Rule::unique('roles', 'name')->where('manager_id', $managerId)->ignore($role->id),
             ],
             'description' => ['nullable', 'string', 'max:255'],
             'is_system' => ['nullable', 'boolean'],

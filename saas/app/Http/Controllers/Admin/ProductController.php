@@ -7,7 +7,7 @@ use App\Models\Category;
 use App\Models\Ingredient;
 use App\Models\Product;
 use App\Models\Tax;
-use App\Models\Tenant;
+use App\Models\Manager;
 use App\Services\ProductImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -19,34 +19,34 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $tenantId = $request->query('tenant_id');
+        $managerId = $request->query('manager_id');
 
-        $query = Product::query()->with(['tenant', 'category', 'tax'])->orderBy('id', 'desc');
-        if ($tenantId) {
-            $query->where('tenant_id', $tenantId);
+        $query = Product::query()->with(['manager', 'category', 'tax'])->orderBy('id', 'desc');
+        if ($managerId) {
+            $query->where('manager_id', $managerId);
         }
 
         $products = $query->paginate(20)->withQueryString();
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
 
-        return view('admin.products.index', compact('products', 'tenants', 'tenantId'));
+        return view('admin.products.index', compact('products', 'managers', 'managerId'));
     }
 
     public function importForm()
     {
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
 
-        return view('admin.products.import', compact('tenants'));
+        return view('admin.products.import', compact('managers'));
     }
 
     public function import(Request $request, ProductImportService $importService)
     {
         $data = $request->validate([
-            'tenant_id' => ['required', 'exists:tenants,id'],
+            'manager_id' => ['required', 'exists:managers,id'],
             'file' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
-        $result = $importService->import($request->file('file'), (int) $data['tenant_id']);
+        $result = $importService->import($request->file('file'), (int) $data['manager_id']);
 
         return redirect()->route('admin.products.index')
             ->with('success', sprintf(
@@ -60,40 +60,46 @@ class ProductController extends Controller
 
     public function create()
     {
-        $tenants = Tenant::orderBy('name')->get();
-        $categories = Category::with('tenant')->orderBy('name')->get();
-        $taxes = Tax::with('tenant')->orderBy('name')->get();
-        $ingredients = Ingredient::with('tenant')->orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
+        $categories = Category::with('manager')->orderBy('name')->get();
+        $taxes = Tax::with('manager')->orderBy('name')->get();
+        $ingredients = Ingredient::with('manager')->orderBy('name')->get();
 
-        return view('admin.products.create', compact('tenants', 'categories', 'taxes', 'ingredients'));
+        return view('admin.products.create', compact('managers', 'categories', 'taxes', 'ingredients'));
     }
 
     public function store(Request $request)
     {
-        $tenantId = $request->input('tenant_id');
+        $managerId = $request->input('manager_id');
 
         $data = $request->validate([
-            'tenant_id' => ['required', 'exists:tenants,id'],
+            'manager_id' => ['required', 'exists:managers,id'],
             'name' => ['required', 'string', 'max:255'],
             'category_id' => [
                 'nullable',
-                Rule::exists('categories', 'id')->where('tenant_id', $tenantId),
+                Rule::exists('categories', 'id')->where(function ($query) use ($managerId) {
+                    $query->whereNull('manager_id')
+                        ->orWhere('manager_id', $managerId);
+                }),
             ],
             'tax_id' => [
                 'nullable',
-                Rule::exists('taxes', 'id')->where('tenant_id', $tenantId),
+                Rule::exists('taxes', 'id')->where(function ($query) use ($managerId) {
+                    $query->whereNull('manager_id')
+                        ->orWhere('manager_id', $managerId);
+                }),
             ],
             'sku' => [
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('products', 'sku')->where('tenant_id', $tenantId),
+                Rule::unique('products', 'sku')->where('manager_id', $managerId),
             ],
             'barcode' => [
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('products', 'barcode')->where('tenant_id', $tenantId),
+                Rule::unique('products', 'barcode')->where('manager_id', $managerId),
             ],
             'description' => ['nullable', 'string'],
             'ingredients' => ['nullable', 'array'],
@@ -118,7 +124,7 @@ class ProductController extends Controller
         }
 
         $product = Product::create($data);
-        $this->syncIngredients($product, $ingredientsInput, $tenantId);
+        $this->syncIngredients($product, $ingredientsInput, $managerId);
 
         return redirect()->route('admin.products.index')
             ->with('success', 'Product created.');
@@ -126,9 +132,18 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        $categories = Category::where('tenant_id', $product->tenant_id)->orderBy('name')->get();
-        $taxes = Tax::where('tenant_id', $product->tenant_id)->orderBy('name')->get();
-        $ingredients = Ingredient::where('tenant_id', $product->tenant_id)->orderBy('name')->get();
+        $categories = Category::where(function ($query) use ($product) {
+            $query->whereNull('manager_id')
+                ->orWhere('manager_id', $product->manager_id);
+        })->orderBy('name')->get();
+        $taxes = Tax::where(function ($query) use ($product) {
+            $query->whereNull('manager_id')
+                ->orWhere('manager_id', $product->manager_id);
+        })->orderBy('name')->get();
+        $ingredients = Ingredient::where(function ($query) use ($product) {
+            $query->whereNull('manager_id')
+                ->orWhere('manager_id', $product->manager_id);
+        })->orderBy('name')->get();
 
         $product->load('ingredientLinks');
 
@@ -137,29 +152,35 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
-        $tenantId = $product->tenant_id;
+        $managerId = $product->manager_id;
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'category_id' => [
                 'nullable',
-                Rule::exists('categories', 'id')->where('tenant_id', $tenantId),
+                Rule::exists('categories', 'id')->where(function ($query) use ($managerId) {
+                    $query->whereNull('manager_id')
+                        ->orWhere('manager_id', $managerId);
+                }),
             ],
             'tax_id' => [
                 'nullable',
-                Rule::exists('taxes', 'id')->where('tenant_id', $tenantId),
+                Rule::exists('taxes', 'id')->where(function ($query) use ($managerId) {
+                    $query->whereNull('manager_id')
+                        ->orWhere('manager_id', $managerId);
+                }),
             ],
             'sku' => [
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('products', 'sku')->where('tenant_id', $tenantId)->ignore($product->id),
+                Rule::unique('products', 'sku')->where('manager_id', $managerId)->ignore($product->id),
             ],
             'barcode' => [
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('products', 'barcode')->where('tenant_id', $tenantId)->ignore($product->id),
+                Rule::unique('products', 'barcode')->where('manager_id', $managerId)->ignore($product->id),
             ],
             'description' => ['nullable', 'string'],
             'ingredients' => ['nullable', 'array'],
@@ -182,7 +203,7 @@ class ProductController extends Controller
 
         unset($data['ingredients']);
         $product->update($data);
-        $this->syncIngredients($product, $ingredientsInput, $tenantId);
+        $this->syncIngredients($product, $ingredientsInput, $managerId);
 
         return redirect()->route('admin.products.index')
             ->with('success', 'Product updated.');
@@ -199,7 +220,7 @@ class ProductController extends Controller
             ->with('success', 'Product deleted.');
     }
 
-    private function syncIngredients(Product $product, array $input, int $tenantId): void
+    private function syncIngredients(Product $product, array $input, int $managerId): void
     {
         $ids = array_filter(array_keys($input), fn ($id) => is_numeric($id));
         if (empty($ids)) {
@@ -207,7 +228,10 @@ class ProductController extends Controller
             return;
         }
 
-        $validIds = Ingredient::where('tenant_id', $tenantId)
+        $validIds = Ingredient::where(function ($query) use ($managerId) {
+            $query->whereNull('manager_id')
+                ->orWhere('manager_id', $managerId);
+        })
             ->whereIn('id', $ids)
             ->pluck('id')
             ->map(fn ($id) => (string) $id)

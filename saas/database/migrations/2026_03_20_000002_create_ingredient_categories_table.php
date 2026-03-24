@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('ingredient_categories', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('manager_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['tenant_id', 'name']);
+            $table->unique(['manager_id', 'name']);
         });
     }
 

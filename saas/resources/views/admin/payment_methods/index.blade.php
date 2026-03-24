@@ -3,27 +3,27 @@
 @section('content')
     <div class="row" style="justify-content: space-between; align-items: center;">
         <div>
-            <h1>Payment Methods</h1>
-            <p class="muted">Manage cash and other payment types.</p>
+            <h1>{{ t("Payment Methods") }}</h1>
+            <p class="muted">{{ t("Manage cash and other payment types.") }}</p>
         </div>
-        <a class="btn" href="{{ route('admin.payment_methods.create') }}">New Method</a>
+        <a class="btn" href="{{ route('admin.payment_methods.create') }}">{{ t("New Method") }}</a>
     </div>
 
     <div class="card" style="margin-bottom: 16px;">
         <form method="GET" action="{{ route('admin.payment_methods.index') }}" class="row">
             <div style="min-width: 220px;">
-                <label>Filter by Tenant</label>
-                <select name="tenant_id">
-                    <option value="">All Tenants</option>
-                    @foreach ($tenants as $tenant)
-                        <option value="{{ $tenant->id }}" {{ (string) $tenantId === (string) $tenant->id ? 'selected' : '' }}>
-                            {{ $tenant->name }}
+                <label>{{ t("Filter by Manager") }}</label>
+                <select name="manager_id">
+                    <option value="">{{ t("All Managers") }}</option>
+                    @foreach ($managers as $manager)
+                        <option value="{{ $manager->id }}" {{ (string) $managerId === (string) $manager->id ? 'selected' : '' }}>
+                            {{ $manager->name }}
                         </option>
                     @endforeach
                 </select>
             </div>
             <div style="align-self: end;">
-                <button class="btn" type="submit">Filter</button>
+                <button class="btn" type="submit">{{ t("Filter") }}</button>
             </div>
         </form>
     </div>
@@ -32,19 +32,19 @@
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Tenant</th>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Default</th>
-                    <th>Active</th>
+                    <th>{{ t("ID") }}</th>
+                    <th>{{ t("Scope") }}</th>
+                    <th>{{ t("Name") }}</th>
+                    <th>{{ t("Type") }}</th>
+                    <th>{{ t("Default") }}</th>
+                    <th>{{ t("Active") }}</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($methods as $method)
                     <tr>
                         <td>{{ $method->id }}</td>
-                        <td>{{ $method->tenant?->name }}</td>
+                        <td>{{ $method->manager?->name ?? 'Global' }}</td>
                         <td>{{ $method->name }}</td>
                         <td>{{ $method->type }}</td>
                         <td>{{ $method->is_default ? 'Yes' : 'No' }}</td>

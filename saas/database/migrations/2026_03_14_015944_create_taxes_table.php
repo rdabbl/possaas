@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('taxes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('manager_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name');
             $table->decimal('rate', 7, 4)->default(0);
             $table->string('type')->default('percent'); // percent or fixed
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['tenant_id', 'name']);
+            $table->unique(['manager_id', 'name']);
         });
     }
 

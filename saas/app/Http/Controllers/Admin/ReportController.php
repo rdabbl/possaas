@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use App\Models\SaleItem;
-use App\Models\Tenant;
+use App\Models\Manager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,7 +13,7 @@ class ReportController extends Controller
 {
     public function index(Request $request)
     {
-        $tenantId = $request->query('tenant_id');
+        $managerId = $request->query('manager_id');
         $from = $request->query('from', now()->subDays(30)->toDateString());
         $to = $request->query('to', now()->toDateString());
 
@@ -24,8 +24,8 @@ class ReportController extends Controller
             ])
             ->whereIn('status', ['paid', 'partial']);
 
-        if ($tenantId) {
-            $salesQuery->where('tenant_id', $tenantId);
+        if ($managerId) {
+            $salesQuery->where('manager_id', $managerId);
         }
 
         $daily = (clone $salesQuery)
@@ -50,8 +50,8 @@ class ReportController extends Controller
             ->limit(10)
             ->get();
 
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
 
-        return view('admin.reports.index', compact('daily', 'monthly', 'topProducts', 'tenants', 'tenantId', 'from', 'to'));
+        return view('admin.reports.index', compact('daily', 'monthly', 'topProducts', 'managers', 'managerId', 'from', 'to'));
     }
 }

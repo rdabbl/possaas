@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/api/api_client.dart';
+import 'core/i18n/translation_controller.dart';
+import 'package:pos_nimirik/core/i18n/i18n.dart';
 import 'core/storage/token_storage.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/pages/login_page.dart';
@@ -34,9 +36,12 @@ class PosApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => AppearanceController()..bootstrap(),
         ),
+        ChangeNotifierProvider(
+          create: (_) => TranslationController()..bootstrap(),
+        ),
       ],
-      child: Consumer2<AuthController, AppearanceController>(
-        builder: (context, auth, appearance, _) {
+      child: Consumer3<AuthController, AppearanceController, TranslationController>(
+        builder: (context, auth, appearance, translations, _) {
           final repository = posRepository ??
               PosRepository(
                 apiClient: LaravelApiClient(
@@ -44,7 +49,7 @@ class PosApp extends StatelessWidget {
                 ),
               );
           return MaterialApp(
-            title: 'POS Flutter',
+            title: tr('POS Flutter'),
             theme: appearance.theme.copyWith(
               visualDensity: VisualDensity.adaptivePlatformDensity,
             ),

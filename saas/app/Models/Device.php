@@ -10,7 +10,7 @@ class Device extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'tenant_id',
+        'manager_id',
         'store_id',
         'uuid',
         'name',
@@ -28,9 +28,9 @@ class Device extends Model
         'is_active' => 'boolean',
     ];
 
-    public function tenant()
+    public function manager()
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Manager::class);
     }
 
     public function store()

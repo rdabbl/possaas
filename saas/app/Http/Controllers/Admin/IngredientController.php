@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Ingredient;
 use App\Models\IngredientCategory;
-use App\Models\Tenant;
+use App\Models\Manager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -14,47 +14,44 @@ class IngredientController extends Controller
 {
     public function index(Request $request)
     {
-        $tenantId = $request->query('tenant_id');
+        $managerId = $request->query('manager_id');
 
-        $query = Ingredient::query()->with('tenant')->orderBy('id', 'desc');
-        if ($tenantId) {
-            $query->where('tenant_id', $tenantId);
+        $query = Ingredient::query()->with('manager')->orderBy('id', 'desc');
+        if ($managerId) {
+            $query->where('manager_id', $managerId);
         }
 
         $ingredients = $query->paginate(20)->withQueryString();
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
 
-        return view('admin.ingredients.index', compact('ingredients', 'tenants', 'tenantId'));
+        return view('admin.ingredients.index', compact('ingredients', 'managers', 'managerId'));
     }
 
     public function create()
     {
-        $tenants = Tenant::orderBy('name')->get();
-        $categories = IngredientCategory::with('tenant')->orderBy('name')->get();
+        $categories = IngredientCategory::whereNull('manager_id')->orderBy('name')->get();
 
-        return view('admin.ingredients.create', compact('tenants', 'categories'));
+        return view('admin.ingredients.create', compact('categories'));
     }
 
     public function store(Request $request)
     {
-        $tenantId = $request->input('tenant_id');
-
         $data = $request->validate([
-            'tenant_id' => ['required', 'exists:tenants,id'],
             'ingredient_category_id' => [
                 'nullable',
-                Rule::exists('ingredient_categories', 'id')->where('tenant_id', $tenantId),
+                Rule::exists('ingredient_categories', 'id')->whereNull('manager_id'),
             ],
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('ingredients', 'name')->where('tenant_id', $tenantId),
+                Rule::unique('ingredients', 'name')->whereNull('manager_id'),
             ],
             'image' => ['nullable', 'image', 'max:4096'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
+        $data['manager_id'] = null;
         $data['is_active'] = $data['is_active'] ?? true;
         if ($request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('ingredients', 'public');
@@ -68,7 +65,14 @@ class IngredientController extends Controller
 
     public function edit(Ingredient $ingredient)
     {
-        $categories = IngredientCategory::where('tenant_id', $ingredient->tenant_id)
+        $categories = IngredientCategory::where(function ($query) use ($ingredient) {
+            if ($ingredient->manager_id) {
+                $query->whereNull('manager_id')
+                    ->orWhere('manager_id', $ingredient->manager_id);
+                return;
+            }
+            $query->whereNull('manager_id');
+        })
             ->orderBy('name')
             ->get();
 
@@ -77,18 +81,33 @@ class IngredientController extends Controller
 
     public function update(Request $request, Ingredient $ingredient)
     {
-        $tenantId = $ingredient->tenant_id;
+        $managerId = $ingredient->manager_id;
+        $categoryScope = function ($query) use ($managerId) {
+            if ($managerId) {
+                $query->whereNull('manager_id')
+                    ->orWhere('manager_id', $managerId);
+                return;
+            }
+            $query->whereNull('manager_id');
+        };
+        $nameScope = function ($query) use ($managerId) {
+            if ($managerId) {
+                $query->where('manager_id', $managerId);
+                return;
+            }
+            $query->whereNull('manager_id');
+        };
 
         $data = $request->validate([
             'ingredient_category_id' => [
                 'nullable',
-                Rule::exists('ingredient_categories', 'id')->where('tenant_id', $tenantId),
+                Rule::exists('ingredient_categories', 'id')->where($categoryScope),
             ],
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('ingredients', 'name')->where('tenant_id', $tenantId)->ignore($ingredient->id),
+                Rule::unique('ingredients', 'name')->where($nameScope)->ignore($ingredient->id),
             ],
             'image' => ['nullable', 'image', 'max:4096'],
             'is_active' => ['nullable', 'boolean'],

@@ -9,10 +9,10 @@ class CustomerController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
         $perPage = (int) $request->query('per_page', 20);
 
-        $customers = Customer::where('tenant_id', $tenant->id)
+        $customers = Customer::where('manager_id', $manager->id)
             ->orderBy('id', 'desc')
             ->paginate($perPage);
 
@@ -21,16 +21,16 @@ class CustomerController extends BaseApiController
 
     public function show(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $customer = Customer::where('tenant_id', $tenant->id)->findOrFail($id);
+        $customer = Customer::where('manager_id', $manager->id)->findOrFail($id);
 
         return response()->json($customer);
     }
 
     public function store(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -41,7 +41,7 @@ class CustomerController extends BaseApiController
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $data['tenant_id'] = $tenant->id;
+        $data['manager_id'] = $manager->id;
         $data['is_active'] = $data['is_active'] ?? true;
 
         $customer = Customer::create($data);
@@ -51,9 +51,9 @@ class CustomerController extends BaseApiController
 
     public function update(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $customer = Customer::where('tenant_id', $tenant->id)->findOrFail($id);
+        $customer = Customer::where('manager_id', $manager->id)->findOrFail($id);
 
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
@@ -71,9 +71,9 @@ class CustomerController extends BaseApiController
 
     public function destroy(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $customer = Customer::where('tenant_id', $tenant->id)->findOrFail($id);
+        $customer = Customer::where('manager_id', $manager->id)->findOrFail($id);
         $customer->delete();
 
         return response()->json(['message' => 'Deleted']);

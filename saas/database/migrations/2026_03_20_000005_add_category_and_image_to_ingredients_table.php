@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('ingredients', function (Blueprint $table) {
-            $table->foreignId('ingredient_category_id')->nullable()->after('tenant_id')
+            $table->foreignId('ingredient_category_id')->nullable()->after('manager_id')
                 ->constrained('ingredient_categories')->nullOnDelete();
             $table->string('image_path')->nullable()->after('name');
-            $table->index(['tenant_id', 'ingredient_category_id']);
+            $table->index(['manager_id', 'ingredient_category_id']);
         });
     }
 
@@ -25,7 +25,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('ingredients', function (Blueprint $table) {
-            $table->dropIndex(['tenant_id', 'ingredient_category_id']);
+            $table->dropIndex(['manager_id', 'ingredient_category_id']);
             $table->dropConstrainedForeignId('ingredient_category_id');
             $table->dropColumn('image_path');
         });

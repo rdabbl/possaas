@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/auth_controller.dart';
+import 'package:pos_nimirik/core/i18n/i18n.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -89,8 +90,7 @@ class _LoginPageState extends State<LoginPage> {
                                 CircleAvatar(
                                   radius: 24,
                                   backgroundColor: accent,
-                                  child: const Text(
-                                    'POS',
+                                  child: Text(tr('POS'),
                                     style: TextStyle(
                                       fontWeight: FontWeight.w800,
                                       color: Colors.black,
@@ -98,8 +98,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Text(
-                                  'Connexion POS',
+                                Text(tr('Connexion POS'),
                                   style:
                                       Theme.of(context).textTheme.headlineSmall,
                                 ),
@@ -146,8 +145,7 @@ class _LoginPageState extends State<LoginPage> {
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
                                                 children: [
-                                                  Text(
-                                                    'Se reconnecter',
+                                                  Text(tr('Se reconnecter'),
                                                     style: Theme.of(context)
                                                         .textTheme
                                                         .labelMedium,
@@ -165,7 +163,7 @@ class _LoginPageState extends State<LoginPage> {
                                             IconButton(
                                               icon: const Icon(
                                                   Icons.delete_outline),
-                                              tooltip: 'Supprimer le compte',
+                                              tooltip: tr('Supprimer le compte'),
                                               onPressed: identifier.isEmpty
                                                   ? null
                                                   : () =>
@@ -184,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
                             TextFormField(
                               controller: _identifierController,
                               decoration: InputDecoration(
-                                labelText: 'Email ou nom d\'utilisateur',
+                                labelText: tr('Email ou nom d\'utilisateur'),
                                 prefixIcon: const Icon(Icons.person_outline),
                                 filled: true,
                                 fillColor: const Color(0xFFF9FAFB),
@@ -214,7 +212,7 @@ class _LoginPageState extends State<LoginPage> {
                               controller: _passwordController,
                               focusNode: _passwordFocusNode,
                               decoration: InputDecoration(
-                                labelText: 'Mot de passe',
+                                labelText: tr('Mot de passe'),
                                 prefixIcon: const Icon(Icons.lock_outline),
                                 filled: true,
                                 fillColor: const Color(0xFFF9FAFB),
@@ -264,9 +262,8 @@ class _LoginPageState extends State<LoginPage> {
                                     Border.all(color: const Color(0xFFE5E7EB)),
                               ),
                               child: SwitchListTile(
-                                title: const Text('Mode hors ligne'),
-                                subtitle: const Text(
-                                    'Utiliser le cache et différer la synchro'),
+                                title: Text(tr('Mode hors ligne')),
+                                subtitle: Text(tr('Utiliser le cache et différer la synchro')),
                                 value: _offlineToggle,
                                 onChanged: (value) async {
                                   setState(() => _offlineToggle = value);
@@ -294,8 +291,7 @@ class _LoginPageState extends State<LoginPage> {
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2),
                                     )
-                                  : const Text(
-                                      'Se connecter',
+                                  : Text(tr('Se connecter'),
                                       style: TextStyle(
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -336,9 +332,9 @@ class _LoginPageState extends State<LoginPage> {
       _identifierPrefilled = false;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Compte supprime localement'),
-        duration: Duration(seconds: 3),
+      SnackBar(
+        content: Text(tr('Compte supprime localement')),
+        duration: const Duration(seconds: 3),
       ),
     );
   }

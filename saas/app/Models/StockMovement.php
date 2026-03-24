@@ -10,7 +10,7 @@ class StockMovement extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'tenant_id',
+        'manager_id',
         'product_id',
         'store_id',
         'user_id',
@@ -27,9 +27,9 @@ class StockMovement extends Model
         'occurred_at' => 'datetime',
     ];
 
-    public function tenant()
+    public function manager()
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Manager::class);
     }
 
     public function product()

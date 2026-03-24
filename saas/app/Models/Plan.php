@@ -24,8 +24,8 @@ class Plan extends Model
         'is_active' => 'boolean',
     ];
 
-    public function tenants()
+    public function managers()
     {
-        return $this->hasMany(Tenant::class);
+        return $this->hasMany(Manager::class);
     }
 }

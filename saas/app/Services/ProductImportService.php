@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 
 class ProductImportService
 {
-    public function import(UploadedFile $file, int $tenantId): array
+    public function import(UploadedFile $file, int $managerId): array
     {
         $handle = fopen($file->getRealPath(), 'r');
         if (!$handle) {
@@ -63,7 +63,7 @@ class ProductImportService
             $imageUrl = $this->cleanString($data['image_url'] ?? null);
 
             $payload = [
-                'tenant_id' => $tenantId,
+                'manager_id' => $managerId,
                 'name' => $name,
                 'price' => $price,
             ];
@@ -93,10 +93,21 @@ class ProductImportService
                 $categoryId = null;
                 $categoryName = $this->cleanString($data['category'] ?? null);
                 if ($categoryName) {
-                    $category = Category::firstOrCreate(
-                        ['tenant_id' => $tenantId, 'name' => $categoryName],
-                        ['is_active' => true]
-                    );
+                    $category = Category::where('manager_id', $managerId)
+                        ->where('name', $categoryName)
+                        ->first();
+                    if (!$category) {
+                        $category = Category::whereNull('manager_id')
+                            ->where('name', $categoryName)
+                            ->first();
+                    }
+                    if (!$category) {
+                        $category = Category::create([
+                            'manager_id' => $managerId,
+                            'name' => $categoryName,
+                            'is_active' => true,
+                        ]);
+                    }
                     $categoryId = $category->id;
                 }
                 $payload['category_id'] = $categoryId;
@@ -106,14 +117,17 @@ class ProductImportService
                 $taxId = null;
                 $taxName = $this->cleanString($data['tax'] ?? null);
                 if ($taxName) {
-                    $tax = Tax::where('tenant_id', $tenantId)->where('name', $taxName)->first();
+                    $tax = Tax::where('manager_id', $managerId)->where('name', $taxName)->first();
+                    if (!$tax) {
+                        $tax = Tax::whereNull('manager_id')->where('name', $taxName)->first();
+                    }
                     $taxId = $tax?->id;
                 }
                 $payload['tax_id'] = $taxId;
             }
 
             if ($sku) {
-                $product = Product::where('tenant_id', $tenantId)->where('sku', $sku)->first();
+                $product = Product::where('manager_id', $managerId)->where('sku', $sku)->first();
                 if ($product) {
                     $product->update($payload);
                     $updated++;

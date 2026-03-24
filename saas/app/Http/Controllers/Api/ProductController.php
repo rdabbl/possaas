@@ -12,20 +12,20 @@ class ProductController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
         $perPage = (int) $request->query('per_page', 20);
         $storeId = $request->query('store_id');
         $categoryId = $request->query('category_id');
         $search = $request->query('search');
         $store = null;
         if ($storeId) {
-            $store = Store::where('tenant_id', $tenant->id)->find($storeId);
+            $store = Store::where('manager_id', $manager->id)->find($storeId);
             if (!$store) {
                 return response()->json(['message' => 'Store not found.'], 404);
             }
         }
 
-        $query = Product::where('tenant_id', $tenant->id)
+        $query = Product::where('manager_id', $manager->id)
             ->with(['ingredientLinks' => function ($q) {
                 $q->where('ingredients.is_active', true)->orderBy('name');
             }])
@@ -67,17 +67,17 @@ class ProductController extends BaseApiController
 
     public function show(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
         $storeId = $request->query('store_id');
         $store = null;
         if ($storeId) {
-            $store = Store::where('tenant_id', $tenant->id)->find($storeId);
+            $store = Store::where('manager_id', $manager->id)->find($storeId);
             if (!$store) {
                 return response()->json(['message' => 'Store not found.'], 404);
             }
         }
 
-        $query = Product::where('tenant_id', $tenant->id)
+        $query = Product::where('manager_id', $manager->id)
             ->with(['ingredientLinks' => function ($q) {
                 $q->where('ingredients.is_active', true)->orderBy('name');
             }]);
@@ -101,29 +101,29 @@ class ProductController extends BaseApiController
 
     public function store(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'category_id' => [
                 'nullable',
-                Rule::exists('categories', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('categories', 'id')->where('manager_id', $manager->id),
             ],
             'tax_id' => [
                 'nullable',
-                Rule::exists('taxes', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('taxes', 'id')->where('manager_id', $manager->id),
             ],
             'sku' => [
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('products', 'sku')->where('tenant_id', $tenant->id),
+                Rule::unique('products', 'sku')->where('manager_id', $manager->id),
             ],
             'barcode' => [
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('products', 'barcode')->where('tenant_id', $tenant->id),
+                Rule::unique('products', 'barcode')->where('manager_id', $manager->id),
             ],
             'description' => ['nullable', 'string'],
             'price' => ['nullable', 'numeric', 'min:0'],
@@ -132,7 +132,7 @@ class ProductController extends BaseApiController
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $data['tenant_id'] = $tenant->id;
+        $data['manager_id'] = $manager->id;
         $data['uuid'] = (string) Str::uuid();
         $data['price'] = $data['price'] ?? 0;
         $data['cost'] = $data['cost'] ?? 0;
@@ -146,31 +146,31 @@ class ProductController extends BaseApiController
 
     public function update(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $product = Product::where('tenant_id', $tenant->id)->findOrFail($id);
+        $product = Product::where('manager_id', $manager->id)->findOrFail($id);
 
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'category_id' => [
                 'nullable',
-                Rule::exists('categories', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('categories', 'id')->where('manager_id', $manager->id),
             ],
             'tax_id' => [
                 'nullable',
-                Rule::exists('taxes', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('taxes', 'id')->where('manager_id', $manager->id),
             ],
             'sku' => [
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('products', 'sku')->where('tenant_id', $tenant->id)->ignore($product->id),
+                Rule::unique('products', 'sku')->where('manager_id', $manager->id)->ignore($product->id),
             ],
             'barcode' => [
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('products', 'barcode')->where('tenant_id', $tenant->id)->ignore($product->id),
+                Rule::unique('products', 'barcode')->where('manager_id', $manager->id)->ignore($product->id),
             ],
             'description' => ['nullable', 'string'],
             'price' => ['nullable', 'numeric', 'min:0'],
@@ -186,9 +186,9 @@ class ProductController extends BaseApiController
 
     public function destroy(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $product = Product::where('tenant_id', $tenant->id)->findOrFail($id);
+        $product = Product::where('manager_id', $manager->id)->findOrFail($id);
         $product->delete();
 
         return response()->json(['message' => 'Deleted']);

@@ -3,22 +3,22 @@
 @section('content')
     <div class="row" style="justify-content: space-between; align-items: center;">
         <div>
-            <h1>Currencies</h1>
-            <p class="muted">Manage available currencies.</p>
+            <h1>{{ t("Currencies") }}</h1>
+            <p class="muted">{{ t("Manage available currencies.") }}</p>
         </div>
-        <a class="btn" href="{{ route('admin.currencies.create') }}">New Currency</a>
+        <a class="btn" href="{{ route('admin.currencies.create') }}">{{ t("New Currency") }}</a>
     </div>
 
     <div class="card">
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Code</th>
-                    <th>Symbol</th>
-                    <th>Active</th>
-                    <th>Actions</th>
+                    <th>{{ t("ID") }}</th>
+                    <th>{{ t("Name") }}</th>
+                    <th>{{ t("Code") }}</th>
+                    <th>{{ t("Symbol") }}</th>
+                    <th>{{ t("Active") }}</th>
+                    <th>{{ t("Actions") }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -30,7 +30,7 @@
                         <td>{{ $currency->symbol }}</td>
                         <td>{{ $currency->is_active ? 'Yes' : 'No' }}</td>
                         <td>
-                            <a class="btn secondary" href="{{ route('admin.currencies.edit', $currency) }}">Edit</a>
+                            <a class="btn secondary" href="{{ route('admin.currencies.edit', $currency) }}">{{ t("Edit") }}</a>
                         </td>
                     </tr>
                 @endforeach

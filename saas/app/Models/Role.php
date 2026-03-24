@@ -10,7 +10,7 @@ class Role extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'tenant_id',
+        'manager_id',
         'name',
         'description',
         'is_system',
@@ -20,9 +20,9 @@ class Role extends Model
         'is_system' => 'boolean',
     ];
 
-    public function tenant()
+    public function manager()
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Manager::class);
     }
 
     public function permissions()

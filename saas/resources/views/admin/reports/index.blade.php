@@ -1,45 +1,45 @@
 @extends('admin.layout')
 
 @section('content')
-    <h1>Sales Reports</h1>
-    <p class="muted">Daily, monthly, and top products.</p>
+    <h1>{{ t("Sales Reports") }}</h1>
+    <p class="muted">{{ t("Daily, monthly, and top products.") }}</p>
 
     <div class="card" style="margin-bottom: 16px;">
         <form method="GET" action="{{ route('admin.reports.index') }}" class="row">
             <div style="min-width: 220px;">
-                <label>Tenant</label>
-                <select name="tenant_id">
-                    <option value="">All Tenants</option>
-                    @foreach ($tenants as $tenant)
-                        <option value="{{ $tenant->id }}" {{ (string) $tenantId === (string) $tenant->id ? 'selected' : '' }}>
-                            {{ $tenant->name }}
+                <label>{{ t("Manager") }}</label>
+                <select name="manager_id">
+                    <option value="">{{ t("All Managers") }}</option>
+                    @foreach ($managers as $manager)
+                        <option value="{{ $manager->id }}" {{ (string) $managerId === (string) $manager->id ? 'selected' : '' }}>
+                            {{ $manager->name }}
                         </option>
                     @endforeach
                 </select>
             </div>
             <div>
-                <label>From</label>
+                <label>{{ t("From") }}</label>
                 <input type="date" name="from" value="{{ $from }}">
             </div>
             <div>
-                <label>To</label>
+                <label>{{ t("To") }}</label>
                 <input type="date" name="to" value="{{ $to }}">
             </div>
             <div style="align-self: end;">
-                <button class="btn" type="submit">Apply</button>
+                <button class="btn" type="submit">{{ t("Apply") }}</button>
             </div>
         </form>
     </div>
 
     <div class="grid">
         <div class="card">
-            <h3>Daily Sales</h3>
+            <h3>{{ t("Daily Sales") }}</h3>
             <table>
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>Count</th>
-                        <th>Total</th>
+                        <th>{{ t("Date") }}</th>
+                        <th>{{ t("Count") }}</th>
+                        <th>{{ t("Total") }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -50,19 +50,19 @@
                             <td>{{ number_format((float) $row->total, 2) }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="muted">No data</td></tr>
+                        <tr><td colspan="3" class="muted">{{ t("No data") }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
         <div class="card">
-            <h3>Monthly Sales</h3>
+            <h3>{{ t("Monthly Sales") }}</h3>
             <table>
                 <thead>
                     <tr>
-                        <th>Month</th>
-                        <th>Count</th>
-                        <th>Total</th>
+                        <th>{{ t("Month") }}</th>
+                        <th>{{ t("Count") }}</th>
+                        <th>{{ t("Total") }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,7 +73,7 @@
                             <td>{{ number_format((float) $row->total, 2) }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="muted">No data</td></tr>
+                        <tr><td colspan="3" class="muted">{{ t("No data") }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -81,13 +81,13 @@
     </div>
 
     <div class="card" style="margin-top: 16px;">
-        <h3>Top Products</h3>
+        <h3>{{ t("Top Products") }}</h3>
         <table>
             <thead>
                 <tr>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Total</th>
+                    <th>{{ t("Product") }}</th>
+                    <th>{{ t("Qty") }}</th>
+                    <th>{{ t("Total") }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -98,7 +98,7 @@
                         <td>{{ number_format((float) $row->total, 2) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="3" class="muted">No data</td></tr>
+                    <tr><td colspan="3" class="muted">{{ t("No data") }}</td></tr>
                 @endforelse
             </tbody>
         </table>

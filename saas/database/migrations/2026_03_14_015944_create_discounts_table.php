@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('discounts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('manager_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name');
             $table->string('type')->default('percent'); // percent or fixed
             $table->decimal('value', 12, 2)->default(0);
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['tenant_id', 'name']);
+            $table->unique(['manager_id', 'name']);
         });
     }
 

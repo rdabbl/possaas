@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PaymentMethod;
-use App\Models\Tenant;
+use App\Models\Manager;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -12,41 +12,39 @@ class PaymentMethodController extends Controller
 {
     public function index(Request $request)
     {
-        $tenantId = $request->query('tenant_id');
+        $managerId = $request->query('manager_id');
 
-        $query = PaymentMethod::query()->with('tenant')->orderBy('id', 'desc');
-        if ($tenantId) {
-            $query->where('tenant_id', $tenantId);
+        $query = PaymentMethod::query()->with('manager')->orderBy('id', 'desc');
+        if ($managerId) {
+            $query->where('manager_id', $managerId);
         }
 
         $methods = $query->paginate(20)->withQueryString();
-        $tenants = Tenant::orderBy('name')->get();
+        $managers = Manager::orderBy('name')->get();
 
-        return view('admin.payment_methods.index', compact('methods', 'tenants', 'tenantId'));
+        return view('admin.payment_methods.index', compact('methods', 'managers', 'managerId'));
     }
 
     public function create()
     {
-        $tenants = Tenant::orderBy('name')->get();
-
-        return view('admin.payment_methods.create', compact('tenants'));
+        return view('admin.payment_methods.create');
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'tenant_id' => ['required', 'exists:tenants,id'],
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('payment_methods', 'name')->where('tenant_id', $request->input('tenant_id')),
+                Rule::unique('payment_methods', 'name')->whereNull('manager_id'),
             ],
             'type' => ['nullable', Rule::in(['cash', 'card', 'bank', 'other'])],
             'is_active' => ['nullable', 'boolean'],
             'is_default' => ['nullable', 'boolean'],
         ]);
 
+        $data['manager_id'] = null;
         $data['type'] = $data['type'] ?? 'cash';
         $data['is_active'] = $data['is_active'] ?? true;
         $data['is_default'] = $data['is_default'] ?? false;

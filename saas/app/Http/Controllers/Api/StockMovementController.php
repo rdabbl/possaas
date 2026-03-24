@@ -10,10 +10,10 @@ class StockMovementController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
         $perPage = (int) $request->query('per_page', 50);
 
-        $movements = StockMovement::where('tenant_id', $tenant->id)
+        $movements = StockMovement::where('manager_id', $manager->id)
             ->orderBy('id', 'desc')
             ->paginate($perPage);
 
@@ -22,16 +22,16 @@ class StockMovementController extends BaseApiController
 
     public function store(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
         $data = $request->validate([
             'product_id' => [
                 'required',
-                Rule::exists('products', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('products', 'id')->where('manager_id', $manager->id),
             ],
             'store_id' => [
                 'nullable',
-                Rule::exists('stores', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('stores', 'id')->where('manager_id', $manager->id),
             ],
             'user_id' => ['nullable', 'integer'],
             'quantity' => ['required', 'numeric', 'not_in:0'],
@@ -42,7 +42,7 @@ class StockMovementController extends BaseApiController
             'occurred_at' => ['nullable', 'date'],
         ]);
 
-        $data['tenant_id'] = $tenant->id;
+        $data['manager_id'] = $manager->id;
         $data['type'] = $data['type'] ?? 'adjust';
         $data['occurred_at'] = $data['occurred_at'] ?? now();
 

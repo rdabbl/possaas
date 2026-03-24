@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('stores', function (Blueprint $table) {
             $table->foreignId('currency_id')->nullable()->constrained('currencies')->nullOnDelete();
             $table->boolean('is_currency_right')->default(true);
-            $table->index(['tenant_id', 'currency_id']);
+            $table->index(['manager_id', 'currency_id']);
         });
     }
 
@@ -24,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('stores', function (Blueprint $table) {
-            $table->dropIndex(['tenant_id', 'currency_id']);
+            $table->dropIndex(['manager_id', 'currency_id']);
             $table->dropConstrainedForeignId('currency_id');
             $table->dropColumn('is_currency_right');
         });

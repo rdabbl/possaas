@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Currency;
 use App\Models\Store;
-use App\Models\Tenant;
+use App\Models\Manager;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -39,7 +39,7 @@ class AuthController extends BaseApiController
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'tenant_id' => $user->tenant_id,
+                'manager_id' => $user->manager_id,
                 'store_id' => $user->store_id,
                 'is_super_admin' => $user->is_super_admin,
             ],
@@ -50,29 +50,29 @@ class AuthController extends BaseApiController
     {
         $user = $request->user();
         $store = null;
-        $tenant = null;
+        $manager = null;
 
         if ($user->store_id) {
             $store = Store::with('currency')->find($user->store_id);
         }
 
-        if ($user->tenant_id) {
-            $tenant = Tenant::find($user->tenant_id);
+        if ($user->manager_id) {
+            $manager = Manager::find($user->manager_id);
         }
 
         $currency = $store?->currency;
-        if (!$currency && $tenant?->currency) {
-            $currency = Currency::where('code', strtoupper($tenant->currency))
+        if (!$currency && $manager?->currency) {
+            $currency = Currency::where('code', strtoupper($manager->currency))
                 ->where('is_active', true)
                 ->first();
         }
 
         $payload = $user->toArray();
         $payload['currency'] = $currency?->id;
-        $payload['currency_code'] = $currency?->code ?? $tenant?->currency ?? 'USD';
-        $payload['currency_symbol'] = $currency?->symbol ?? ($tenant?->currency ?? 'USD');
+        $payload['currency_code'] = $currency?->code ?? $manager?->currency ?? 'USD';
+        $payload['currency_symbol'] = $currency?->symbol ?? ($manager?->currency ?? 'USD');
         $payload['is_currency_right'] = $store?->is_currency_right ?? true;
-        $payload['company_name'] = $tenant?->name ?? $payload['company_name'] ?? '';
+        $payload['company_name'] = $manager?->name ?? $payload['company_name'] ?? '';
         $payload['address'] = $store?->address ?? $payload['address'] ?? null;
         $payload['email'] = $store?->email ?? $payload['email'] ?? $user->email;
         $payload['phone'] = $store?->phone ?? $payload['phone'] ?? null;

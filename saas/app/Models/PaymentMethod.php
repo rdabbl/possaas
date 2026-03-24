@@ -10,7 +10,7 @@ class PaymentMethod extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'tenant_id',
+        'manager_id',
         'name',
         'type',
         'is_active',
@@ -22,9 +22,9 @@ class PaymentMethod extends Model
         'is_default' => 'boolean',
     ];
 
-    public function tenant()
+    public function manager()
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Manager::class);
     }
 
     public function payments()

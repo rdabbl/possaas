@@ -3,27 +3,27 @@
 @section('content')
     <div class="row" style="justify-content: space-between; align-items: center;">
         <div>
-            <h1>Ingredient Categories</h1>
-            <p class="muted">Manage ingredient categories.</p>
+            <h1>{{ t("Ingredient Categories") }}</h1>
+            <p class="muted">{{ t("Manage ingredient categories.") }}</p>
         </div>
-        <a class="btn" href="{{ route('admin.ingredient_categories.create') }}">New Ingredient Category</a>
+        <a class="btn" href="{{ route('admin.ingredient_categories.create') }}">{{ t("New Ingredient Category") }}</a>
     </div>
 
     <div class="card" style="margin-bottom: 16px;">
         <form method="GET" action="{{ route('admin.ingredient_categories.index') }}" class="row">
             <div style="min-width: 220px;">
-                <label>Filter by Tenant</label>
-                <select name="tenant_id">
-                    <option value="">All Tenants</option>
-                    @foreach ($tenants as $tenant)
-                        <option value="{{ $tenant->id }}" {{ (string) $tenantId === (string) $tenant->id ? 'selected' : '' }}>
-                            {{ $tenant->name }}
+                <label>{{ t("Filter by Manager") }}</label>
+                <select name="manager_id">
+                    <option value="">{{ t("All Managers") }}</option>
+                    @foreach ($managers as $manager)
+                        <option value="{{ $manager->id }}" {{ (string) $managerId === (string) $manager->id ? 'selected' : '' }}>
+                            {{ $manager->name }}
                         </option>
                     @endforeach
                 </select>
             </div>
             <div style="align-self: end;">
-                <button class="btn" type="submit">Filter</button>
+                <button class="btn" type="submit">{{ t("Filter") }}</button>
             </div>
         </form>
     </div>
@@ -32,26 +32,26 @@
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Tenant</th>
-                    <th>Name</th>
-                    <th>Active</th>
-                    <th>Actions</th>
+                    <th>{{ t("ID") }}</th>
+                    <th>{{ t("Scope") }}</th>
+                    <th>{{ t("Name") }}</th>
+                    <th>{{ t("Active") }}</th>
+                    <th>{{ t("Actions") }}</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($categories as $category)
                     <tr>
                         <td>{{ $category->id }}</td>
-                        <td>{{ $category->tenant?->name }}</td>
+                        <td>{{ $category->manager?->name ?? 'Global' }}</td>
                         <td>{{ $category->name }}</td>
                         <td>{{ $category->is_active ? 'Yes' : 'No' }}</td>
                         <td>
-                            <a class="btn secondary" href="{{ route('admin.ingredient_categories.edit', $category) }}">Edit</a>
+                            <a class="btn secondary" href="{{ route('admin.ingredient_categories.edit', $category) }}">{{ t("Edit") }}</a>
                             <form method="POST" action="{{ route('admin.ingredient_categories.destroy', $category) }}" style="display:inline-block" onsubmit="return confirm('Delete this ingredient category?');">
                                 @csrf
                                 @method('DELETE')
-                                <button class="btn secondary" type="submit">Delete</button>
+                                <button class="btn secondary" type="submit">{{ t("Delete") }}</button>
                             </form>
                         </td>
                     </tr>

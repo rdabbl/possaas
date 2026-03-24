@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/models/product.dart';
 import '../../../../core/models/product_category.dart';
+import '../../../../core/i18n/translation_controller.dart';
 import '../../state/pos_controller.dart';
+import 'package:pos_nimirik/core/i18n/i18n.dart';
 
 String _formatCurrency(double value, String symbol, bool symbolOnRight) {
   final formatted = NumberFormat.currency(
@@ -19,32 +21,23 @@ String _formatCurrency(double value, String symbol, bool symbolOnRight) {
 }
 
 class _KioskStrings {
-  const _KioskStrings({required this.isFrench});
+  const _KioskStrings();
 
-  final bool isFrench;
-
-  String get backToPos => isFrench ? 'Retour POS' : 'Back to POS';
-  String get kioskMenu => isFrench ? 'Menu borne' : 'Kiosk Menu';
-  String get all => isFrench ? 'Tous' : 'All';
-  String get noProducts =>
-      isFrench ? 'Aucun produit disponible.' : 'No products available.';
-  String get selectProduct =>
-      isFrench ? 'Sélectionnez un produit' : 'Select a product';
-  String get extras => isFrench ? 'Suppléments' : 'Extras';
-  String get notes => isFrench ? 'Remarques' : 'Notes';
+  String get backToPos => tr('Back to POS');
+  String get kioskMenu => tr('Kiosk Menu');
+  String get all => tr('All');
+  String get noProducts => tr('No products available.');
+  String get selectProduct => tr('Select a product');
+  String get extras => tr('Extras');
+  String get notes => tr('Notes');
   String cartSummary(int count) {
-    if (isFrench) {
-      return 'Panier : $count article${count > 1 ? 's' : ''}';
-    }
-    return 'Cart: $count item${count == 1 ? '' : 's'}';
+    return '${tr('Cart')}: $count ${tr('item(s)')}';
   }
 
-  String get addToCart =>
-      isFrench ? 'Ajouter au panier' : 'Add to cart';
-  String get checkout => isFrench ? 'Payer' : 'Checkout';
-  String get order => isFrench ? 'Commander' : 'Place order';
-  String get addRequired =>
-      isFrench ? 'Ajoutez un produit avant de continuer.' : 'Add a product first.';
+  String get addToCart => tr('Add to cart');
+  String get checkout => tr('Checkout');
+  String get order => tr('Place order');
+  String get addRequired => tr('Add a product first.');
 }
 
 class KioskPage extends StatefulWidget {
@@ -56,9 +49,7 @@ class KioskPage extends StatefulWidget {
 
 class _KioskPageState extends State<KioskPage> {
   Product? _selectedProduct;
-  bool _isFrench = false;
-
-  _KioskStrings get _strings => _KioskStrings(isFrench: _isFrench);
+  _KioskStrings get _strings => const _KioskStrings();
 
   Product? _resolveSelected(List<Product> products) {
     if (products.isEmpty) {
@@ -77,6 +68,8 @@ class _KioskPageState extends State<KioskPage> {
   Widget build(BuildContext context) {
     return Consumer<PosController>(
       builder: (context, pos, _) {
+        final i18n = context.watch<TranslationController>();
+        final isFrench = i18n.locale.startsWith('fr');
         final categories = pos.categories;
         final products = pos.products;
         final selectedProduct = _resolveSelected(products);
@@ -192,17 +185,21 @@ class _KioskPageState extends State<KioskPage> {
                           ),
                           const Spacer(),
                           ToggleButtons(
-                            isSelected: [_isFrench == false, _isFrench == true],
-                            onPressed: (index) =>
-                                setState(() => _isFrench = index == 1),
+                            isSelected: [!isFrench, isFrench],
+                            onPressed: (index) {
+                              final locale = index == 1 ? 'fr' : 'en';
+                              context.read<TranslationController>().setLocale(
+                                locale,
+                              );
+                            },
                             borderRadius: BorderRadius.circular(12),
                             constraints: const BoxConstraints(
                               minWidth: 48,
                               minHeight: 36,
                             ),
-                            children: const [
-                              Text('EN'),
-                              Text('FR'),
+                            children: [
+                              Text(tr('EN')),
+                              Text(tr('FR')),
                             ],
                           ),
                         ],
@@ -324,9 +321,9 @@ class _KioskMenuPanel extends StatelessWidget {
                     color: const Color(0xFFFFF4D6),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      'M',
+                      tr('M'),
                       style: TextStyle(
                         color: Color(0xFFE8A700),
                         fontSize: 28,

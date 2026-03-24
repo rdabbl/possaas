@@ -10,10 +10,10 @@ class StoreController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
         $stores = Store::with('currency')
-            ->where('tenant_id', $tenant->id)
+            ->where('manager_id', $manager->id)
             ->orderBy('id', 'desc')
             ->get();
 
@@ -22,13 +22,13 @@ class StoreController extends BaseApiController
 
     public function store(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        if ($tenant->max_stores !== null) {
-            $count = Store::where('tenant_id', $tenant->id)->count();
-            if ($count >= $tenant->max_stores) {
+        if ($manager->max_stores !== null) {
+            $count = Store::where('manager_id', $manager->id)->count();
+            if ($count >= $manager->max_stores) {
                 return response()->json([
-                    'message' => 'Store limit reached for this tenant.',
+                    'message' => 'Store limit reached for this manager.',
                 ], 422);
             }
         }
@@ -40,7 +40,7 @@ class StoreController extends BaseApiController
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('stores', 'code')->where('tenant_id', $tenant->id),
+                Rule::unique('stores', 'code')->where('manager_id', $manager->id),
             ],
             'phone' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -50,7 +50,7 @@ class StoreController extends BaseApiController
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $data['tenant_id'] = $tenant->id;
+        $data['manager_id'] = $manager->id;
         $data['stock_enabled'] = $data['stock_enabled'] ?? true;
         $data['is_currency_right'] = $data['is_currency_right'] ?? true;
         $data['is_active'] = $data['is_active'] ?? true;
@@ -62,9 +62,9 @@ class StoreController extends BaseApiController
 
     public function update(Request $request, Store $store)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        if ($store->tenant_id !== $tenant->id) {
+        if ($store->manager_id !== $manager->id) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 

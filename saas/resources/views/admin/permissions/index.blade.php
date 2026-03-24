@@ -3,20 +3,20 @@
 @section('content')
     <div class="row" style="justify-content: space-between; align-items: center;">
         <div>
-            <h1>Permissions</h1>
-            <p class="muted">Manage system permissions.</p>
+            <h1>{{ t("Permissions") }}</h1>
+            <p class="muted">{{ t("Manage system permissions.") }}</p>
         </div>
-        <a class="btn" href="{{ route('admin.permissions.create') }}">New Permission</a>
+        <a class="btn" href="{{ route('admin.permissions.create') }}">{{ t("New Permission") }}</a>
     </div>
 
     <div class="card">
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Actions</th>
+                    <th>{{ t("ID") }}</th>
+                    <th>{{ t("Name") }}</th>
+                    <th>{{ t("Description") }}</th>
+                    <th>{{ t("Actions") }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -26,7 +26,7 @@
                         <td>{{ $permission->name }}</td>
                         <td>{{ $permission->description }}</td>
                         <td>
-                            <a class="btn secondary" href="{{ route('admin.permissions.edit', $permission) }}">Edit</a>
+                            <a class="btn secondary" href="{{ route('admin.permissions.edit', $permission) }}">{{ t("Edit") }}</a>
                         </td>
                     </tr>
                 @endforeach

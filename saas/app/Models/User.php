@@ -21,7 +21,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'tenant_id',
+        'manager_id',
         'store_id',
         'name',
         'email',
@@ -55,9 +55,9 @@ class User extends Authenticatable
         ];
     }
 
-    public function tenant()
+    public function manager()
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Manager::class);
     }
 
     public function store()

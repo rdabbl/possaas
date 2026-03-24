@@ -10,7 +10,7 @@ class Ingredient extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'tenant_id',
+        'manager_id',
         'ingredient_category_id',
         'name',
         'image_path',
@@ -22,9 +22,9 @@ class Ingredient extends Model
         'ingredient_category_id' => 'integer',
     ];
 
-    public function tenant()
+    public function manager()
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Manager::class);
     }
 
     public function category()

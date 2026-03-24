@@ -20,10 +20,10 @@ class SaleController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
         $perPage = (int) $request->query('per_page', 20);
 
-        $sales = Sale::where('tenant_id', $tenant->id)
+        $sales = Sale::where('manager_id', $manager->id)
             ->with('payments')
             ->orderBy('id', 'desc')
             ->paginate($perPage);
@@ -33,9 +33,9 @@ class SaleController extends BaseApiController
 
     public function show(Request $request, int $id)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
-        $sale = Sale::where('tenant_id', $tenant->id)
+        $sale = Sale::where('manager_id', $manager->id)
             ->with(['items', 'payments'])
             ->findOrFail($id);
 
@@ -44,21 +44,21 @@ class SaleController extends BaseApiController
 
     public function store(Request $request)
     {
-        $tenant = $this->tenantOrFail($request);
+        $manager = $this->managerOrFail($request);
 
         $data = $request->validate([
             'store_id' => [
                 'required',
-                Rule::exists('stores', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('stores', 'id')->where('manager_id', $manager->id),
             ],
             'device_id' => [
                 'nullable',
-                Rule::exists('devices', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('devices', 'id')->where('manager_id', $manager->id),
             ],
             'user_id' => ['nullable', 'integer'],
             'customer_id' => [
                 'nullable',
-                Rule::exists('customers', 'id')->where('tenant_id', $tenant->id),
+                Rule::exists('customers', 'id')->where('manager_id', $manager->id),
             ],
             'currency' => ['nullable', 'string', 'size:3'],
             'note' => ['nullable', 'string'],
@@ -84,10 +84,10 @@ class SaleController extends BaseApiController
         ]);
 
         $store = Store::with('currency')
-            ->where('tenant_id', $tenant->id)
+            ->where('manager_id', $manager->id)
             ->findOrFail($data['store_id']);
 
-        return DB::transaction(function () use ($tenant, $data, $store) {
+        return DB::transaction(function () use ($manager, $data, $store) {
             $saleItems = [];
             $subtotal = 0.0;
             $discountTotal = 0.0;
@@ -98,11 +98,11 @@ class SaleController extends BaseApiController
                 $variant = null;
 
                 if (!empty($item['product_id'])) {
-                    $product = Product::where('tenant_id', $tenant->id)->findOrFail($item['product_id']);
+                    $product = Product::where('manager_id', $manager->id)->findOrFail($item['product_id']);
                 }
 
                 if (!empty($item['product_variant_id'])) {
-                    $variant = ProductVariant::where('tenant_id', $tenant->id)->findOrFail($item['product_variant_id']);
+                    $variant = ProductVariant::where('manager_id', $manager->id)->findOrFail($item['product_variant_id']);
                     if ($product && $variant->product_id !== $product->id) {
                         throw new HttpResponseException(
                             response()->json(['message' => 'Product variant does not belong to product.'], 422)
@@ -152,10 +152,10 @@ class SaleController extends BaseApiController
 
             $grandTotal = $subtotal - $discountTotal + $taxTotal;
 
-            $currencyCode = $store->currency?->code ?? $tenant->currency ?? 'USD';
+            $currencyCode = $store->currency?->code ?? $manager->currency ?? 'USD';
 
             $sale = Sale::create([
-                'tenant_id' => $tenant->id,
+                'manager_id' => $manager->id,
                 'store_id' => $store->id,
                 'device_id' => $data['device_id'] ?? null,
                 'user_id' => $data['user_id'] ?? null,
@@ -176,10 +176,10 @@ class SaleController extends BaseApiController
                 SaleItem::create($saleItem);
 
                 if ($store->stock_enabled && !empty($saleItem['product_id'])) {
-                    $product = Product::where('tenant_id', $tenant->id)->find($saleItem['product_id']);
+                    $product = Product::where('manager_id', $manager->id)->find($saleItem['product_id']);
                     if ($product && $product->track_stock) {
                         StockMovement::create([
-                            'tenant_id' => $tenant->id,
+                            'manager_id' => $manager->id,
                             'product_id' => $product->id,
                             'store_id' => $store->id,
                             'user_id' => $data['user_id'] ?? null,
@@ -197,7 +197,10 @@ class SaleController extends BaseApiController
             $paidTotal = 0.0;
             if (!empty($data['payments'])) {
                 foreach ($data['payments'] as $paymentData) {
-                    $method = PaymentMethod::where('tenant_id', $tenant->id)->findOrFail($paymentData['payment_method_id']);
+                    $method = PaymentMethod::where(function ($query) use ($manager) {
+                        $query->whereNull('manager_id')
+                            ->orWhere('manager_id', $manager->id);
+                    })->findOrFail($paymentData['payment_method_id']);
                     $paidTotal += (float) $paymentData['amount'];
 
                     Payment::create([

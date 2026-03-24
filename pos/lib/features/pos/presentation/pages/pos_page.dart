@@ -23,6 +23,7 @@ import '../../state/pos_controller.dart';
 import '../../state/printer_controller.dart';
 import 'kiosk_page.dart';
 import '../widgets/product_grid.dart';
+import 'package:pos_nimirik/core/i18n/i18n.dart';
 
 String _formatCurrency(double value, String symbol, bool symbolOnRight) {
   final formatted = NumberFormat.currency(
@@ -62,19 +63,19 @@ const List<int> _historyPresetHours = [
 String _historyLabelForHours(int hours) {
   switch (hours) {
     case 12:
-      return '12h';
+      return tr('12h');
     case 24:
-      return '24h';
+      return tr('24h');
     case 48:
-      return '48h';
+      return tr('48h');
     case 168:
-      return '7j';
+      return tr('7j');
     case 360:
-      return '15j';
+      return tr('15j');
     case 720:
-      return '1 mois';
+      return tr('1 mois');
     default:
-      return '${hours}h';
+      return '$hours${tr('h')}';
   }
 }
 
@@ -132,7 +133,7 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
     if (!ok) {
       pos.setOfflineMode(true);
       _showReconnectSnack(
-        'Impossible de se reconnecter. Mode hors ligne conserve.',
+        tr('Impossible de se reconnecter. Mode hors ligne conserve.'),
       );
       return;
     }
@@ -145,17 +146,20 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
         pos.setOfflineMode(true);
-        _showReconnectSnack('Session expiree. Utilisation du mode hors ligne.');
+        _showReconnectSnack(
+          tr('Session expiree. Utilisation du mode hors ligne.'),
+        );
         return;
       }
       pos.setOfflineMode(true);
       _showReconnectSnack(
-        'Rafraichissement impossible (${e.message}). Mode hors ligne conserve.',
+        '${tr('Rafraichissement impossible')} (${e.message}). '
+        '${tr('Mode hors ligne conserve.')}',
       );
     } catch (_) {
       pos.setOfflineMode(true);
       _showReconnectSnack(
-        'Rafraichissement impossible. Mode hors ligne conserve.',
+        tr('Rafraichissement impossible. Mode hors ligne conserve.'),
       );
     }
   }
@@ -426,7 +430,7 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
             children: [
               ListTile(
                 leading: const Icon(Icons.refresh),
-                title: const Text('Actualiser les produits'),
+                title: Text(tr('Actualiser les produits')),
                 onTap: () async {
                   Navigator.of(context).pop();
                   await controller.refreshProducts(skipSyncOffline: true);
@@ -434,7 +438,7 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
               ),
               ListTile(
                 leading: const Icon(Icons.history),
-                title: const Text('Historique des ventes'),
+                title: Text(tr('Historique des ventes')),
                 onTap: () {
                   Navigator.of(context).pop();
                   _openOrderHistory();
@@ -442,7 +446,7 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
               ),
               ListTile(
                 leading: const Icon(Icons.palette_outlined),
-                title: const Text('Apparence'),
+                title: Text(tr('Apparence')),
                 onTap: () {
                   Navigator.of(context).pop();
                   _openAppearanceSettings();
@@ -450,7 +454,7 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
               ),
               ListTile(
                 leading: const Icon(Icons.logout),
-                title: const Text('Se déconnecter'),
+                title: Text(tr('Se déconnecter')),
                 onTap: () async {
                   Navigator.of(context).pop();
                   await auth.logout();
@@ -632,16 +636,19 @@ class _CatalogPanel extends StatelessWidget {
     final storeName =
         controller.selectedWarehouse?.name ??
         controller.companyName ??
-        'Store';
+        tr('Store');
     final categories = <ProductCategory>[
-      ProductCategory(id: 0, name: 'All'),
+      ProductCategory(id: 0, name: tr('All')),
       ...controller.categories,
     ];
     final selectedCategoryId = controller.selectedCategoryId ?? 0;
     final userLabel = (context.read<AuthController>().userLabel ?? '').trim();
-    final displayName = userLabel.isEmpty ? 'User' : userLabel;
+    final defaultUserLabel = tr('User');
+    final displayName = userLabel.isEmpty ? defaultUserLabel : userLabel;
     final initials = userLabel.trim().isEmpty
-        ? 'U'
+        ? (defaultUserLabel.isNotEmpty
+            ? defaultUserLabel[0].toUpperCase()
+            : 'U')
         : userLabel
             .trim()
             .split(' ')
@@ -655,7 +662,7 @@ class _CatalogPanel extends StatelessWidget {
         controller: searchController,
         onChanged: controller.searchProducts,
         decoration: InputDecoration(
-          hintText: 'Search',
+          hintText: tr('Search'),
           prefixIcon: const Icon(Icons.search),
           suffixIcon: searchController.text.isEmpty
               ? null
@@ -819,7 +826,7 @@ class _CatalogPanel extends StatelessWidget {
             ],
             const SizedBox(height: 12),
             Text(
-              'Store • $storeName',
+              '${tr('Store')} • $storeName',
               style: const TextStyle(
                 fontSize: 12,
                 color: Color(0xFF6B7280),
@@ -851,8 +858,7 @@ class _CatalogPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Popular Dish',
+            Text(tr('Popular Dish'),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -894,7 +900,10 @@ class _HeroBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initials = title.trim().isEmpty ? 'S' : title.trim()[0].toUpperCase();
+    final defaultTitle = tr('Store');
+    final initials = title.trim().isEmpty
+        ? (defaultTitle.isNotEmpty ? defaultTitle[0].toUpperCase() : 'S')
+        : title.trim()[0].toUpperCase();
     return Container(
       height: 110,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -935,18 +944,18 @@ class _HeroBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Fresh & healthy food recipe',
+                Text(
+                  tr('Fresh & healthy food recipe'),
                   style: TextStyle(color: Color(0xFFE5E7EB), fontSize: 12),
                 ),
               ],
             ),
           ),
-          _MetricTile(label: 'Total item', value: totalItems),
+          _MetricTile(label: tr('Total item'), value: totalItems),
           const SizedBox(width: 12),
-          _MetricTile(label: 'Category', value: categories),
+          _MetricTile(label: tr('Category'), value: categories),
           const SizedBox(width: 12),
-          _MetricTile(label: 'Outlet', value: outlets),
+          _MetricTile(label: tr('Outlet'), value: outlets),
         ],
       ),
     );
@@ -1097,7 +1106,7 @@ class _TopActionButtonsState extends State<_TopActionButtons> {
 
   Future<void> _toggleFullScreen() async {
     if (!_isDesktop) {
-      _showSnack('Le plein écran est disponible uniquement sur desktop.');
+      _showSnack(tr('Le plein écran est disponible uniquement sur desktop.'));
       return;
     }
     final nextValue = !_isFullScreen;
@@ -1194,64 +1203,65 @@ class _TopActionButtonsState extends State<_TopActionButtons> {
     final actions = [
       _ActionMenuItem(
         icon: Icons.refresh,
-        label: 'Actualiser',
+        label: tr('Actualiser'),
         onTap: widget.onRefresh,
       ),
       _ActionMenuItem(
         icon: Icons.history,
-        label: 'Historique',
+        label: tr('Historique'),
         onTap: _openOrderHistory,
       ),
       _ActionMenuItem(
         icon: Icons.calculate_outlined,
-        label: 'Calculatrice',
+        label: tr('Calculatrice'),
         onTap: _openCalculator,
       ),
       _ActionMenuItem(
         icon: _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-        label: _isFullScreen ? 'Quitter plein écran' : 'Plein écran',
+        label:
+            _isFullScreen ? tr('Quitter plein écran') : tr('Plein écran'),
         onTap: _toggleFullScreen,
       ),
       _ActionMenuItem(
         icon: Icons.attach_money,
-        label: 'Cash en caisse',
+        label: tr('Cash en caisse'),
         onTap: widget.onCashInHand,
       ),
       _ActionMenuItem(
         icon: Icons.tune,
-        label: 'Apparence',
+        label: tr('Apparence'),
         onTap: _openAppearanceSettings,
       ),
       _ActionMenuItem(
         icon: Icons.sync,
-        label: 'Synchroniser',
+        label: tr('Synchroniser'),
         onTap: widget.onSync,
       ),
       _ActionMenuItem(
         icon: Icons.print_outlined,
-        label: 'Imprimante',
+        label: tr('Imprimante'),
         onTap: _openPrinterSettings,
       ),
       _ActionMenuItem(
         icon: Icons.settings_applications_outlined,
-        label: 'Config POS',
+        label: tr('Config POS'),
         onTap: _openPosConfiguration,
       ),
       _ActionMenuItem(
         icon: Icons.store_mall_directory_outlined,
-        label: 'Interface borne',
+        label: tr('Interface borne'),
         onTap: _openKioskPage,
       ),
       _ActionMenuItem(
         icon: widget.offlineMode ? Icons.cloud_off : Icons.cloud_done,
-        label: widget.offlineMode ? 'Mode hors ligne' : 'Connecté',
+        label: widget.offlineMode ? tr('Mode hors ligne') : tr('Connecté'),
         onTap: widget.offlineMode ? widget.onReconnect : null,
         color: widget.offlineMode ? Colors.orange : const Color(0xFF22C55E),
         background: widget.offlineMode ? accent : const Color(0xFFF3F4F6),
       ),
       _ActionMenuItem(
         icon: Icons.logout,
-        label: 'Déconnexion',
+        label: tr('Déconnexion'),
         onTap: widget.onLogout,
       ),
     ];
@@ -1260,7 +1270,7 @@ class _TopActionButtonsState extends State<_TopActionButtons> {
       alignment: Alignment.centerRight,
       child: _ActionIcon(
         icon: Icons.menu,
-        tooltip: 'Menu actions',
+        tooltip: tr('Menu actions'),
         onTap: () => _showActionMenu(context, actions),
       ),
     );
@@ -1348,8 +1358,7 @@ Future<void> _showActionMenu(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Actions',
+              Text(tr('Actions'),
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -1454,16 +1463,16 @@ class _CartPanel extends StatelessWidget {
       final shouldClear = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Vider le panier'),
-          content: const Text('Supprimer tous les articles du panier ?'),
+          title: Text(tr('Vider le panier')),
+          content: Text(tr('Supprimer tous les articles du panier ?')),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Annuler'),
+              child: Text(tr('Annuler')),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Vider'),
+              child: Text(tr('Vider')),
             ),
           ],
         ),
@@ -1512,8 +1521,7 @@ class _CartPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text(
-                'My cart',
+              Text(tr('My cart'),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -1522,7 +1530,7 @@ class _CartPanel extends StatelessWidget {
               ),
               const Spacer(),
               IconButton(
-                tooltip: 'Vider le panier',
+                tooltip: tr('Vider le panier'),
                 onPressed: cartItems.isEmpty ? null : confirmReset,
                 icon: const Icon(Icons.close),
               ),
@@ -1531,9 +1539,9 @@ class _CartPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Expanded(
             child: cartItems.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
-                      'Votre panier est vide',
+                      tr('Votre panier est vide'),
                       style: TextStyle(color: Color(0xFF9CA3AF)),
                     ),
                   )
@@ -1580,14 +1588,14 @@ class _CartTableHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          Expanded(flex: 6, child: Text('PRODUCT', style: style)),
+          Expanded(flex: 6, child: Text(tr('PRODUCT'), style: style)),
           Expanded(
             flex: 3,
-            child: Text('QTY', style: style, textAlign: TextAlign.center),
+            child: Text(tr('QTY'), style: style, textAlign: TextAlign.center),
           ),
           Expanded(
             flex: 3,
-            child: Text('SUB TOTAL', style: style, textAlign: TextAlign.end),
+            child: Text(tr('SUB TOTAL'), style: style, textAlign: TextAlign.end),
           ),
         ],
       ),
@@ -1637,7 +1645,7 @@ class _CartRow extends StatelessWidget {
             child: Row(
               children: [
                 IconButton(
-                  tooltip: 'Supprimer',
+                  tooltip: tr('Supprimer'),
                   onPressed: () => controller.removeFromCart(item.id),
                   icon: Icon(Icons.delete_outline, size: 18, color: iconColor),
                 ),
@@ -1780,7 +1788,7 @@ class _CartItemTile extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Supprimer',
+            tooltip: tr('Supprimer'),
             onPressed: () => controller.removeFromCart(item.id),
             icon: const Icon(Icons.delete_outline, size: 18),
           ),
@@ -1810,7 +1818,7 @@ class _CartSummaryCard extends StatelessWidget {
     final symbol = controller.currencySymbol;
     final symbolRight = controller.isCurrencySymbolRight;
     final isPercent = controller.discountMode == DiscountMode.percentage;
-    final discountLabel = isPercent ? 'Discount' : 'Discount';
+    final discountLabel = tr('Discount');
 
     double parseInput(String value) {
       final sanitized = value.replaceAll(',', '.');
@@ -1900,8 +1908,8 @@ class _CartSummaryCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text(
-                'Cart summary',
+              Text(
+                tr('Cart summary'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -1910,14 +1918,14 @@ class _CartSummaryCard extends StatelessWidget {
               ),
               const Spacer(),
               IconButton(
-                tooltip: 'Edit',
+                tooltip: tr('Edit'),
                 onPressed: onEdit,
                 icon: const Icon(Icons.edit, size: 18),
               ),
             ],
           ),
           summaryRow(
-            'Subtotal',
+            tr('Subtotal'),
             _formatCurrency(controller.subTotal, symbol, symbolRight),
           ),
           const SizedBox(height: 6),
@@ -1940,9 +1948,9 @@ class _CartSummaryCard extends StatelessWidget {
                 selectedColor: Colors.white,
                 color: const Color(0xFF6B7280),
                 fillColor: const Color(0xFFF7C045),
-                children: const [
-                  Text('Amt', style: TextStyle(fontSize: 11)),
-                  Text('%', style: TextStyle(fontSize: 12)),
+                children: [
+                  Text(tr('Amt'), style: TextStyle(fontSize: 11)),
+                  Text(tr('%'), style: TextStyle(fontSize: 12)),
                 ],
               ),
               const SizedBox(width: 8),
@@ -1979,15 +1987,15 @@ class _CartSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           editableRow(
-            label: 'Tax (%)',
+            label: tr('Tax (%)'),
             controller: taxController,
             onChanged: (value) =>
                 this.controller.updateTaxRate(parseInput(value)),
-            suffixText: '%',
+            suffixText: tr('%'),
           ),
           const SizedBox(height: 6),
           editableRow(
-            label: 'Shipping',
+            label: tr('Shipping'),
             controller: shippingController,
             onChanged: (value) =>
                 this.controller.updateShipping(parseInput(value)),
@@ -1995,7 +2003,7 @@ class _CartSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           summaryRow(
-            'Final',
+            tr('Final'),
             _formatCurrency(controller.grandTotal, symbol, symbolRight),
             labelColor: const Color(0xFF111827),
             valueColor: const Color(0xFFF59E0B),
@@ -2053,7 +2061,7 @@ class _CartSummary extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Sous-total', style: theme.textTheme.bodySmall),
+                  Text(tr('Sous-total'), style: theme.textTheme.bodySmall),
                   Text(
                     format(controller.subTotal),
                     style: theme.textTheme.bodySmall,
@@ -2063,7 +2071,7 @@ class _CartSummary extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('TVA', style: theme.textTheme.bodySmall),
+                  Text(tr('TVA'), style: theme.textTheme.bodySmall),
                   Text(
                     format(controller.taxTotal),
                     style: theme.textTheme.bodySmall,
@@ -2073,7 +2081,7 @@ class _CartSummary extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Livraison', style: theme.textTheme.bodySmall),
+                  Text(tr('Livraison'), style: theme.textTheme.bodySmall),
                   Text(
                     format(controller.shipping),
                     style: theme.textTheme.bodySmall,
@@ -2084,8 +2092,7 @@ class _CartSummary extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Total',
+                  Text(tr('Total'),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -2102,8 +2109,8 @@ class _CartSummary extends StatelessWidget {
           );
 
           final discountLabel = controller.discountMode == DiscountMode.percentage
-              ? 'Remise (%)'
-              : 'Remise (${controller.currencySymbol})';
+              ? tr('Remise (%)')
+              : '${tr('Remise')} (${controller.currencySymbol})';
 
           Widget buildTextField({
             required String label,
@@ -2150,14 +2157,14 @@ class _CartSummary extends StatelessWidget {
                   padding: EdgeInsets.only(bottom: spacing),
                   child: SegmentedButton<DiscountMode>(
                     showSelectedIcon: false,
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: DiscountMode.fixed,
-                        label: Text('Montant'),
+                        label: Text(tr('Montant')),
                       ),
                       ButtonSegment(
                         value: DiscountMode.percentage,
-                        label: Text('Pourcentage'),
+                        label: Text(tr('Pourcentage')),
                       ),
                     ],
                     selected: {this.controller.discountMode},
@@ -2186,8 +2193,8 @@ class _CartSummary extends StatelessWidget {
                           value == 0
                               ? controller.discountMode ==
                                       DiscountMode.percentage
-                                  ? 'Aucun pourcentage'
-                                  : 'Aucune remise'
+                                  ? tr('Aucun pourcentage')
+                                  : tr('Aucune remise')
                               : controller.discountMode ==
                                       DiscountMode.percentage
                                   ? '${value.toStringAsFixed(0)} %'
@@ -2202,13 +2209,13 @@ class _CartSummary extends StatelessWidget {
                   ),
                 ),
                 buildTextField(
-                  label: 'TVA (%)',
+                  label: tr('TVA (%)'),
                   controller: taxController,
                   onChanged: (value) =>
                       this.controller.updateTaxRate(parseInput(value)),
                 ),
                 buildTextField(
-                  label: 'Livraison (${controller.currencySymbol})',
+                  label: '${tr('Livraison')} (${controller.currencySymbol})',
                   controller: shippingController,
                   onChanged: (value) =>
                       this.controller.updateShipping(parseInput(value)),
@@ -2216,7 +2223,7 @@ class _CartSummary extends StatelessWidget {
                 labeledField(
                   TextField(
                     controller: notesController,
-                    decoration: _inputDecoration(context, 'Notes'),
+                    decoration: _inputDecoration(context, tr('Notes')),
                     minLines: 2,
                     maxLines: 4,
                   ),
@@ -2290,7 +2297,7 @@ class _CartActions extends StatelessWidget {
           ? null
           : () async {
               if (controller.cartItems.isEmpty) {
-                showError('Ajoutez des articles avant de payer.');
+                showError(tr('Ajoutez des articles avant de payer.'));
                 return;
               }
 
@@ -2319,12 +2326,14 @@ class _CartActions extends StatelessWidget {
                 (method) => method.id == result.paymentTypeId,
                 orElse: () => defaultMethod,
               );
-              final paymentStatusLabel = _paymentStatuses
-                  .firstWhere(
-                    (status) => status.id == result.paymentStatusId,
-                    orElse: () => _paymentStatuses.first,
-                  )
-                  .label;
+              final paymentStatusLabel = tr(
+                _paymentStatuses
+                    .firstWhere(
+                      (status) => status.id == result.paymentStatusId,
+                      orElse: () => _paymentStatuses.first,
+                    )
+                    .label,
+              );
 
               final cartSnapshot = List<CartItem>.from(controller.cartItems);
               final subTotal = controller.subTotal;
@@ -2375,21 +2384,21 @@ class _CartActions extends StatelessWidget {
               ),
             )
           : const Icon(Icons.payments_outlined),
-      label: const Text('PAYER'),
+      label: Text(tr('PAYER')),
     );
 
     final resetButton = OutlinedButton.icon(
       style: outlineStyle(resetColor),
       onPressed: controller.resetCart,
       icon: const Icon(Icons.restart_alt),
-      label: const Text('Reset'),
+      label: Text(tr('Reset')),
     );
 
     final holdButton = OutlinedButton.icon(
       style: outlineStyle(holdColor),
-      onPressed: () => showError('Hold non disponible pour le moment.'),
+      onPressed: () => showError(tr('Hold non disponible pour le moment.')),
       icon: const Icon(Icons.pause_circle_outline),
-      label: const Text('Hold'),
+      label: Text(tr('Hold')),
     );
 
     final buttonsList = <Widget>[
@@ -2435,14 +2444,14 @@ class _CartActions extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    'Total : ${_formatCurrency(controller.grandTotal, controller.currencySymbol, controller.isCurrencySymbolRight)}',
+                    '${tr('Total')}: ${_formatCurrency(controller.grandTotal, controller.currencySymbol, controller.isCurrencySymbolRight)}',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: const Color(0xFF111827),
                     ),
                   ),
                   Text(
-                    'QTY : ${controller.totalQuantity}',
+                    '${tr('QTY')}: ${controller.totalQuantity}',
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF6B7280),
@@ -2492,7 +2501,7 @@ class _HistorySection extends StatelessWidget {
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const Text('Période:'),
+              Text(tr('Période:')),
               ..._historyPresetHours.map((h) {
                 final selected = controller.historyHours == h;
                 return ChoiceChip(
@@ -2510,15 +2519,15 @@ class _HistorySection extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Text('Utilisateur:'),
+              Text(tr('Utilisateur:')),
               const SizedBox(width: 8),
               DropdownButton<int?>(
                 value: controller.historyUserIdFilter,
-                hint: const Text('Tous'),
+                hint: Text(tr('Tous')),
                 items: [
-                  const DropdownMenuItem(
+                  DropdownMenuItem(
                     value: null,
-                    child: Text('Tous'),
+                    child: Text(tr('Tous')),
                   ),
                   ...combinedUsers
                       .map((u) => DropdownMenuItem(value: u.id, child: Text(u.label)))
@@ -2548,8 +2557,9 @@ class _HistorySection extends StatelessWidget {
                 : const Icon(Icons.send),
             label: Text(
               controller.offlineSales.isEmpty
-                  ? 'Aucune commande locale à envoyer'
-                  : 'Envoyer ${controller.offlineSales.length} commande(s) locales',
+                  ? tr('Aucune commande locale à envoyer')
+                  : '${tr('Envoyer')} ${controller.offlineSales.length} '
+                      '${tr('commande(s) locales')}',
             ),
           ),
         ),
@@ -2571,7 +2581,8 @@ class _HistorySection extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              'Aucune commande sur les ${_historyLabelForHours(controller.historyHours)}.',
+              '${tr('Aucune commande sur les')} '
+              '${_historyLabelForHours(controller.historyHours)}.',
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -2633,7 +2644,7 @@ class _ProductPanel extends StatelessWidget {
     if (showClient) {
       selectorWidgets.add(
         _DropdownField<Customer>(
-          label: 'Client',
+          label: tr('Client'),
           value: controller.selectedCustomer,
           items: controller.customers,
           display: (customer) => customer.name,
@@ -2648,7 +2659,7 @@ class _ProductPanel extends StatelessWidget {
       }
       selectorWidgets.add(
         _DropdownField<Warehouse>(
-          label: 'Magasin',
+          label: tr('Magasin'),
           value: controller.selectedWarehouse,
           items: controller.warehouses,
           display: (warehouse) => warehouse.name,
@@ -2671,7 +2682,7 @@ class _ProductPanel extends StatelessWidget {
       addSpacing(16);
       filterWidgets.add(
         _FilterChips<ProductCategory>(
-          title: 'All Categories',
+          title: tr('All Categories'),
           items: controller.categories,
           selectedId: controller.selectedCategoryId,
           onSelected: controller.selectCategory,
@@ -2710,8 +2721,7 @@ class _ProductPanel extends StatelessWidget {
                         listHeight: 420,
                       )
                     : Center(
-                        child: Text(
-                          'Section produits masquée dans les paramètres.',
+                        child: Text(tr('Section produits masquée dans les paramètres.'),
                           style: Theme.of(context).textTheme.bodyLarge,
                           textAlign: TextAlign.center,
                         ),
@@ -2739,7 +2749,7 @@ class _ProductPanel extends StatelessWidget {
     return TextField(
       controller: searchController,
       decoration: InputDecoration(
-        hintText: 'Scan/Search Product by Code Name',
+        hintText: tr('Scan/Search Product by Code Name'),
         prefixIcon: const Icon(Icons.search),
         suffixIcon: searchController.text.isEmpty
             ? null
@@ -2809,7 +2819,7 @@ class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
 
   Future<void> _toggleFullScreen() async {
     if (!_isDesktop) {
-      _showSnack('Le plein écran est disponible uniquement sur desktop.');
+      _showSnack(tr('Le plein écran est disponible uniquement sur desktop.'));
       return;
     }
     final nextValue = !_isFullScreen;
@@ -2888,57 +2898,58 @@ class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
     final actions = [
       _ActionMenuItem(
         icon: Icons.refresh,
-        label: 'Actualiser',
+        label: tr('Actualiser'),
         onTap: widget.onRefresh,
       ),
       _ActionMenuItem(
         icon: Icons.history,
-        label: 'Historique',
+        label: tr('Historique'),
         onTap: _openOrderHistory,
       ),
       _ActionMenuItem(
         icon: Icons.calculate_outlined,
-        label: 'Calculatrice',
+        label: tr('Calculatrice'),
         onTap: _openCalculator,
       ),
       _ActionMenuItem(
         icon: _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-        label: _isFullScreen ? 'Quitter plein écran' : 'Plein écran',
+        label:
+            _isFullScreen ? tr('Quitter plein écran') : tr('Plein écran'),
         onTap: _toggleFullScreen,
       ),
       _ActionMenuItem(
         icon: Icons.attach_money,
-        label: 'Cash en caisse',
+        label: tr('Cash en caisse'),
         onTap: widget.onCashInHand,
       ),
       _ActionMenuItem(
         icon: Icons.tune,
-        label: 'Apparence',
+        label: tr('Apparence'),
         onTap: _openAppearanceSettings,
       ),
       _ActionMenuItem(
         icon: Icons.sync,
-        label: 'Synchroniser',
+        label: tr('Synchroniser'),
         onTap: widget.onSync,
       ),
       _ActionMenuItem(
         icon: Icons.print_outlined,
-        label: 'Imprimante',
+        label: tr('Imprimante'),
         onTap: _openPrinterSettings,
       ),
       _ActionMenuItem(
         icon: Icons.settings_applications_outlined,
-        label: 'Config POS',
+        label: tr('Config POS'),
         onTap: _openPosConfiguration,
       ),
       _ActionMenuItem(
         icon: Icons.store_mall_directory_outlined,
-        label: 'Interface borne',
+        label: tr('Interface borne'),
         onTap: _openKioskPage,
       ),
       _ActionMenuItem(
         icon: widget.offlineMode ? Icons.cloud_off : Icons.cloud_done,
-        label: widget.offlineMode ? 'Mode hors ligne' : 'Connecté',
+        label: widget.offlineMode ? tr('Mode hors ligne') : tr('Connecté'),
         onTap: widget.offlineMode ? widget.onReconnect : null,
         color: widget.offlineMode ? Colors.orange : const Color(0xFF22C55E),
         background: widget.offlineMode
@@ -2947,14 +2958,14 @@ class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
       ),
       _ActionMenuItem(
         icon: Icons.logout,
-        label: 'Déconnexion',
+        label: tr('Déconnexion'),
         onTap: widget.onLogout,
       ),
     ];
 
     final greeting = widget.userLabel != null
         ? Text(
-            'Bonjour ${widget.userLabel}',
+            '${tr('Bonjour')} ${widget.userLabel}',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -2990,12 +3001,12 @@ class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
                 Chip(
                   backgroundColor: Colors.orange.withOpacity(0.15),
                   avatar: const Icon(Icons.cloud_off, color: Colors.orange),
-                  label: const Text('Mode hors ligne'),
+                  label: Text(tr('Mode hors ligne')),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Synchroniser'),
+                  label: Text(tr('Synchroniser')),
                   onPressed: widget.onReconnect,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.orange,
@@ -3072,7 +3083,7 @@ class _ConnectionStatusIcon extends StatefulWidget {
 }
 
 class _ConnectionStatusIconState extends State<_ConnectionStatusIcon> {
-  String _status = 'inconnu';
+  String _status = tr('Inconnu');
   IconData _icon = Icons.help_outline;
   Color _color = Colors.grey;
 
@@ -3090,13 +3101,13 @@ class _ConnectionStatusIconState extends State<_ConnectionStatusIcon> {
       ).timeout(const Duration(seconds: 2));
       final hasNet = result.isNotEmpty && result.first.rawAddress.isNotEmpty;
       setState(() {
-        _status = hasNet ? 'Connecté' : 'Hors ligne';
+        _status = hasNet ? tr('Connecté') : tr('Hors ligne');
         _icon = hasNet ? Icons.wifi : Icons.wifi_off;
         _color = hasNet ? Colors.green : Colors.red;
       });
     } catch (_) {
       setState(() {
-        _status = 'Hors ligne';
+        _status = tr('Hors ligne');
         _icon = Icons.wifi_off;
         _color = Colors.red;
       });
@@ -3108,7 +3119,8 @@ class _ConnectionStatusIconState extends State<_ConnectionStatusIcon> {
     return _IconTile(
       icon: _icon,
       color: _color,
-      tooltip: 'Statut réseau: $_status (tap pour rafraîchir)',
+      tooltip:
+          '${tr('Statut réseau')}: $_status (${tr('tap pour rafraîchir')})',
       onTap: _refresh,
     );
   }
@@ -3144,7 +3156,7 @@ class _CashInHandDialogState extends State<_CashInHandDialog> {
   void _submit() {
     final value = double.tryParse(_controller.text.replaceAll(',', '.'));
     if (value == null) {
-      setState(() => _error = 'Montant invalide');
+      setState(() => _error = tr('Montant invalide'));
       return;
     }
     Navigator.of(context).pop(value);
@@ -3153,14 +3165,14 @@ class _CashInHandDialogState extends State<_CashInHandDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Cash en caisse'),
+      title: Text(tr('Cash en caisse')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextFormField(
             controller: _controller,
             decoration: InputDecoration(
-              labelText: 'Montant initial',
+              labelText: tr('Montant initial'),
               prefixIcon: const Icon(Icons.attach_money),
               errorText: _error,
             ),
@@ -3168,8 +3180,8 @@ class _CashInHandDialogState extends State<_CashInHandDialog> {
             onFieldSubmitted: (_) => _submit(),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Saisissez le cash initial avant d\'utiliser le POS.',
+          Text(
+            tr('Saisissez le cash initial avant d\'utiliser le POS.'),
             style: TextStyle(fontSize: 12),
           ),
         ],
@@ -3177,9 +3189,9 @@ class _CashInHandDialogState extends State<_CashInHandDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(tr('Annuler')),
         ),
-        FilledButton(onPressed: _submit, child: const Text('Valider')),
+        FilledButton(onPressed: _submit, child: Text(tr('Valider'))),
       ],
     );
   }
@@ -3303,9 +3315,9 @@ class _CalculatorDialogState extends State<_CalculatorDialog> {
 
   void _showError() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Division par zéro impossible.'),
-        duration: Duration(seconds: 5),
+      SnackBar(
+        content: Text(tr('Division par zéro impossible.')),
+        duration: const Duration(seconds: 5),
       ),
     );
   }
@@ -3320,7 +3332,7 @@ class _CalculatorDialogState extends State<_CalculatorDialog> {
     ];
 
     return AlertDialog(
-      title: const Text('Calculatrice'),
+      title: Text(tr('Calculatrice')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -3368,21 +3380,21 @@ class _CalculatorDialogState extends State<_CalculatorDialog> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _clear(),
-                  child: const Text('AC'),
+                  child: Text(tr('AC')),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _clear(true),
-                  child: const Text('C'),
+                  child: Text(tr('C')),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: FilledButton(
                   onPressed: _calculate,
-                  child: const Text('='),
+                  child: Text(tr('=')),
                 ),
               ),
             ],
@@ -3448,10 +3460,10 @@ class _IngredientSelectionDialogState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Ingrédients',
+                tr('Ingrédients'),
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -3537,7 +3549,7 @@ class _IngredientSelectionDialogState
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(tr('Annuler')),
         ),
         FilledButton(
           onPressed: () {
@@ -3550,7 +3562,7 @@ class _IngredientSelectionDialogState
             }
             Navigator.of(context).pop(selected);
           },
-          child: const Text('Ajouter'),
+          child: Text(tr('Ajouter')),
         ),
       ],
     );
@@ -3608,14 +3620,13 @@ class _AppearanceSettingsDialogState extends State<_AppearanceSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Personnalisation POS'),
+      title: Text(tr('Personnalisation POS')),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Couleur principale',
+            Text(tr('Couleur principale'),
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -3646,7 +3657,7 @@ class _AppearanceSettingsDialogState extends State<_AppearanceSettingsDialog> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Produits par rangée : $_gridColumns',
+              '${tr('Produits par rangée')}: $_gridColumns',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             Slider(
@@ -3662,8 +3673,8 @@ class _AppearanceSettingsDialogState extends State<_AppearanceSettingsDialog> {
               contentPadding: EdgeInsets.zero,
               value: _darkMode,
               onChanged: (value) => setState(() => _darkMode = value),
-              title: const Text('Mode sombre'),
-              subtitle: const Text('Bascule entre thème clair et sombre'),
+              title: Text(tr('Mode sombre')),
+              subtitle: Text(tr('Bascule entre thème clair et sombre')),
             ),
           ],
         ),
@@ -3671,7 +3682,7 @@ class _AppearanceSettingsDialogState extends State<_AppearanceSettingsDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(tr('Annuler')),
         ),
         FilledButton(
           onPressed: () {
@@ -3681,7 +3692,7 @@ class _AppearanceSettingsDialogState extends State<_AppearanceSettingsDialog> {
             appearance.toggleDarkMode(_darkMode);
             Navigator.of(context).pop();
           },
-          child: const Text('Enregistrer'),
+          child: Text(tr('Enregistrer')),
         ),
       ],
     );
@@ -3785,52 +3796,50 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
   Widget build(BuildContext context) {
     final pos = context.watch<PosController>();
     return AlertDialog(
-      title: const Text('Configuration POS'),
+      title: Text(tr('Configuration POS')),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher le champ Client'),
-              subtitle: const Text(
-                'Masque simplement le champ tout en conservant le client actuel.',
+              title: Text(tr('Afficher le champ Client')),
+              subtitle: Text(tr('Masque simplement le champ tout en conservant le client actuel.'),
               ),
               value: _showClient,
               onChanged: (value) => setState(() => _showClient = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher le champ Magasin'),
-              subtitle: const Text(
-                'Cache l\'entrée visuelle mais garde vos sélections.',
+              title: Text(tr('Afficher le champ Magasin')),
+              subtitle: Text(
+                tr('Cache l\'entrée visuelle mais garde vos sélections.'),
               ),
               value: _showWarehouse,
               onChanged: (value) => setState(() => _showWarehouse = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher la barre de recherche'),
-              subtitle: const Text(
-                'Permet de masquer l\'input tout en conservant la recherche active.',
+              title: Text(tr('Afficher la barre de recherche')),
+              subtitle: Text(
+                tr('Permet de masquer l\'input tout en conservant la recherche active.'),
               ),
               value: _showSearch,
               onChanged: (value) => setState(() => _showSearch = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher les filtres Catégorie'),
-              subtitle: const Text(
-                'Masque les boutons de catégories si vous ne les utilisez pas.',
+              title: Text(tr('Afficher les filtres Catégorie')),
+              subtitle: Text(tr('Masque les boutons de catégories si vous ne les utilisez pas.'),
               ),
               value: _showCategory,
               onChanged: (value) => setState(() => _showCategory = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Réinitialiser les stats automatiquement'),
-              subtitle: const Text(
-                'Quand activé, les indicateurs ventes/articles/caisse repartent à zéro à l\'heure choisie.',
+              title: Text(tr('Réinitialiser les stats automatiquement')),
+              subtitle: Text(
+                tr('Quand activé, les indicateurs ventes/articles/caisse repartent à zéro à l\'heure choisie.'),
               ),
               value: _resetHistoryAt4,
               onChanged: (value) => setState(() => _resetHistoryAt4 = value),
@@ -3843,9 +3852,9 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
                   children: [
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'Heure de réinitialisation',
+                            tr('Heure de réinitialisation'),
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -3874,23 +3883,25 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
                         await widget.onTestReset();
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Réinitialisation test effectuée.'),
-                            duration: Duration(seconds: 5),
+                          SnackBar(
+                            content: Text(
+                              tr('Réinitialisation test effectuée.'),
+                            ),
+                            duration: const Duration(seconds: 5),
                           ),
                         );
                       },
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Tester la réinitialisation'),
+                      label: Text(tr('Tester la réinitialisation')),
                     ),
                   ],
                 ),
               ),
             const Divider(),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Devise',
+                tr('Devise'),
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -3898,12 +3909,12 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
             if (_loadingCurrencies)
               const LinearProgressIndicator()
             else if (pos.currencies.isEmpty)
-              const Text('Aucune devise disponible.')
+              Text(tr('Aucune devise disponible.'))
             else
               DropdownButtonFormField<Currency>(
                 value: _selectedCurrency,
-                decoration: const InputDecoration(
-                  labelText: 'Devise',
+                decoration: InputDecoration(
+                  labelText: tr('Devise'),
                   border: OutlineInputBorder(),
                 ),
                 items: pos.currencies
@@ -3921,9 +3932,8 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
               ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Symbole a droite'),
-              subtitle: const Text(
-                'Affiche la devise apres le montant.',
+              title: Text(tr('Symbole a droite')),
+              subtitle: Text(tr('Affiche la devise apres le montant.'),
               ),
               value: _currencyOnRight,
               onChanged: (value) => setState(() => _currencyOnRight = value),
@@ -3934,8 +3944,7 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Produits par ligne',
+                  Text(tr('Produits par ligne'),
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
@@ -3958,7 +3967,7 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Taille de l\'interface (${(_uiScale * 100).round()} %)',
+                  '${tr('Taille de l\'interface')} (${(_uiScale * 100).round()} %)',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 Slider(
@@ -3969,104 +3978,99 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
                   label: '${(_uiScale * 100).round()} %',
                   onChanged: (value) => setState(() => _uiScale = value),
                 ),
-                const Text(
-                  'Réduit ou agrandit les textes, icônes et boutons (utile sur Android).',
+                Text(tr('Réduit ou agrandit les textes, icônes et boutons (utile sur Android).'),
                 ),
               ],
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher le bouton Ajouter au panier'),
-              subtitle: const Text(
-                'Permet de masquer le bouton tout en gardant l\'action sur clic.',
+              title: Text(tr('Afficher le bouton Ajouter au panier')),
+              subtitle: Text(
+                tr('Permet de masquer le bouton tout en gardant l\'action sur clic.'),
               ),
               value: _showAddToCart,
               onChanged: (value) => setState(() => _showAddToCart = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher le code produit (slug)'),
-              subtitle: const Text(
-                'Cache ou affiche le code sous le nom du produit.',
+              title: Text(tr('Afficher le code produit (slug)')),
+              subtitle: Text(tr('Cache ou affiche le code sous le nom du produit.'),
               ),
               value: _showSlug,
               onChanged: (value) => setState(() => _showSlug = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher le stock dans la vignette'),
-              subtitle: const Text(
-                'Affiche la pastille avec la quantité disponible.',
+              title: Text(tr('Afficher le stock dans la vignette')),
+              subtitle: Text(tr('Affiche la pastille avec la quantité disponible.'),
               ),
               value: _showStock,
               onChanged: (value) => setState(() => _showStock = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher total et QTY (cart)'),
-              subtitle: const Text('Masque les totaux si espace limité.'),
+              title: Text(tr('Afficher total et QTY (cart)')),
+              subtitle: Text(tr('Masque les totaux si espace limité.')),
               value: _showTotalsInCart,
               onChanged: (value) => setState(() => _showTotalsInCart = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher le résumé panier'),
-              subtitle: const Text(
-                'Permet d\'afficher le bloc de totaux/remises.',
+              title: Text(tr('Afficher le résumé panier')),
+              subtitle: Text(
+                tr('Permet d\'afficher le bloc de totaux/remises.'),
               ),
               value: _showCartSummary,
               onChanged: (value) => setState(() => _showCartSummary = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher la section produits'),
-              subtitle: const Text(
-                'Masque totalement la grille produits si vous utilisez uniquement le scanner.',
+              title: Text(tr('Afficher la section produits')),
+              subtitle: Text(tr('Masque totalement la grille produits si vous utilisez uniquement le scanner.'),
               ),
               value: _showProductList,
               onChanged: (value) => setState(() => _showProductList = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Afficher l\'historique rapide'),
-              subtitle: const Text(
-                'Ajoute un aperçu des dernières commandes sous la grille.',
+              title: Text(tr('Afficher l\'historique rapide')),
+              subtitle: Text(
+                tr('Ajoute un aperçu des dernières commandes sous la grille.'),
               ),
               value: _showHistoryPanel,
               onChanged: (value) => setState(() => _showHistoryPanel = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Inverser les panneaux'),
-              subtitle: const Text(
-                'Place les produits a gauche et le panier a droite.',
+              title: Text(tr('Inverser les panneaux')),
+              subtitle: Text(tr('Place les produits a gauche et le panier a droite.'),
               ),
               value: _swapSidePanels,
               onChanged: (value) => setState(() => _swapSidePanels = value),
             ),
             const Divider(),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Boutons actions',
+                tr('Boutons actions'),
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Bouton Espèce'),
+              title: Text(tr('Bouton Espèce')),
               value: _showCashButton,
               onChanged: (value) => setState(() => _showCashButton = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Bouton Reset'),
+              title: Text(tr('Bouton Reset')),
               value: _showResetButton,
               onChanged: (value) => setState(() => _showResetButton = value),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Bouton Hold'),
+              title: Text(tr('Bouton Hold')),
               value: _showHoldButton,
               onChanged: (value) => setState(() => _showHoldButton = value),
             ),
@@ -4076,7 +4080,7 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(tr('Annuler')),
         ),
         FilledButton(
           onPressed: _isSavingCurrency
@@ -4113,8 +4117,8 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
               setState(() => _isSavingCurrency = false);
               if (!ok) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Mise a jour de la devise impossible.'),
+                  SnackBar(
+                    content: Text(tr('Mise a jour de la devise impossible.')),
                   ),
                 );
                 return;
@@ -4130,7 +4134,7 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Enregistrer'),
+              : Text(tr('Enregistrer')),
         ),
       ],
     );
@@ -4155,17 +4159,17 @@ class _OrderSummaryPills extends StatelessWidget {
           children: [
             _SummaryPill(
               icon: Icons.receipt_long,
-              label: 'Cmd',
+              label: tr('Cmd'),
               value: controller.ordersCount.toString(),
             ),
             _SummaryPill(
               icon: Icons.shopping_bag_outlined,
-              label: 'Articles',
+              label: tr('Articles'),
               value: controller.itemsSold.toString(),
             ),
             _SummaryPill(
               icon: Icons.account_balance_wallet_outlined,
-              label: 'Caisse',
+              label: tr('Caisse'),
               value: formatAmount(controller.registerDetails.totalCashAmount),
             ),
           ],
@@ -4182,7 +4186,7 @@ class _PrinterSettingsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<PrinterSettingsController>();
     return AlertDialog(
-      title: const Text('Paramètres imprimante'),
+      title: Text(tr('Paramètres imprimante')),
       content: SizedBox(
         width: 640,
         child: SingleChildScrollView(
@@ -4195,8 +4199,9 @@ class _PrinterSettingsDialog extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: _PrinterStatusBanner(
-                    message:
-                        'Ce type de connexion n\'est pas supporté sur cette plateforme.',
+                    message: tr(
+                      'Ce type de connexion n\'est pas supporté sur cette plateforme.',
+                    ),
                     isError: true,
                   ),
                 ),
@@ -4216,8 +4221,8 @@ class _PrinterSettingsDialog extends StatelessWidget {
                         : const Icon(Icons.search),
                     label: Text(
                       controller.isScanning
-                          ? 'Scan en cours...'
-                          : 'Chercher des imprimantes',
+                          ? tr('Scan en cours...')
+                          : tr('Chercher des imprimantes'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -4227,7 +4232,7 @@ class _PrinterSettingsDialog extends StatelessWidget {
                           ? null
                           : controller.addManualNetworkPrinter,
                       icon: const Icon(Icons.add),
-                      label: const Text('Ajouter manuellement'),
+                      label: Text(tr('Ajouter manuellement')),
                     ),
                 ],
               ),
@@ -4242,8 +4247,7 @@ class _PrinterSettingsDialog extends StatelessWidget {
               const SizedBox(height: 8),
               const _PrintPreviewSection(),
               const SizedBox(height: 12),
-              Text(
-                'Taille du texte (%)',
+              Text(tr('Taille du texte (%)'),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 4),
@@ -4272,12 +4276,11 @@ class _PrinterSettingsDialog extends StatelessWidget {
               SwitchListTile(
                 value: controller.autoCut,
                 onChanged: controller.toggleAutoCut,
-                title: const Text('Activer le cutter'),
+                title: Text(tr('Activer le cutter')),
                 contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 8),
-              Text(
-                'Infos Wi-Fi (pour ticket)',
+              Text(tr('Infos Wi-Fi (pour ticket)'),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 4),
@@ -4285,7 +4288,7 @@ class _PrinterSettingsDialog extends StatelessWidget {
                 key: ValueKey('ssid-${controller.wifiSsid}'),
                 initialValue: controller.wifiSsid,
                 decoration: InputDecoration(
-                  labelText: 'SSID',
+                  labelText: tr('SSID'),
                   border: _outlineInputBorder(context),
                   enabledBorder: _outlineInputBorder(context),
                   focusedBorder: _outlineInputBorder(context, width: 1.8),
@@ -4297,7 +4300,7 @@ class _PrinterSettingsDialog extends StatelessWidget {
                 key: ValueKey('wifipass-${controller.wifiPassword}'),
                 initialValue: controller.wifiPassword,
                 decoration: InputDecoration(
-                  labelText: 'Mot de passe Wi-Fi',
+                  labelText: tr('Mot de passe Wi-Fi'),
                   border: _outlineInputBorder(context),
                   enabledBorder: _outlineInputBorder(context),
                   focusedBorder: _outlineInputBorder(context, width: 1.8),
@@ -4318,12 +4321,12 @@ class _PrinterSettingsDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Fermer'),
+          child: Text(tr('Fermer')),
         ),
         TextButton.icon(
           onPressed: controller.persistSettings,
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Sauvegarder'),
+          label: Text(tr('Sauvegarder')),
         ),
         FilledButton.icon(
           onPressed: controller.isTestEnabled
@@ -4339,7 +4342,7 @@ class _PrinterSettingsDialog extends StatelessWidget {
                   ),
                 )
               : const Icon(Icons.print),
-          label: const Text('Test print'),
+          label: Text(tr('Test print')),
         ),
       ],
     );
@@ -4385,8 +4388,7 @@ class _PrinterDeviceList extends StatelessWidget {
           color: Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Text(
-          'Aucune imprimante sélectionnée. Lancez une recherche ou ajoutez une adresse manuellement.',
+        child: Text(tr('Aucune imprimante sélectionnée. Lancez une recherche ou ajoutez une adresse manuellement.'),
         ),
       );
     }
@@ -4419,7 +4421,7 @@ class _ManualNetworkFields extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Adresse manuelle (${controller.connectionType.label})',
+          '${tr('Adresse manuelle')} (${controller.connectionType.label})',
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 8),
@@ -4430,7 +4432,7 @@ class _ManualNetworkFields extends StatelessWidget {
                 key: ValueKey('addr-${controller.manualAddress}'),
                 initialValue: controller.manualAddress,
                 decoration: InputDecoration(
-                  labelText: 'Adresse IP / Nom d\'hôte',
+                  labelText: tr('Adresse IP / Nom d\'hôte'),
                   border: _outlineInputBorder(context),
                   enabledBorder: _outlineInputBorder(context),
                   focusedBorder: _outlineInputBorder(context, width: 1.8),
@@ -4445,7 +4447,7 @@ class _ManualNetworkFields extends StatelessWidget {
                 key: ValueKey('port-${controller.manualPort}'),
                 initialValue: controller.manualPort,
                 decoration: InputDecoration(
-                  labelText: 'Port',
+                  labelText: tr('Port'),
                   border: _outlineInputBorder(context),
                   enabledBorder: _outlineInputBorder(context),
                   focusedBorder: _outlineInputBorder(context, width: 1.8),
@@ -4471,7 +4473,7 @@ class _PaperOptions extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Taille du papier', style: Theme.of(context).textTheme.titleSmall),
+        Text(tr('Taille du papier'), style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -4482,7 +4484,7 @@ class _PaperOptions extends StatelessWidget {
                     ? ''
                     : '${controller.paperWidth}',
                 decoration: InputDecoration(
-                  labelText: 'Largeur (mm)',
+                  labelText: tr('Largeur (mm)'),
                   border: _outlineInputBorder(context),
                   enabledBorder: _outlineInputBorder(context),
                   focusedBorder: _outlineInputBorder(context, width: 1.8),
@@ -4501,7 +4503,7 @@ class _PaperOptions extends StatelessWidget {
                     ? ''
                     : '${controller.paperHeight}',
                 decoration: InputDecoration(
-                  labelText: 'Hauteur (mm)',
+                  labelText: tr('Hauteur (mm)'),
                   border: _outlineInputBorder(context),
                   enabledBorder: _outlineInputBorder(context),
                   focusedBorder: _outlineInputBorder(context, width: 1.8),
@@ -4572,7 +4574,7 @@ class _PrintPreviewSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Prévisualisation avant impression',
+          tr('Prévisualisation avant impression'),
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 8),
@@ -4580,11 +4582,13 @@ class _PrintPreviewSection extends StatelessWidget {
           children: [
             Expanded(
               child: _PreviewCard(
-                title: 'Ticket de vente',
+                title: tr('Ticket de vente'),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Client: ${pos.selectedCustomer?.name ?? 'Walk-in'}'),
+                    Text(
+                      "${tr('Client')}: ${pos.selectedCustomer?.name ?? tr('Walk-in')}",
+                    ),
                     const SizedBox(height: 4),
                     ...previewItems.map(
                       (item) => Row(
@@ -4596,7 +4600,9 @@ class _PrintPreviewSection extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Text('x${item.quantity.toStringAsFixed(0)}'),
+                          Text(
+                            '${tr('x')}${item.quantity.toStringAsFixed(0)}',
+                          ),
                           Text(
                             _formatAmount(item.product.price * item.quantity),
                           ),
@@ -4604,12 +4610,12 @@ class _PrintPreviewSection extends StatelessWidget {
                       ),
                     ),
                     const Divider(),
-                    _previewLine('Total', _formatAmount(pos.subTotal)),
-                    _previewLine('TVA', _formatAmount(pos.taxTotal)),
-                    _previewLine('Livraison', _formatAmount(pos.shipping)),
+                    _previewLine(tr('Total'), _formatAmount(pos.subTotal)),
+                    _previewLine(tr('TVA'), _formatAmount(pos.taxTotal)),
+                    _previewLine(tr('Livraison'), _formatAmount(pos.shipping)),
                     const Divider(),
                     _previewLine(
-                      'À payer',
+                      tr('À payer'),
                       _formatAmount(pos.grandTotal),
                       bold: true,
                     ),
@@ -4620,14 +4626,14 @@ class _PrintPreviewSection extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _PreviewCard(
-                title: 'Historique (dernier)',
+                title: tr('Historique (dernier)'),
                 content: Builder(
                   builder: (_) {
                     final last = pos.recentOrders.isNotEmpty
                         ? pos.recentOrders.first
                         : null;
                     if (last == null) {
-                      return const Text('Aucune commande encore enregistrée.');
+                      return Text(tr('Aucune commande encore enregistrée.'));
                     }
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4638,9 +4644,15 @@ class _PrintPreviewSection extends StatelessWidget {
                         ),
                         Text(last.customerName),
                         const SizedBox(height: 4),
-                        _previewLine('Montant', _formatAmount(last.grandTotal)),
-                        _previewLine('Payé', _formatAmount(last.paidAmount)),
-                        _previewLine('Articles', last.itemCount.toString()),
+                        _previewLine(
+                          tr('Montant'),
+                          _formatAmount(last.grandTotal),
+                        ),
+                        _previewLine(tr('Payé'), _formatAmount(last.paidAmount)),
+                        _previewLine(
+                          tr('Articles'),
+                          last.itemCount.toString(),
+                        ),
                         if (last.createdAt != null)
                           Text(
                             DateFormat(
@@ -4779,7 +4791,7 @@ class _OrderHistoryDialogState extends State<_OrderHistoryDialog> {
     final auth = context.read<AuthController>();
 
     return AlertDialog(
-      title: const Text('Historique des commandes'),
+      title: Text(tr('Historique des commandes')),
       content: SizedBox(
         width: 640,
         child: _HistorySection(
@@ -4813,18 +4825,20 @@ class _OrderHistoryDialogState extends State<_OrderHistoryDialog> {
             await posController.resetHistoryStats();
             if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Historique réinitialisé après impression.'),
-                duration: Duration(seconds: 5),
+              SnackBar(
+                content: Text(
+                  tr('Historique réinitialisé après impression.'),
+                ),
+                duration: const Duration(seconds: 5),
               ),
             );
           },
           icon: const Icon(Icons.print_outlined),
-          label: const Text('Imprimer'),
+          label: Text(tr('Imprimer')),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Fermer'),
+          child: Text(tr('Fermer')),
         ),
       ],
     );
@@ -4855,32 +4869,32 @@ class _HistoryHeader extends StatelessWidget {
             children: [
               _SummaryPill(
                 icon: Icons.receipt_long,
-                label: 'Commandes',
+                label: tr('Commandes'),
                 value: register.salesCount.toString(),
               ),
               _SummaryPill(
                 icon: Icons.shopping_bag_outlined,
-                label: 'Articles vendus',
+                label: tr('Articles vendus'),
                 value: register.itemsCount.toString(),
               ),
               _SummaryPill(
                 icon: Icons.account_balance_wallet_outlined,
-                label: 'Cash en main',
+                label: tr('Cash en main'),
                 value: formatAmount(register.cashInHand),
               ),
               _SummaryPill(
                 icon: Icons.account_balance,
-                label: 'Cash total',
+                label: tr('Cash total'),
                 value: formatAmount(register.totalCashAmount),
               ),
               _SummaryPill(
                 icon: Icons.trending_up,
-                label: 'Ventes du jour',
+                label: tr('Ventes du jour'),
                 value: formatAmount(register.salesAmount),
               ),
               _SummaryPill(
                 icon: Icons.undo,
-                label: 'Retours',
+                label: tr('Retours'),
                 value: formatAmount(register.salesReturnAmount),
               ),
             ],
@@ -4924,7 +4938,7 @@ class _ProductSummarySection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Produits vendus (période)',
+            tr('Produits vendus (période)'),
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 8),
@@ -4966,7 +4980,7 @@ class _HistoryPrintPreviewDialog extends StatelessWidget {
     final productTotals = _aggregateProducts(orders);
     final userLabel = orders.isNotEmpty ? (orders.first.userName ?? '') : '';
     return AlertDialog(
-      title: const Text('Aperçu avant impression'),
+      title: Text(tr('Aperçu avant impression')),
       content: SizedBox(
         width: 520,
         height: 520,
@@ -4976,10 +4990,11 @@ class _HistoryPrintPreviewDialog extends StatelessWidget {
             children: [
               _HistoryHeader(register: register, formatAmount: formatAmount),
               const SizedBox(height: 12),
-              if (userLabel.isNotEmpty) Text('Filtre utilisateur : $userLabel'),
+              if (userLabel.isNotEmpty)
+                Text('${tr('Filtre utilisateur :')} $userLabel'),
               if (productTotals.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                const Text('Produits (total sur la période)'),
+                Text(tr('Produits (total sur la période)')),
                 const SizedBox(height: 4),
                 ...productTotals.entries.map(
                   (e) => Row(
@@ -4995,7 +5010,7 @@ class _HistoryPrintPreviewDialog extends StatelessWidget {
               ],
               const SizedBox(height: 12),
               if (orders.isEmpty)
-                const Text('Aucune commande à imprimer.')
+                Text(tr('Aucune commande à imprimer.'))
               else
                 ListView.separated(
                   shrinkWrap: true,
@@ -5014,12 +5029,12 @@ class _HistoryPrintPreviewDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Annuler'),
+          child: Text(tr('Annuler')),
         ),
         FilledButton.icon(
           onPressed: () => Navigator.of(context).pop(true),
           icon: const Icon(Icons.print_outlined),
-          label: const Text('Imprimer'),
+          label: Text(tr('Imprimer')),
         ),
       ],
     );
@@ -5124,7 +5139,7 @@ class _OrderHistoryRow extends StatelessWidget {
               .join(', ')
         : (order.productNames.isNotEmpty
               ? order.productNames.join(', ')
-              : 'Produits indisponibles');
+              : tr('Produits indisponibles'));
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -5139,7 +5154,7 @@ class _OrderHistoryRow extends StatelessWidget {
                     child: Text(
                       itemsText.isNotEmpty
                           ? itemsText
-                          : 'Commande #${order.id}',
+                          : '${tr('Commande')} #${order.id}',
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -5154,8 +5169,7 @@ class _OrderHistoryRow extends StatelessWidget {
                         color: Colors.orange.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
-                        'Local',
+                      child: Text(tr('Local'),
                         style: TextStyle(
                           color: Colors.orange,
                           fontSize: 12,
@@ -5169,7 +5183,7 @@ class _OrderHistoryRow extends StatelessWidget {
               Text(date, style: Theme.of(context).textTheme.bodySmall),
               if (order.userName != null && order.userName!.isNotEmpty)
                 Text(
-                  'Utilisateur: ${order.userName}',
+                  '${tr('Utilisateur')}: ${order.userName}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
             ],
@@ -5181,7 +5195,7 @@ class _OrderHistoryRow extends StatelessWidget {
             children: [
               Text(formatAmount(order.grandTotal)),
               Text(
-                'Payé : ${formatAmount(order.paidAmount)}',
+                '${tr('Payé')}: ${formatAmount(order.paidAmount)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -5193,18 +5207,18 @@ class _OrderHistoryRow extends StatelessWidget {
 
   String _statusLabel(String status) {
     final normalized = status.toLowerCase();
-    if (normalized == 'paid') return 'Payée';
-    if (normalized == 'partial') return 'Partielle';
-    if (normalized == 'unpaid') return 'Impayée';
+    if (normalized == 'paid') return tr('Payée');
+    if (normalized == 'partial') return tr('Partielle');
+    if (normalized == 'unpaid') return tr('Impayée');
     switch (status) {
       case '1':
-        return 'Complétée';
+        return tr('Complétée');
       case '2':
-        return 'En attente';
+        return tr('En attente');
       case '3':
-        return 'Commandée';
+        return tr('Commandée');
       default:
-        return status.isEmpty ? 'N/A' : status;
+        return status.isEmpty ? tr('N/A') : status;
     }
   }
 
@@ -5227,18 +5241,18 @@ class _OrderHistoryRow extends StatelessWidget {
 
   String _paymentStatusLabel(String status) {
     final normalized = status.toLowerCase();
-    if (normalized == 'paid') return 'Payée';
-    if (normalized == 'partial') return 'Partielle';
-    if (normalized == 'unpaid') return 'Impayée';
+    if (normalized == 'paid') return tr('Payée');
+    if (normalized == 'partial') return tr('Partielle');
+    if (normalized == 'unpaid') return tr('Impayée');
     switch (status) {
       case '1':
-        return 'Payée';
+        return tr('Payée');
       case '2':
-        return 'Impayée';
+        return tr('Impayée');
       case '3':
-        return 'Partielle';
+        return tr('Partielle');
       default:
-        return status.isEmpty ? 'N/A' : status;
+        return status.isEmpty ? tr('N/A') : status;
     }
   }
 }
@@ -5331,7 +5345,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Paiement'),
+      title: Text(tr('Paiement')),
       content: SizedBox(
         width: 500,
         child: Column(
@@ -5340,7 +5354,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
             TextField(
               controller: _receivedController,
               decoration: InputDecoration(
-                labelText: 'Montant reçu',
+                labelText: tr('Montant reçu'),
                 prefixIcon: const Icon(Icons.payments_outlined),
                 prefixText: widget.currencyOnRight
                     ? null
@@ -5360,7 +5374,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
             const SizedBox(height: 12),
             TextField(
               decoration: InputDecoration(
-                labelText: 'Montant à payer',
+                labelText: tr('Montant à payer'),
                 prefixIcon: const Icon(Icons.request_quote_outlined),
                 prefixText: widget.currencyOnRight
                     ? null
@@ -5377,7 +5391,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
             const SizedBox(height: 12),
             TextField(
               decoration: InputDecoration(
-                labelText: 'Rendu',
+                labelText: tr('Rendu'),
                 prefixIcon: const Icon(Icons.change_circle_outlined),
                 prefixText: widget.currencyOnRight
                     ? null
@@ -5394,7 +5408,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
               value: _paymentTypeId,
-              decoration: const InputDecoration(labelText: 'Type de paiement'),
+              decoration: InputDecoration(labelText: tr('Type de paiement')),
               items: widget.paymentMethods
                   .map(
                     (method) => DropdownMenuItem(
@@ -5408,12 +5422,12 @@ class _PaymentDialogState extends State<_PaymentDialog> {
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
               value: _paymentStatusId,
-              decoration: const InputDecoration(labelText: 'Statut'),
+              decoration: InputDecoration(labelText: tr('Statut')),
               items: _paymentStatuses
                   .map(
                     (option) => DropdownMenuItem(
                       value: option.id,
-                      child: Text(option.label),
+                      child: Text(tr(option.label)),
                     ),
                   )
                   .toList(),
@@ -5426,7 +5440,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(tr('Annuler')),
         ),
         FilledButton.icon(
           onPressed: () => Navigator.of(context).pop(
@@ -5441,7 +5455,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
             ),
           ),
           icon: const Icon(Icons.receipt_long),
-          label: const Text('Confirmer & imprimer'),
+          label: Text(tr('Confirmer & imprimer')),
         ),
       ],
     );
@@ -5491,7 +5505,7 @@ class _ReceiptPreviewDialog extends StatelessWidget {
         _formatCurrency(value, currencySymbol, currencyOnRight);
     final widthPx = paperWidthMm <= 58 ? 260.0 : 320.0;
     return AlertDialog(
-      title: const Text('Prévisualisation ticket'),
+      title: Text(tr('Prévisualisation ticket')),
       content: SizedBox(
         width: widthPx,
         child: SingleChildScrollView(
@@ -5509,16 +5523,26 @@ class _ReceiptPreviewDialog extends StatelessWidget {
               if (companyAddress.isNotEmpty)
                 Text(companyAddress, textAlign: TextAlign.center),
               if (companyEmail.isNotEmpty)
-                Text('Email : $companyEmail', textAlign: TextAlign.center),
+                Text(
+                  '${tr('Email')}: $companyEmail',
+                  textAlign: TextAlign.center,
+                ),
               if (companyPhone.isNotEmpty)
-                Text('Tél : $companyPhone', textAlign: TextAlign.center),
+                Text(
+                  '${tr('Tél')}: $companyPhone',
+                  textAlign: TextAlign.center,
+                ),
               if (warehouseName != null && warehouseName!.isNotEmpty)
-                Text('Magasin : $warehouseName', textAlign: TextAlign.center),
+                Text(
+                  '${tr('Magasin')}: $warehouseName',
+                  textAlign: TextAlign.center,
+                ),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Date : ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+                  '${tr('Date')} : '
+                  '${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -5571,18 +5595,18 @@ class _ReceiptPreviewDialog extends StatelessWidget {
                 ),
               ),
               const Divider(),
-              _previewLine('Sous-total', format(subTotal)),
-              _previewLine('Taxe', format(tax)),
+              _previewLine(tr('Sous-total'), format(subTotal)),
+              _previewLine(tr('Taxe'), format(tax)),
               const SizedBox(height: 4),
-              _previewLine('Total', format(total), isBold: true),
+              _previewLine(tr('Total'), format(total), isBold: true),
               const Divider(),
-              _previewLine('Paiement', paymentType),
-              _previewLine('Statut', paymentStatus),
-              _previewLine('Reçu', format(received)),
-              _previewLine('Rendu', format(change)),
+              _previewLine(tr('Paiement'), paymentType),
+              _previewLine(tr('Statut'), paymentStatus),
+              _previewLine(tr('Reçu'), format(received)),
+              _previewLine(tr('Rendu'), format(change)),
               const SizedBox(height: 8),
-              const Text(
-                'Merci pour votre achat.',
+              Text(
+                tr('Merci pour votre achat.'),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -5592,12 +5616,12 @@ class _ReceiptPreviewDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Annuler'),
+          child: Text(tr('Annuler')),
         ),
         FilledButton.icon(
           onPressed: () => Navigator.of(context).pop(true),
           icon: const Icon(Icons.print_outlined),
-          label: const Text('Payer & imprimer'),
+          label: Text(tr('Payer & imprimer')),
         ),
       ],
     );

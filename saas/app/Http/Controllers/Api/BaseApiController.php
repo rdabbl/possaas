@@ -3,49 +3,49 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tenant;
+use App\Models\Manager;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 
 class BaseApiController extends Controller
 {
-    protected function tenantOrFail(Request $request): Tenant
+    protected function managerOrFail(Request $request): Manager
     {
         $user = $request->user();
-        $tenantId = $request->header('X-Tenant-ID') ?? $request->input('tenant_id');
+        $managerId = $request->header('X-Manager-ID') ?? $request->input('manager_id');
 
         if ($user && !$user->is_super_admin) {
-            if (!$user->tenant_id) {
+            if (!$user->manager_id) {
                 throw new HttpResponseException(
-                    response()->json(['message' => 'User has no tenant assigned.'], 403)
+                    response()->json(['message' => 'User has no manager assigned.'], 403)
                 );
             }
 
-            if ($tenantId && (int) $tenantId !== (int) $user->tenant_id) {
+            if ($managerId && (int) $managerId !== (int) $user->manager_id) {
                 throw new HttpResponseException(
-                    response()->json(['message' => 'Tenant mismatch.'], 403)
+                    response()->json(['message' => 'Manager mismatch.'], 403)
                 );
             }
 
-            $tenantId = $user->tenant_id;
+            $managerId = $user->manager_id;
         }
 
-        if (!$tenantId) {
+        if (!$managerId) {
             throw new HttpResponseException(
-                response()->json(['message' => 'X-Tenant-ID header is required.'], 422)
+                response()->json(['message' => 'X-Manager-ID header is required.'], 422)
             );
         }
 
-        $tenant = Tenant::where('id', $tenantId)
+        $manager = Manager::where('id', $managerId)
             ->where('is_active', true)
             ->first();
 
-        if (!$tenant) {
+        if (!$manager) {
             throw new HttpResponseException(
-                response()->json(['message' => 'Tenant not found or inactive.'], 404)
+                response()->json(['message' => 'Manager not found or inactive.'], 404)
             );
         }
 
-        return $tenant;
+        return $manager;
     }
 }
