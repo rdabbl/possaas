@@ -5,13 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Ingredient extends Model
+class ProductOption extends Model
 {
     use SoftDeletes;
 
+    protected $table = 'product_options';
+
     protected $fillable = [
         'manager_id',
-        'ingredient_category_id',
+        'product_option_category_id',
         'name',
         'image_path',
         'is_active',
@@ -19,7 +21,7 @@ class Ingredient extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
-        'ingredient_category_id' => 'integer',
+        'product_option_category_id' => 'integer',
     ];
 
     public function manager()
@@ -29,12 +31,12 @@ class Ingredient extends Model
 
     public function category()
     {
-        return $this->belongsTo(IngredientCategory::class, 'ingredient_category_id');
+        return $this->belongsTo(ProductOptionCategory::class, 'product_option_category_id');
     }
 
     public function products()
     {
-        return $this->belongsToMany(Product::class)
+        return $this->belongsToMany(Product::class, 'product_option_product')
             ->withPivot('quantity')
             ->withTimestamps();
     }

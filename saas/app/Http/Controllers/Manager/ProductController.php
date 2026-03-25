@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Manager;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\Ingredient;
+use App\Models\ProductOption;
 use App\Models\Product;
 use App\Models\Tax;
 use App\Services\ProductImportService;
@@ -62,12 +62,12 @@ class ProductController extends Controller
             $query->whereNull('manager_id')
                 ->orWhere('manager_id', $managerId);
         })->orderBy('name')->get();
-        $ingredients = Ingredient::where(function ($query) use ($managerId) {
+        $options = ProductOption::where(function ($query) use ($managerId) {
             $query->whereNull('manager_id')
                 ->orWhere('manager_id', $managerId);
         })->orderBy('name')->get();
 
-        return view('manager.products.create', compact('categories', 'taxes', 'ingredients'));
+        return view('manager.products.create', compact('categories', 'taxes', 'options'));
     }
 
     public function store(Request $request)
@@ -103,8 +103,8 @@ class ProductController extends Controller
                 Rule::unique('products', 'barcode')->where('manager_id', $managerId),
             ],
             'description' => ['nullable', 'string'],
-            'ingredients' => ['nullable', 'array'],
-            'ingredients.*' => ['nullable', 'numeric', 'min:0'],
+            'options' => ['nullable', 'array'],
+            'options.*' => ['nullable', 'numeric', 'min:0'],
             'image' => ['nullable', 'image', 'max:4096'],
             'price' => ['nullable', 'numeric', 'min:0'],
             'cost' => ['nullable', 'numeric', 'min:0'],
@@ -112,21 +112,21 @@ class ProductController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $ingredientsInput = $request->input('ingredients', []);
+        $optionsInput = $request->input('options', []);
         $data['manager_id'] = $managerId;
         $data['uuid'] = (string) Str::uuid();
         $data['price'] = $data['price'] ?? 0;
         $data['cost'] = $data['cost'] ?? 0;
         $data['track_stock'] = $data['track_stock'] ?? true;
         $data['is_active'] = $data['is_active'] ?? true;
-        unset($data['ingredients']);
+        unset($data['options']);
 
         if ($request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('products', 'public');
         }
 
         $product = Product::create($data);
-        $this->syncIngredients($product, $ingredientsInput, $managerId);
+        $this->syncOptions($product, $optionsInput, $managerId);
 
         return redirect()->route('manager.products.index')
             ->with('success', 'Product created.');
@@ -148,16 +148,16 @@ class ProductController extends Controller
             $query->whereNull('manager_id')
                 ->orWhere('manager_id', $managerId);
         })->orderBy('name')->get();
-        $ingredients = Ingredient::where(function ($query) use ($managerId) {
+        $options = ProductOption::where(function ($query) use ($managerId) {
             $query->whereNull('manager_id')
                 ->orWhere('manager_id', $managerId);
         })->orderBy('name')->get();
 
         $variants = $product->variants()->orderBy('id')->get();
 
-        $product->load('ingredientLinks');
+        $product->load('optionLinks');
 
-        return view('manager.products.edit', compact('product', 'categories', 'taxes', 'variants', 'ingredients'));
+        return view('manager.products.edit', compact('product', 'categories', 'taxes', 'variants', 'options'));
     }
 
     public function update(Request $request, Product $product)
@@ -197,8 +197,8 @@ class ProductController extends Controller
                 Rule::unique('products', 'barcode')->where('manager_id', $managerId)->ignore($product->id),
             ],
             'description' => ['nullable', 'string'],
-            'ingredients' => ['nullable', 'array'],
-            'ingredients.*' => ['nullable', 'numeric', 'min:0'],
+            'options' => ['nullable', 'array'],
+            'options.*' => ['nullable', 'numeric', 'min:0'],
             'image' => ['nullable', 'image', 'max:4096'],
             'price' => ['nullable', 'numeric', 'min:0'],
             'cost' => ['nullable', 'numeric', 'min:0'],
@@ -206,7 +206,7 @@ class ProductController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $ingredientsInput = $request->input('ingredients', []);
+        $optionsInput = $request->input('options', []);
         if ($request->hasFile('image')) {
             if ($product->image_path) {
                 Storage::disk('public')->delete($product->image_path);
@@ -215,9 +215,9 @@ class ProductController extends Controller
             $data['image_url'] = null;
         }
 
-        unset($data['ingredients']);
+        unset($data['options']);
         $product->update($data);
-        $this->syncIngredients($product, $ingredientsInput, $managerId);
+        $this->syncOptions($product, $optionsInput, $managerId);
 
         return redirect()->route('manager.products.index')
             ->with('success', 'Product updated.');
@@ -240,15 +240,54 @@ class ProductController extends Controller
             ->with('success', 'Product deleted.');
     }
 
-    private function syncIngredients(Product $product, array $input, int $managerId): void
+    public function duplicate(Request $request, Product $product)
+    {
+        $managerId = $request->user()->manager_id;
+        if ($product->manager_id !== $managerId) {
+            abort(403);
+        }
+
+        $product->load(['optionLinks', 'variants']);
+        $copy = $product->replicate();
+        $copy->manager_id = $managerId;
+        $copy->uuid = (string) Str::uuid();
+        $copy->name = $this->copyName($product->name);
+        $copy->sku = null;
+        $copy->barcode = null;
+        $copy->save();
+
+        if ($product->optionLinks->isNotEmpty()) {
+            $sync = $product->optionLinks
+                ->mapWithKeys(fn ($option) => [
+                    $option->id => ['quantity' => $option->pivot->quantity],
+                ])
+                ->all();
+            $copy->optionLinks()->sync($sync);
+        }
+
+        foreach ($product->variants as $variant) {
+            $variantCopy = $variant->replicate();
+            $variantCopy->manager_id = $managerId;
+            $variantCopy->product_id = $copy->id;
+            $variantCopy->uuid = (string) Str::uuid();
+            $variantCopy->sku = null;
+            $variantCopy->barcode = null;
+            $variantCopy->save();
+        }
+
+        return redirect()->route('manager.products.edit', $copy)
+            ->with('success', 'Product duplicated.');
+    }
+
+    private function syncOptions(Product $product, array $input, int $managerId): void
     {
         $ids = array_filter(array_keys($input), fn ($id) => is_numeric($id));
         if (empty($ids)) {
-            $product->ingredientLinks()->sync([]);
+            $product->optionLinks()->sync([]);
             return;
         }
 
-        $validIds = Ingredient::where(function ($query) use ($managerId) {
+        $validIds = ProductOption::where(function ($query) use ($managerId) {
             $query->whereNull('manager_id')
                 ->orWhere('manager_id', $managerId);
         })
@@ -260,7 +299,7 @@ class ProductController extends Controller
         $invalid = array_diff(array_map('strval', $ids), $validIds);
         if (!empty($invalid)) {
             throw ValidationException::withMessages([
-                'ingredients' => ['Invalid ingredient selection.'],
+                'options' => ['Invalid option selection.'],
             ]);
         }
 
@@ -276,6 +315,11 @@ class ProductController extends Controller
             }
         }
 
-        $product->ingredientLinks()->sync($sync);
+        $product->optionLinks()->sync($sync);
+    }
+
+    private function copyName(string $base): string
+    {
+        return trim($base) . ' (Copy)';
     }
 }

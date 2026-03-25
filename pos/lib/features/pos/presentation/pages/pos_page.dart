@@ -15,7 +15,8 @@ import '../../../../core/models/register_details.dart';
 import '../../../../core/models/currency.dart';
 import '../../../../core/models/payment_method.dart';
 import '../../../../core/models/warehouse.dart';
-import '../../../../core/models/product_ingredient.dart';
+import '../../../../core/models/product_option.dart';
+import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../auth/state/auth_controller.dart';
 import '../../state/appearance_controller.dart';
@@ -342,16 +343,16 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
     PosController controller,
     Product product,
   ) async {
-    if (product.ingredients.isEmpty) {
+    if (product.options.isEmpty) {
       controller.addProduct(product);
       return;
     }
-    final selected = await showDialog<List<ProductIngredient>>(
+    final selected = await showDialog<List<ProductOption>>(
       context: context,
-      builder: (_) => _IngredientSelectionDialog(product: product),
+      builder: (_) => _OptionSelectionDialog(product: product),
     );
     if (selected == null) return;
-    controller.addProduct(product, ingredients: selected);
+    controller.addProduct(product, options: selected);
   }
 
   Future<void> _promptCashInHandIfNeeded({bool force = false}) async {
@@ -417,54 +418,153 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
     );
   }
 
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 5)),
+    );
+  }
+
+  bool get _isDesktop =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux);
+
+  Future<void> _toggleFullScreen() async {
+    if (!_isDesktop) {
+      _showSnack(tr('Le plein écran est disponible uniquement sur desktop.'));
+      return;
+    }
+    final isFullScreen = await windowManager.isFullScreen();
+    await windowManager.setFullScreen(!isFullScreen);
+  }
+
+  Future<void> _openCalculator() async {
+    await showDialog(
+      context: context,
+      builder: (_) => const _CalculatorDialog(),
+    );
+  }
+
+  Future<void> _openPosConfiguration() async {
+    final pos = context.read<PosController>();
+    await showDialog(
+      context: context,
+      builder: (_) => ChangeNotifierProvider<PosController>.value(
+        value: pos,
+        child: _PosConfigurationDialog(
+          onTestReset: () => pos.resetHistoryStats(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openKioskPage() async {
+    final pos = context.read<PosController>();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChangeNotifierProvider<PosController>.value(
+          value: pos,
+          child: const KioskPage(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openPrinterSettings() async {
+    final printerController = context.read<PrinterSettingsController>();
+    final posController = context.read<PosController>();
+    await showDialog(
+      context: context,
+      builder: (_) => MultiProvider(
+        providers: [
+          ChangeNotifierProvider<PrinterSettingsController>.value(
+            value: printerController,
+          ),
+          ChangeNotifierProvider<PosController>.value(value: posController),
+        ],
+        child: const _PrinterSettingsDialog(),
+      ),
+    );
+  }
+
   Future<void> _openQuickMenu() async {
     final controller = context.read<PosController>();
     final auth = context.read<AuthController>();
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.refresh),
-                title: Text(tr('Actualiser les produits')),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await controller.refreshProducts(skipSyncOffline: true);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.history),
-                title: Text(tr('Historique des ventes')),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _openOrderHistory();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.palette_outlined),
-                title: Text(tr('Apparence')),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _openAppearanceSettings();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.logout),
-                title: Text(tr('Se déconnecter')),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await auth.logout();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    final isFullScreen = _isDesktop ? await windowManager.isFullScreen() : false;
+    final accent = const Color(0xFFF7C045);
+    final actions = [
+      _ActionMenuItem(
+        icon: Icons.refresh,
+        label: tr('Actualiser'),
+        onTap: () => controller.refreshProducts(skipSyncOffline: true),
+      ),
+      _ActionMenuItem(
+        icon: Icons.history,
+        label: tr('Historique'),
+        onTap: _openOrderHistory,
+      ),
+      _ActionMenuItem(
+        icon: Icons.calculate_outlined,
+        label: tr('Calculatrice'),
+        onTap: _openCalculator,
+      ),
+      _ActionMenuItem(
+        icon: isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
+        label: isFullScreen
+            ? tr('Quitter plein écran')
+            : tr('Plein écran'),
+        onTap: _toggleFullScreen,
+      ),
+      _ActionMenuItem(
+        icon: Icons.attach_money,
+        label: tr('Cash en caisse'),
+        onTap: () => _promptCashInHandIfNeeded(force: true),
+      ),
+      _ActionMenuItem(
+        icon: Icons.tune,
+        label: tr('Apparence'),
+        onTap: _openAppearanceSettings,
+      ),
+      _ActionMenuItem(
+        icon: Icons.sync,
+        label: tr('Synchroniser'),
+        onTap: controller.refreshProducts,
+      ),
+      _ActionMenuItem(
+        icon: Icons.print_outlined,
+        label: tr('Imprimante'),
+        onTap: _openPrinterSettings,
+      ),
+      _ActionMenuItem(
+        icon: Icons.settings_applications_outlined,
+        label: tr('Config POS'),
+        onTap: _openPosConfiguration,
+      ),
+      _ActionMenuItem(
+        icon: Icons.store_mall_directory_outlined,
+        label: tr('Interface borne'),
+        onTap: _openKioskPage,
+      ),
+      _ActionMenuItem(
+        icon: controller.offlineMode ? Icons.cloud_off : Icons.cloud_done,
+        label:
+            controller.offlineMode ? tr('Mode hors ligne') : tr('Connecté'),
+        onTap: controller.offlineMode ? _attemptReconnect : null,
+        color: controller.offlineMode ? Colors.orange : const Color(0xFF22C55E),
+        background:
+            controller.offlineMode ? accent : const Color(0xFFF3F4F6),
+      ),
+      _ActionMenuItem(
+        icon: Icons.logout,
+        label: tr('Déconnexion'),
+        onTap: () async {
+          await auth.logout();
+        },
+      ),
+    ];
+    await _showActionMenu(context, actions);
   }
 
   void _maybeScheduleBannerClear(PosController controller) {
@@ -637,6 +737,30 @@ class _CatalogPanel extends StatelessWidget {
         controller.selectedWarehouse?.name ??
         controller.companyName ??
         tr('Store');
+    final showClient = appearance.showClientField;
+    final showWarehouse = appearance.showWarehouseField;
+    final customers = controller.customers;
+    Customer? selectedCustomer;
+    if (controller.selectedCustomer != null) {
+      final matched = customers
+          .where((c) => c.id == controller.selectedCustomer!.id)
+          .toList();
+      if (matched.isNotEmpty) {
+        selectedCustomer = matched.first;
+      }
+    }
+    selectedCustomer ??= customers.isNotEmpty ? customers.first : null;
+    final warehouses = controller.warehouses;
+    Warehouse? selectedWarehouse;
+    if (controller.selectedWarehouse != null) {
+      final matched = warehouses
+          .where((w) => w.id == controller.selectedWarehouse!.id)
+          .toList();
+      if (matched.isNotEmpty) {
+        selectedWarehouse = matched.first;
+      }
+    }
+    selectedWarehouse ??= warehouses.isNotEmpty ? warehouses.first : null;
     final categories = <ProductCategory>[
       ProductCategory(id: 0, name: tr('All')),
       ...controller.categories,
@@ -681,6 +805,58 @@ class _CatalogPanel extends StatelessWidget {
           ),
           contentPadding: const EdgeInsets.symmetric(vertical: 0),
         ),
+      );
+    }
+
+    Widget buildCustomerSelector() {
+      if (!showClient) return const SizedBox.shrink();
+      return DropdownButtonFormField<Customer>(
+        value: selectedCustomer,
+        decoration: InputDecoration(
+          labelText: tr('Client'),
+          filled: true,
+          fillColor: const Color(0xFFF3F4F6),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        ),
+        items: customers
+            .map(
+              (customer) => DropdownMenuItem(
+                value: customer,
+                child: Text(customer.name),
+              ),
+            )
+            .toList(),
+        onChanged: customers.isEmpty ? null : controller.selectCustomer,
+      );
+    }
+
+    Widget buildWarehouseSelector() {
+      if (!showWarehouse) return const SizedBox.shrink();
+      return DropdownButtonFormField<Warehouse>(
+        value: selectedWarehouse,
+        decoration: InputDecoration(
+          labelText: tr('Magasin'),
+          filled: true,
+          fillColor: const Color(0xFFF3F4F6),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        ),
+        items: warehouses
+            .map(
+              (warehouse) => DropdownMenuItem(
+                value: warehouse,
+                child: Text(warehouse.name),
+              ),
+            )
+            .toList(),
+        onChanged: warehouses.isEmpty ? null : controller.selectWarehouse,
       );
     }
 
@@ -765,6 +941,14 @@ class _CatalogPanel extends StatelessWidget {
                   cartIcon(),
                 ],
               ),
+              if (showClient) ...[
+                const SizedBox(height: 12),
+                buildCustomerSelector(),
+              ],
+              if (showWarehouse) ...[
+                const SizedBox(height: 12),
+                buildWarehouseSelector(),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -823,6 +1007,14 @@ class _CatalogPanel extends StatelessWidget {
                   cartIcon(),
                 ],
               ),
+              if (showClient) ...[
+                const SizedBox(height: 12),
+                buildCustomerSelector(),
+              ],
+              if (showWarehouse) ...[
+                const SizedBox(height: 12),
+                buildWarehouseSelector(),
+              ],
             ],
             const SizedBox(height: 12),
             Text(
@@ -1622,18 +1814,18 @@ class _CartRow extends StatelessWidget {
       context,
     ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600);
     final iconColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.8);
-    final ingredientStyle = Theme.of(context)
+    final optionStyle = Theme.of(context)
         .textTheme
         .bodySmall
         ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6));
 
-    String formatIngredients() {
-      return item.ingredients.map((ingredient) {
-        final qty = ingredient.quantity;
+    String formatOptions() {
+      return item.options.map((option) {
+        final qty = option.quantity;
         final qtyLabel = qty == qty.roundToDouble()
             ? qty.toStringAsFixed(0)
             : qty.toString();
-        return qty <= 1 ? ingredient.name : '${ingredient.name} x$qtyLabel';
+        return qty <= 1 ? option.name : '${option.name} x$qtyLabel';
       }).join(', ');
     }
     return Padding(
@@ -1659,12 +1851,12 @@ class _CartRow extends StatelessWidget {
                         style: textStyle,
                         softWrap: true,
                       ),
-                      if (item.ingredients.isNotEmpty)
+                      if (item.options.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
-                            formatIngredients(),
-                            style: ingredientStyle,
+                            formatOptions(),
+                            style: optionStyle,
                             softWrap: true,
                           ),
                         ),
@@ -1713,17 +1905,17 @@ class _CartItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ingredientStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+    final optionStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
           color: const Color(0xFF9CA3AF),
           fontSize: 11,
         );
 
-    String formatIngredients() {
-      return item.ingredients.map((ingredient) {
-        final qty = ingredient.quantity;
+    String formatOptions() {
+      return item.options.map((option) {
+        final qty = option.quantity;
         final qtyLabel =
             qty == qty.roundToDouble() ? qty.toStringAsFixed(0) : qty.toString();
-        return qty <= 1 ? ingredient.name : '${ingredient.name} x$qtyLabel';
+        return qty <= 1 ? option.name : '${option.name} x$qtyLabel';
       }).join(', ');
     }
 
@@ -1736,15 +1928,15 @@ class _CartItemTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 18,
+          AppNetworkImage(
+            url: item.product.imageUrl,
+            width: 36,
+            height: 36,
+            isCircle: true,
             backgroundColor: const Color(0xFFF3F4F6),
-            backgroundImage: item.product.imageUrl != null
-                ? NetworkImage(item.product.imageUrl!)
-                : null,
-            child: item.product.imageUrl == null
-                ? const Icon(Icons.restaurant_menu, size: 16, color: Colors.black54)
-                : null,
+            fallbackIcon: Icons.restaurant_menu,
+            iconSize: 16,
+            iconColor: Colors.black54,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1761,14 +1953,14 @@ class _CartItemTile extends StatelessWidget {
                     color: Color(0xFF111827),
                   ),
                 ),
-                if (item.ingredients.isNotEmpty)
+                if (item.options.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      formatIngredients(),
+                      formatOptions(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: ingredientStyle,
+                      style: optionStyle,
                     ),
                   ),
               ],
@@ -3405,19 +3597,19 @@ class _CalculatorDialogState extends State<_CalculatorDialog> {
   }
 }
 
-class _IngredientSelectionDialog extends StatefulWidget {
-  const _IngredientSelectionDialog({required this.product});
+class _OptionSelectionDialog extends StatefulWidget {
+  const _OptionSelectionDialog({required this.product});
 
   final Product product;
 
   @override
-  State<_IngredientSelectionDialog> createState() =>
-      _IngredientSelectionDialogState();
+  State<_OptionSelectionDialog> createState() =>
+      _OptionSelectionDialogState();
 }
 
-class _IngredientSelectionDialogState
-    extends State<_IngredientSelectionDialog> {
-  late final List<_IngredientChoice> _choices;
+class _OptionSelectionDialogState
+    extends State<_OptionSelectionDialog> {
+  late final List<_OptionChoice> _choices;
 
   double _stepFor(double qty) {
     if (qty >= 1) {
@@ -3433,10 +3625,10 @@ class _IngredientSelectionDialogState
   @override
   void initState() {
     super.initState();
-    _choices = widget.product.ingredients.map((ingredient) {
-      final qty = ingredient.quantity;
-      return _IngredientChoice(
-        ingredient: ingredient,
+    _choices = widget.product.options.map((option) {
+      final qty = option.quantity;
+      return _OptionChoice(
+        option: option,
         enabled: qty > 0,
         quantity: qty,
         step: _stepFor(qty),
@@ -3463,7 +3655,7 @@ class _IngredientSelectionDialogState
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                tr('Ingrédients'),
+                tr('Options'),
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -3491,7 +3683,7 @@ class _IngredientSelectionDialogState
                         },
                       ),
                       Expanded(
-                        child: Text(choice.ingredient.name),
+                        child: Text(choice.option.name),
                       ),
                       IconButton(
                         onPressed: choice.enabled
@@ -3553,11 +3745,11 @@ class _IngredientSelectionDialogState
         ),
         FilledButton(
           onPressed: () {
-            final selected = <ProductIngredient>[];
+            final selected = <ProductOption>[];
             for (final choice in _choices) {
               final qty = choice.quantity;
               if (choice.enabled && qty > 0) {
-                selected.add(choice.ingredient.copyWith(quantity: qty));
+                selected.add(choice.option.copyWith(quantity: qty));
               }
             }
             Navigator.of(context).pop(selected);
@@ -3569,15 +3761,15 @@ class _IngredientSelectionDialogState
   }
 }
 
-class _IngredientChoice {
-  _IngredientChoice({
-    required this.ingredient,
+class _OptionChoice {
+  _OptionChoice({
+    required this.option,
     required this.enabled,
     required this.quantity,
     required this.step,
   });
 
-  final ProductIngredient ingredient;
+  final ProductOption option;
   bool enabled;
   double quantity;
   final double step;
@@ -4564,7 +4756,7 @@ class _PrintPreviewSection extends StatelessWidget {
         ? pos.cartItems.take(3).toList()
         : pos.products
               .take(3)
-              .map((p) => CartItem(product: p, quantity: 1, ingredients: p.ingredients))
+              .map((p) => CartItem(product: p, quantity: 1, options: p.options))
               .toList();
 
     String _formatAmount(double value) =>
@@ -5122,19 +5314,19 @@ class _OrderHistoryRow extends StatelessWidget {
         ? order.itemsDetail
               .map((i) {
                 final qtyLabel = i.quantity.toStringAsFixed(0);
-                if (i.ingredients.isEmpty) {
+                if (i.options.isEmpty) {
                   return '${i.name} x$qtyLabel';
                 }
-                final ingredientsLabel = i.ingredients.map((ingredient) {
-                  final qty = ingredient.quantity;
+                final optionsLabel = i.options.map((option) {
+                  final qty = option.quantity;
                   final qtyText = qty == qty.roundToDouble()
                       ? qty.toStringAsFixed(0)
                       : qty.toString();
                   return qty <= 1
-                      ? ingredient.name
-                      : '${ingredient.name} x$qtyText';
+                      ? option.name
+                      : '${option.name} x$qtyText';
                 }).join(', ');
-                return '${i.name} x$qtyLabel ($ingredientsLabel)';
+                return '${i.name} x$qtyLabel ($optionsLabel)';
               })
               .join(', ')
         : (order.productNames.isNotEmpty
@@ -5555,18 +5747,18 @@ class _ReceiptPreviewDialog extends StatelessWidget {
                       item.product.name,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    if (item.ingredients.isNotEmpty)
+                    if (item.options.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Text(
-                          item.ingredients.map((ingredient) {
-                            final qty = ingredient.quantity;
+                          item.options.map((option) {
+                            final qty = option.quantity;
                             final qtyText = qty == qty.roundToDouble()
                                 ? qty.toStringAsFixed(0)
                                 : qty.toString();
                             return qty <= 1
-                                ? ingredient.name
-                                : '${ingredient.name} x$qtyText';
+                                ? option.name
+                                : '${option.name} x$qtyText';
                           }).join(', '),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),

@@ -143,4 +143,32 @@ class CategoryController extends Controller
         return redirect()->route('manager.categories.index')
             ->with('success', 'Category deleted.');
     }
+
+    public function duplicate(Request $request, Category $category)
+    {
+        $managerId = $request->user()->manager_id;
+        if ($category->manager_id !== null && $category->manager_id !== $managerId) {
+            abort(403);
+        }
+
+        $copy = $category->replicate();
+        $copy->manager_id = $managerId;
+        $copy->name = $this->uniqueName($managerId, $category->name);
+        $copy->save();
+
+        return redirect()->route('manager.categories.index')
+            ->with('success', 'Category duplicated.');
+    }
+
+    private function uniqueName(int $managerId, string $base): string
+    {
+        $suffix = ' (Copy)';
+        $candidate = $base . $suffix;
+        $counter = 2;
+        while (Category::where('manager_id', $managerId)->where('name', $candidate)->exists()) {
+            $candidate = $base . $suffix . ' ' . $counter;
+            $counter++;
+        }
+        return $candidate;
+    }
 }

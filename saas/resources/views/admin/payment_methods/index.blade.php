@@ -38,6 +38,7 @@
                     <th>{{ t("Type") }}</th>
                     <th>{{ t("Default") }}</th>
                     <th>{{ t("Active") }}</th>
+                    <th>{{ t("Actions") }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,6 +50,15 @@
                         <td>{{ $method->type }}</td>
                         <td>{{ $method->is_default ? 'Yes' : 'No' }}</td>
                         <td>{{ $method->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            <form method="POST" action="{{ route('admin.payment_methods.destroy', $method) }}" style="display:inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn secondary" type="submit" onclick="return confirm('{{ t("Delete this payment method?") }}')">
+                                    {{ t("Delete") }}
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                 @endforeach
             </tbody>

@@ -454,17 +454,17 @@ class PrinterSettingsController extends ChangeNotifier {
           ),
         ]),
       );
-      if (item.ingredients.isNotEmpty) {
-        final ingredientsLabel = item.ingredients.map((ingredient) {
-          final qty = ingredient.quantity;
+      if (item.options.isNotEmpty) {
+        final optionsLabel = item.options.map((option) {
+          final qty = option.quantity;
           final qtyText = qty == qty.roundToDouble()
               ? qty.toStringAsFixed(0)
               : qty.toString();
-          return qty <= 1 ? ingredient.name : '${ingredient.name} x$qtyText';
+          return qty <= 1 ? option.name : '${option.name} x$qtyText';
         }).join(', ');
         bytes.addAll(
           g.text(
-            '  + $ingredientsLabel',
+            '  + $optionsLabel',
             styles: const PosStyles(align: PosAlign.left),
           ),
         );
@@ -550,17 +550,17 @@ class PrinterSettingsController extends ChangeNotifier {
           ),
         ]),
       );
-      if (item.ingredients.isNotEmpty) {
-        final ingredientsLabel = item.ingredients.map((ingredient) {
-          final qty = ingredient.quantity;
+      if (item.options.isNotEmpty) {
+        final optionsLabel = item.options.map((option) {
+          final qty = option.quantity;
           final qtyText = qty == qty.roundToDouble()
               ? qty.toStringAsFixed(0)
               : qty.toString();
-          return qty <= 1 ? ingredient.name : '${ingredient.name} x$qtyText';
+          return qty <= 1 ? option.name : '${option.name} x$qtyText';
         }).join(', ');
         bytes.addAll(
           g.text(
-            '  + $ingredientsLabel',
+            '  + $optionsLabel',
             styles: const PosStyles(align: PosAlign.left),
           ),
         );

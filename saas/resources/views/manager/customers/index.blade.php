@@ -31,6 +31,10 @@
                         <td>{{ $customer->is_active ? 'Yes' : 'No' }}</td>
                         <td>
                             <a class="btn secondary" href="{{ route('manager.customers.edit', $customer) }}">{{ t("Edit") }}</a>
+                            <form method="POST" action="{{ route('manager.customers.duplicate', $customer) }}" style="display:inline-block">
+                                @csrf
+                                <button class="btn secondary" type="submit">{{ t("Duplicate") }}</button>
+                            </form>
                             <form method="POST" action="{{ route('manager.customers.destroy', $customer) }}" style="display:inline-block" onsubmit="return confirm('Delete this customer?');">
                                 @csrf
                                 @method('DELETE')

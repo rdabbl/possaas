@@ -3,10 +3,10 @@
 @section('content')
     <div class="row" style="justify-content: space-between; align-items: center;">
         <div>
-            <h1>{{ t("Ingredient Categories") }}</h1>
-            <p class="muted">{{ t("Manage your ingredient categories.") }}</p>
+            <h1>{{ t("Option Categories") }}</h1>
+            <p class="muted">{{ t("Manage your product option categories.") }}</p>
         </div>
-        <a class="btn" href="{{ route('manager.ingredient_categories.create') }}">{{ t("New Ingredient Category") }}</a>
+        <a class="btn" href="{{ route('manager.product_option_categories.create') }}">{{ t("New Option Category") }}</a>
     </div>
 
     <div class="card">
@@ -31,15 +31,17 @@
                         </td>
                         <td>{{ $category->is_active ? 'Yes' : 'No' }}</td>
                         <td>
+                            <form method="POST" action="{{ route('manager.product_option_categories.duplicate', $category) }}" style="display:inline-block">
+                                @csrf
+                                <button class="btn secondary" type="submit">{{ t("Duplicate") }}</button>
+                            </form>
                             @if ($category->manager_id)
-                                <a class="btn secondary" href="{{ route('manager.ingredient_categories.edit', $category) }}">{{ t("Edit") }}</a>
-                                <form method="POST" action="{{ route('manager.ingredient_categories.destroy', $category) }}" style="display:inline-block" onsubmit="return confirm('Delete this ingredient category?');">
+                                <a class="btn secondary" href="{{ route('manager.product_option_categories.edit', $category) }}">{{ t("Edit") }}</a>
+                                <form method="POST" action="{{ route('manager.product_option_categories.destroy', $category) }}" style="display:inline-block" onsubmit="return confirm('Delete this option category?');">
                                     @csrf
                                     @method('DELETE')
                                     <button class="btn secondary" type="submit">{{ t("Delete") }}</button>
                                 </form>
-                            @else
-                                <span class="muted">{{ t("Global") }}</span>
                             @endif
                         </td>
                     </tr>

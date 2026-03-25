@@ -1,5 +1,5 @@
-class ProductIngredient {
-  const ProductIngredient({
+class ProductOption {
+  const ProductOption({
     required this.id,
     required this.name,
     required this.quantity,
@@ -9,7 +9,7 @@ class ProductIngredient {
   final String name;
   final double quantity;
 
-  factory ProductIngredient.fromJson(Map<String, dynamic> json) {
+  factory ProductOption.fromJson(Map<String, dynamic> json) {
     double _parseDouble(dynamic value) {
       if (value == null) return 0;
       if (value is num) return value.toDouble();
@@ -18,7 +18,7 @@ class ProductIngredient {
 
     final pivot = json['pivot'] is Map ? json['pivot'] as Map : null;
     final qty = pivot?['quantity'] ?? json['quantity'] ?? json['qty'];
-    return ProductIngredient(
+    return ProductOption(
       id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
       name: json['name']?.toString() ?? '',
       quantity: _parseDouble(qty),
@@ -33,8 +33,8 @@ class ProductIngredient {
     };
   }
 
-  ProductIngredient copyWith({double? quantity}) {
-    return ProductIngredient(
+  ProductOption copyWith({double? quantity}) {
+    return ProductOption(
       id: id,
       name: name,
       quantity: quantity ?? this.quantity,

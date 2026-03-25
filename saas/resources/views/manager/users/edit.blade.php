@@ -21,9 +21,13 @@
             </div>
             <div class="field">
                 <label>{{ t("Store") }}</label>
-                <div class="card" style="padding: 12px;">
-                    {{ $stores->first()?->name ?? t("No Store") }}
-                </div>
+                <select name="store_id" required>
+                    @foreach ($stores as $store)
+                        <option value="{{ $store->id }}" {{ old('store_id', $user->store_id) == $store->id ? 'selected' : '' }}>
+                            {{ $store->name }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
             <div class="field">
                 <label>{{ t("Roles") }}</label>

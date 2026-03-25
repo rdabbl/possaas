@@ -17,7 +17,13 @@ class EnsureManagerStoreAssigned
         }
 
         $routeName = $request->route()?->getName();
-        if (!$user->store_id && $routeName !== 'manager.no_store') {
+        $allowedWithoutStore = [
+            'manager.no_store',
+            'manager.stores.index',
+            'manager.stores.create',
+            'manager.stores.store',
+        ];
+        if (!$user->store_id && !in_array($routeName, $allowedWithoutStore, true)) {
             return redirect()->route('manager.no_store');
         }
 

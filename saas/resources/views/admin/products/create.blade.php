@@ -64,25 +64,25 @@
                 <input name="description" value="{{ old('description') }}">
             </div>
             <div class="field">
-                <label>{{ t("Ingredients (quantity)") }}</label>
-                @if ($ingredients->isEmpty())
-                    <p class="muted">{{ t("No ingredients available. Add ingredients first.") }}</p>
+                <label>{{ t("Product Options (quantity)") }}</label>
+                @if ($options->isEmpty())
+                    <p class="muted">{{ t("No product options available. Add options first.") }}</p>
                 @else
                     <table>
                         <thead>
                             <tr>
-                                <th>{{ t("Ingredient") }}</th>
+                                <th>{{ t("Option") }}</th>
                                 <th style="width: 140px;">{{ t("Quantity") }}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($ingredients as $ingredient)
+                            @foreach ($options as $option)
                                 <tr>
-                                    <td>{{ $ingredient->name }} <span class="muted">({{ $ingredient->manager?->name ?? 'Global' }})</span></td>
+                                    <td>{{ $option->name }} <span class="muted">({{ $option->manager?->name ?? 'Global' }})</span></td>
                                     <td>
                                         <div class="qty-control">
                                             <button type="button" class="qty-btn" data-action="minus">-</button>
-                                            <input class="qty-input" type="number" min="0" step="1" name="ingredients[{{ $ingredient->id }}]" value="{{ old('ingredients.' . $ingredient->id, 0) }}">
+                                            <input class="qty-input" type="number" min="0" step="1" name="options[{{ $option->id }}]" value="{{ old('options.' . $option->id, 0) }}">
                                             <button type="button" class="qty-btn" data-action="plus">{{ t("+") }}</button>
                                         </div>
                                     </td>

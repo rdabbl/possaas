@@ -1,5 +1,5 @@
-import '../config/app_config.dart';
-import 'product_ingredient.dart';
+import '../utils/media_url.dart';
+import 'product_option.dart';
 
 class Product {
   Product({
@@ -19,7 +19,7 @@ class Product {
     this.variationName,
     this.variationTypeName,
     this.categoryId,
-    this.ingredients = const [],
+    this.options = const [],
   });
 
   final int id;
@@ -38,7 +38,7 @@ class Product {
   final String? variationName;
   final String? variationTypeName;
   final int? categoryId;
-  final List<ProductIngredient> ingredients;
+  final List<ProductOption> options;
 
   factory Product.fromJson(Map<String, dynamic> json) {
     double parseDouble(dynamic value) {
@@ -66,7 +66,11 @@ class Product {
     final variationProduct = attributes['variation_product'] is Map
         ? Map<String, dynamic>.from(attributes['variation_product'] as Map)
         : null;
-    final ingredientsRaw = attributes['ingredient_links'] ??
+    final optionsRaw = attributes['option_links'] ??
+        attributes['optionLinks'] ??
+        json['option_links'] ??
+        json['optionLinks'] ??
+        attributes['ingredient_links'] ??
         attributes['ingredientLinks'] ??
         json['ingredient_links'] ??
         json['ingredientLinks'];
@@ -86,17 +90,7 @@ class Product {
       imageUrl = attributes['image_url']?.toString() ??
           attributes['image_path']?.toString();
     }
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-        final apiBase = AppConfig.apiBaseUrl;
-        final root = apiBase.replaceFirst(RegExp(r'/api/?$'), '');
-        if (imageUrl.startsWith('/')) {
-          imageUrl = '$root$imageUrl';
-        } else {
-          imageUrl = '$root/storage/$imageUrl';
-        }
-      }
-    }
+    imageUrl = normalizeMediaUrl(imageUrl);
 
     final stockQuantityRaw =
         attributes['stock_quantity'] ?? json['stock_quantity'];
@@ -142,11 +136,11 @@ class Product {
       variationName: variationProduct?['variation_name']?.toString(),
       variationTypeName: variationProduct?['variation_type_name']?.toString(),
       categoryId: parseInt(attributes['category_id'] ?? json['category_id']),
-      ingredients: ingredientsRaw is List
-          ? ingredientsRaw
+      options: optionsRaw is List
+          ? optionsRaw
               .whereType<Map>()
-              .map((e) => ProductIngredient.fromJson(e.cast<String, dynamic>()))
-              .where((i) => i.id > 0 && i.name.trim().isNotEmpty)
+              .map((e) => ProductOption.fromJson(e.cast<String, dynamic>()))
+              .where((o) => o.id > 0 && o.name.trim().isNotEmpty)
               .toList()
           : const [],
     );

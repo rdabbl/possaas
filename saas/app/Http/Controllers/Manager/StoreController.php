@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Manager;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\Currency;
 use App\Models\Store;
 use App\Models\Manager;
@@ -70,7 +71,15 @@ class StoreController extends Controller
             $data['logo_path'] = $request->file('logo')->store('stores', 'public');
         }
 
-        Store::create($data);
+        $store = Store::create($data);
+        Customer::create([
+            'manager_id' => $store->manager_id,
+            'name' => $store->name . ' - CLIENT',
+            'is_active' => true,
+        ]);
+        if (!$request->user()->store_id) {
+            $request->user()->update(['store_id' => $store->id]);
+        }
 
         return redirect()->route('manager.stores.index')
             ->with('success', 'Store created.');

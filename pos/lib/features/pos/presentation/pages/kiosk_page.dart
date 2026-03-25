@@ -6,6 +6,7 @@ import '../../../../core/models/product.dart';
 import '../../../../core/models/product_category.dart';
 import '../../../../core/i18n/translation_controller.dart';
 import '../../state/pos_controller.dart';
+import '../../../../core/widgets/app_network_image.dart';
 import 'package:pos_nimirik/core/i18n/i18n.dart';
 
 String _formatCurrency(double value, String symbol, bool symbolOnRight) {
@@ -435,22 +436,15 @@ class _KioskDetailPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Container(
+            AppNetworkImage(
+              url: product?.imageUrl,
               width: 220,
               height: 220,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE0D6),
-                shape: BoxShape.circle,
-                image: product?.imageUrl == null
-                    ? null
-                    : DecorationImage(
-                        image: NetworkImage(product!.imageUrl!),
-                        fit: BoxFit.cover,
-                      ),
-              ),
-              child: product?.imageUrl == null
-                  ? const Icon(Icons.lunch_dining, size: 110)
-                  : null,
+              isCircle: true,
+              backgroundColor: const Color(0xFFFFE0D6),
+              fallbackIcon: Icons.lunch_dining,
+              iconSize: 110,
+              iconColor: Colors.black54,
             ),
             const SizedBox(height: 18),
             Text(
@@ -628,22 +622,15 @@ class _MenuCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
+            AppNetworkImage(
+              url: imageUrl,
               width: double.infinity,
               height: 110,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                image: imageUrl == null
-                    ? null
-                    : DecorationImage(
-                        image: NetworkImage(imageUrl!),
-                        fit: BoxFit.cover,
-                      ),
-              ),
-              child: imageUrl == null
-                  ? const Icon(Icons.fastfood, size: 46, color: Colors.black45)
-                  : null,
+              borderRadius: BorderRadius.circular(16),
+              backgroundColor: Colors.white,
+              fallbackIcon: Icons.fastfood,
+              iconSize: 46,
+              iconColor: Colors.black45,
             ),
             const SizedBox(height: 12),
             Text(

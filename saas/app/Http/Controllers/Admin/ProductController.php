@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\Ingredient;
+use App\Models\ProductOption;
 use App\Models\Product;
 use App\Models\Tax;
 use App\Models\Manager;
@@ -63,9 +63,9 @@ class ProductController extends Controller
         $managers = Manager::orderBy('name')->get();
         $categories = Category::with('manager')->orderBy('name')->get();
         $taxes = Tax::with('manager')->orderBy('name')->get();
-        $ingredients = Ingredient::with('manager')->orderBy('name')->get();
+        $options = ProductOption::with('manager')->orderBy('name')->get();
 
-        return view('admin.products.create', compact('managers', 'categories', 'taxes', 'ingredients'));
+        return view('admin.products.create', compact('managers', 'categories', 'taxes', 'options'));
     }
 
     public function store(Request $request)
@@ -102,8 +102,8 @@ class ProductController extends Controller
                 Rule::unique('products', 'barcode')->where('manager_id', $managerId),
             ],
             'description' => ['nullable', 'string'],
-            'ingredients' => ['nullable', 'array'],
-            'ingredients.*' => ['nullable', 'numeric', 'min:0'],
+            'options' => ['nullable', 'array'],
+            'options.*' => ['nullable', 'numeric', 'min:0'],
             'image' => ['nullable', 'image', 'max:4096'],
             'price' => ['nullable', 'numeric', 'min:0'],
             'cost' => ['nullable', 'numeric', 'min:0'],
@@ -111,20 +111,20 @@ class ProductController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $ingredientsInput = $request->input('ingredients', []);
+        $optionsInput = $request->input('options', []);
         $data['uuid'] = (string) Str::uuid();
         $data['price'] = $data['price'] ?? 0;
         $data['cost'] = $data['cost'] ?? 0;
         $data['track_stock'] = $data['track_stock'] ?? true;
         $data['is_active'] = $data['is_active'] ?? true;
-        unset($data['ingredients']);
+        unset($data['options']);
 
         if ($request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('products', 'public');
         }
 
         $product = Product::create($data);
-        $this->syncIngredients($product, $ingredientsInput, $managerId);
+        $this->syncOptions($product, $optionsInput, $managerId);
 
         return redirect()->route('admin.products.index')
             ->with('success', 'Product created.');
@@ -140,14 +140,14 @@ class ProductController extends Controller
             $query->whereNull('manager_id')
                 ->orWhere('manager_id', $product->manager_id);
         })->orderBy('name')->get();
-        $ingredients = Ingredient::where(function ($query) use ($product) {
+        $options = ProductOption::where(function ($query) use ($product) {
             $query->whereNull('manager_id')
                 ->orWhere('manager_id', $product->manager_id);
         })->orderBy('name')->get();
 
-        $product->load('ingredientLinks');
+        $product->load('optionLinks');
 
-        return view('admin.products.edit', compact('product', 'categories', 'taxes', 'ingredients'));
+        return view('admin.products.edit', compact('product', 'categories', 'taxes', 'options'));
     }
 
     public function update(Request $request, Product $product)
@@ -183,8 +183,8 @@ class ProductController extends Controller
                 Rule::unique('products', 'barcode')->where('manager_id', $managerId)->ignore($product->id),
             ],
             'description' => ['nullable', 'string'],
-            'ingredients' => ['nullable', 'array'],
-            'ingredients.*' => ['nullable', 'numeric', 'min:0'],
+            'options' => ['nullable', 'array'],
+            'options.*' => ['nullable', 'numeric', 'min:0'],
             'image' => ['nullable', 'image', 'max:4096'],
             'price' => ['nullable', 'numeric', 'min:0'],
             'cost' => ['nullable', 'numeric', 'min:0'],
@@ -192,7 +192,7 @@ class ProductController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $ingredientsInput = $request->input('ingredients', []);
+        $optionsInput = $request->input('options', []);
         if ($request->hasFile('image')) {
             if ($product->image_path) {
                 Storage::disk('public')->delete($product->image_path);
@@ -201,9 +201,9 @@ class ProductController extends Controller
             $data['image_url'] = null;
         }
 
-        unset($data['ingredients']);
+        unset($data['options']);
         $product->update($data);
-        $this->syncIngredients($product, $ingredientsInput, $managerId);
+        $this->syncOptions($product, $optionsInput, $managerId);
 
         return redirect()->route('admin.products.index')
             ->with('success', 'Product updated.');
@@ -220,15 +220,15 @@ class ProductController extends Controller
             ->with('success', 'Product deleted.');
     }
 
-    private function syncIngredients(Product $product, array $input, int $managerId): void
+    private function syncOptions(Product $product, array $input, int $managerId): void
     {
         $ids = array_filter(array_keys($input), fn ($id) => is_numeric($id));
         if (empty($ids)) {
-            $product->ingredientLinks()->sync([]);
+            $product->optionLinks()->sync([]);
             return;
         }
 
-        $validIds = Ingredient::where(function ($query) use ($managerId) {
+        $validIds = ProductOption::where(function ($query) use ($managerId) {
             $query->whereNull('manager_id')
                 ->orWhere('manager_id', $managerId);
         })
@@ -240,7 +240,7 @@ class ProductController extends Controller
         $invalid = array_diff(array_map('strval', $ids), $validIds);
         if (!empty($invalid)) {
             throw ValidationException::withMessages([
-                'ingredients' => ['Invalid ingredient selection.'],
+                'options' => ['Invalid option selection.'],
             ]);
         }
 
@@ -256,6 +256,6 @@ class ProductController extends Controller
             }
         }
 
-        $product->ingredientLinks()->sync($sync);
+        $product->optionLinks()->sync($sync);
     }
 }

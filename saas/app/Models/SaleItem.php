@@ -19,7 +19,7 @@ class SaleItem extends Model
         'unit_price',
         'discount_amount',
         'tax_amount',
-        'ingredients',
+        'options',
         'total',
     ];
 
@@ -28,7 +28,7 @@ class SaleItem extends Model
         'unit_price' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'tax_amount' => 'decimal:2',
-        'ingredients' => 'array',
+        'options' => 'array',
         'total' => 'decimal:2',
     ];
 

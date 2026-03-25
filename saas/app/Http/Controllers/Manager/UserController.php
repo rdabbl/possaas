@@ -9,16 +9,27 @@ use App\Models\User;
 use App\Models\UserAudit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
-    private function requireStoreId(Request $request): int
+    private function managerStores(int $managerId)
     {
-        $storeId = $request->user()->store_id;
+        return Store::where('manager_id', $managerId)
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function resolveStoreFilter(Request $request, int $managerId): ?int
+    {
+        $storeId = $request->query('store_id');
         if (!$storeId) {
-            abort(403);
+            return null;
         }
-        return (int) $storeId;
+        $storeId = (int) $storeId;
+        $exists = Store::where('manager_id', $managerId)->where('id', $storeId)->exists();
+        return $exists ? $storeId : null;
     }
 
     private function snapshotUser(User $user): array
@@ -68,25 +79,27 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $managerId = $request->user()->manager_id;
-        $storeId = $this->requireStoreId($request);
+        $stores = $this->managerStores($managerId);
+        $storeFilter = $this->resolveStoreFilter($request, $managerId);
 
-        $users = User::where('manager_id', $managerId)
-            ->where('store_id', $storeId)
+        $users = User::with('store')
+            ->where('manager_id', $managerId)
             ->where('is_super_admin', false)
+            ->when($storeFilter, fn ($q) => $q->where('store_id', $storeFilter))
             ->orderBy('id', 'desc')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('manager.users.index', compact('users'));
+        return view('manager.users.index', compact('users', 'stores', 'storeFilter'));
     }
 
     public function create(Request $request)
     {
         $managerId = $request->user()->manager_id;
-        $storeId = $this->requireStoreId($request);
-        $stores = Store::where('manager_id', $managerId)
-            ->where('id', $storeId)
-            ->orderBy('name')
-            ->get();
+        $stores = $this->managerStores($managerId);
+        if ($stores->isEmpty()) {
+            return redirect()->route('manager.no_store');
+        }
         $roles = Role::where(function ($q) use ($managerId) {
                 $q->whereNull('manager_id')->orWhere('manager_id', $managerId);
             })
@@ -99,9 +112,13 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $managerId = $request->user()->manager_id;
-        $storeId = $this->requireStoreId($request);
 
         $data = $request->validate([
+            'store_id' => [
+                'required',
+                'integer',
+                Rule::exists('stores', 'id')->where('manager_id', $managerId),
+            ],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
@@ -112,7 +129,7 @@ class UserController extends Controller
 
         $user = User::create([
             'manager_id' => $managerId,
-            'store_id' => $storeId,
+            'store_id' => $data['store_id'],
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
@@ -139,16 +156,15 @@ class UserController extends Controller
     public function edit(Request $request, User $user)
     {
         $managerId = $request->user()->manager_id;
-        $storeId = $this->requireStoreId($request);
 
-        if ($user->manager_id !== $managerId || $user->store_id !== $storeId || $user->is_super_admin) {
+        if ($user->manager_id !== $managerId || $user->is_super_admin) {
             abort(403);
         }
 
-        $stores = Store::where('manager_id', $managerId)
-            ->where('id', $storeId)
-            ->orderBy('name')
-            ->get();
+        $stores = $this->managerStores($managerId);
+        if ($stores->isEmpty()) {
+            return redirect()->route('manager.no_store');
+        }
         $roles = Role::where(function ($q) use ($managerId) {
                 $q->whereNull('manager_id')->orWhere('manager_id', $managerId);
             })
@@ -162,13 +178,17 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $managerId = $request->user()->manager_id;
-        $storeId = $this->requireStoreId($request);
 
-        if ($user->manager_id !== $managerId || $user->store_id !== $storeId || $user->is_super_admin) {
+        if ($user->manager_id !== $managerId || $user->is_super_admin) {
             abort(403);
         }
 
         $data = $request->validate([
+            'store_id' => [
+                'required',
+                'integer',
+                Rule::exists('stores', 'id')->where('manager_id', $managerId),
+            ],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'password' => ['nullable', 'string', 'min:6'],
@@ -180,7 +200,7 @@ class UserController extends Controller
         $before = $this->snapshotUser($user);
         $user->name = $data['name'];
         $user->email = $data['email'];
-        $user->store_id = $storeId;
+        $user->store_id = $data['store_id'];
         $user->is_active = $data['is_active'] ?? $user->is_active;
         if (!empty($data['password'])) {
             $user->password = Hash::make($data['password']);
@@ -204,9 +224,8 @@ class UserController extends Controller
     public function destroy(Request $request, User $user)
     {
         $managerId = $request->user()->manager_id;
-        $storeId = $this->requireStoreId($request);
 
-        if ($user->manager_id !== $managerId || $user->store_id !== $storeId || $user->is_super_admin) {
+        if ($user->manager_id !== $managerId || $user->is_super_admin) {
             abort(403);
         }
 
@@ -221,5 +240,51 @@ class UserController extends Controller
 
         return redirect()->route('manager.users.index')
             ->with('success', 'User deleted.');
+    }
+
+    public function duplicate(Request $request, User $user)
+    {
+        $managerId = $request->user()->manager_id;
+        if ($user->manager_id !== $managerId || $user->is_super_admin) {
+            abort(403);
+        }
+
+        $newEmail = $this->uniqueEmail($user->email);
+        $newUser = User::create([
+            'manager_id' => $managerId,
+            'store_id' => $user->store_id,
+            'name' => trim($user->name) . ' (Copy)',
+            'email' => $newEmail,
+            'password' => Hash::make(Str::random(12)),
+            'is_active' => false,
+            'is_super_admin' => false,
+        ]);
+
+        $roleIds = $user->roles()->pluck('roles.id')->toArray();
+        if (!empty($roleIds)) {
+            $newUser->roles()->sync($roleIds);
+        }
+
+        $this->logAudit($request, $newUser, 'duplicate', null, $this->snapshotUser($newUser));
+
+        return redirect()->route('manager.users.edit', $newUser)
+            ->with('success', 'User duplicated. Update email/password.');
+    }
+
+    private function uniqueEmail(string $email): string
+    {
+        $email = trim($email);
+        $local = $email;
+        $domain = 'example.local';
+        if (str_contains($email, '@')) {
+            [$local, $domain] = explode('@', $email, 2);
+        }
+        $local = preg_replace('/\\+.*/', '', $local) ?? $local;
+
+        $candidate = $local . '+copy' . time() . '@' . $domain;
+        while (User::where('email', $candidate)->exists()) {
+            $candidate = $local . '+copy' . Str::random(6) . '@' . $domain;
+        }
+        return $candidate;
     }
 }

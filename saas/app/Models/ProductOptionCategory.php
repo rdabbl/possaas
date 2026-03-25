@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class IngredientCategory extends Model
+class ProductOptionCategory extends Model
 {
     use SoftDeletes;
+
+    protected $table = 'product_option_categories';
 
     protected $fillable = [
         'manager_id',
@@ -24,8 +26,8 @@ class IngredientCategory extends Model
         return $this->belongsTo(Manager::class);
     }
 
-    public function ingredients()
+    public function options()
     {
-        return $this->hasMany(Ingredient::class);
+        return $this->hasMany(ProductOption::class, 'product_option_category_id');
     }
 }

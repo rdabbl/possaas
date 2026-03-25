@@ -88,8 +88,8 @@
             <a href="{{ route('manager.dashboard') }}" class="{{ request()->routeIs('manager.dashboard') ? 'active' : '' }}">Dashboard</a>
             <a href="{{ route('manager.stores.index') }}" class="{{ request()->routeIs('manager.stores.*') ? 'active' : '' }}">Stores</a>
             <a href="{{ route('manager.categories.index') }}" class="{{ request()->routeIs('manager.categories.*') ? 'active' : '' }}">Categories</a>
-            <a href="{{ route('manager.ingredient_categories.index') }}" class="{{ request()->routeIs('manager.ingredient_categories.*') ? 'active' : '' }}">Ingredient Categories</a>
-            <a href="{{ route('manager.ingredients.index') }}" class="{{ request()->routeIs('manager.ingredients.*') ? 'active' : '' }}">Ingredients</a>
+            <a href="{{ route('manager.product_option_categories.index') }}" class="{{ request()->routeIs('manager.product_option_categories.*') ? 'active' : '' }}">Product Option Categories</a>
+            <a href="{{ route('manager.product_options.index') }}" class="{{ request()->routeIs('manager.product_options.*') ? 'active' : '' }}">Product Options</a>
             <a href="{{ route('manager.products.index') }}" class="{{ request()->routeIs('manager.products.*') ? 'active' : '' }}">Products</a>
             <a href="{{ route('manager.stock.index') }}" class="{{ request()->routeIs('manager.stock.*') ? 'active' : '' }}">Stock</a>
             <a href="{{ route('manager.customers.index') }}" class="{{ request()->routeIs('manager.customers.*') ? 'active' : '' }}">Customers</a>

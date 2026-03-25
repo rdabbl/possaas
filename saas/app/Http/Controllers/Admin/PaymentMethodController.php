@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PaymentMethod;
 use App\Models\Manager;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rule;
 
 class PaymentMethodController extends Controller
@@ -53,5 +54,17 @@ class PaymentMethodController extends Controller
 
         return redirect()->route('admin.payment_methods.index')
             ->with('success', 'Payment method created.');
+    }
+
+    public function destroy(PaymentMethod $paymentMethod)
+    {
+        try {
+            $paymentMethod->delete();
+            return redirect()->route('admin.payment_methods.index')
+                ->with('success', 'Payment method deleted.');
+        } catch (QueryException $e) {
+            return redirect()->route('admin.payment_methods.index')
+                ->with('error', 'Unable to delete payment method. Remove dependent records first.');
+        }
     }
 }

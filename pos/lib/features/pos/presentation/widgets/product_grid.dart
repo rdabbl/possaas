@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/models/product.dart';
 import '../../state/appearance_controller.dart';
+import '../../../../core/widgets/app_network_image.dart';
 import 'package:pos_nimirik/core/i18n/i18n.dart';
 
 class ProductGrid extends StatelessWidget {
@@ -156,19 +157,15 @@ class _ProductCardState extends State<_ProductCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  radius: 44,
+                AppNetworkImage(
+                  url: widget.product.imageUrl,
+                  width: 88,
+                  height: 88,
+                  isCircle: true,
                   backgroundColor: const Color(0xFFF3F4F6),
-                  backgroundImage: widget.product.imageUrl != null
-                      ? NetworkImage(widget.product.imageUrl!)
-                      : null,
-                  child: widget.product.imageUrl == null
-                      ? const Icon(
-                          Icons.restaurant_menu,
-                          size: 32,
-                          color: Colors.black54,
-                        )
-                      : null,
+                  fallbackIcon: Icons.restaurant_menu,
+                  iconSize: 32,
+                  iconColor: Colors.black54,
                 ),
                 const SizedBox(height: 12),
                 Text(

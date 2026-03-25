@@ -19,7 +19,7 @@ class Product extends Model
         'sku',
         'barcode',
         'description',
-        'ingredients',
+        'options',
         'image_path',
         'image_url',
         'price',
@@ -60,9 +60,9 @@ class Product extends Model
         return $this->hasMany(StockMovement::class);
     }
 
-    public function ingredientLinks()
+    public function optionLinks()
     {
-        return $this->belongsToMany(Ingredient::class)
+        return $this->belongsToMany(ProductOption::class, 'product_option_product')
             ->withPivot('quantity')
             ->withTimestamps();
     }

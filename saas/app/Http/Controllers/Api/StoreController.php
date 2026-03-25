@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Customer;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -56,6 +57,11 @@ class StoreController extends BaseApiController
         $data['is_active'] = $data['is_active'] ?? true;
 
         $store = Store::create($data);
+        Customer::create([
+            'manager_id' => $store->manager_id,
+            'name' => $store->name . ' - CLIENT',
+            'is_active' => true,
+        ]);
 
         return response()->json($store, 201);
     }

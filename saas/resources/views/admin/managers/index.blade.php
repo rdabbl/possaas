@@ -33,6 +33,13 @@
                         <td>{{ $manager->max_devices ?? 'Unlimited' }}</td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.managers.edit', $manager) }}">{{ t("Edit") }}</a>
+                            <form method="POST" action="{{ route('admin.managers.destroy', $manager) }}" style="display:inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn secondary" type="submit" onclick="return confirm('{{ t("Delete this manager?") }}')">
+                                    {{ t("Delete") }}
+                                </button>
+                            </form>
                         </td>
                     </tr>
                 @endforeach

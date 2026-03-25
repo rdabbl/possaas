@@ -3,14 +3,14 @@
 @section('content')
     <div class="row" style="justify-content: space-between; align-items: center;">
         <div>
-            <h1>{{ t("Ingredient Categories") }}</h1>
-            <p class="muted">{{ t("Manage ingredient categories.") }}</p>
+            <h1>{{ t("Product Option Categories") }}</h1>
+            <p class="muted">{{ t("Manage product option categories.") }}</p>
         </div>
-        <a class="btn" href="{{ route('admin.ingredient_categories.create') }}">{{ t("New Ingredient Category") }}</a>
+        <a class="btn" href="{{ route('admin.product_option_categories.create') }}">{{ t("New Product Option Category") }}</a>
     </div>
 
     <div class="card" style="margin-bottom: 16px;">
-        <form method="GET" action="{{ route('admin.ingredient_categories.index') }}" class="row">
+        <form method="GET" action="{{ route('admin.product_option_categories.index') }}" class="row">
             <div style="min-width: 220px;">
                 <label>{{ t("Filter by Manager") }}</label>
                 <select name="manager_id">
@@ -47,8 +47,8 @@
                         <td>{{ $category->name }}</td>
                         <td>{{ $category->is_active ? 'Yes' : 'No' }}</td>
                         <td>
-                            <a class="btn secondary" href="{{ route('admin.ingredient_categories.edit', $category) }}">{{ t("Edit") }}</a>
-                            <form method="POST" action="{{ route('admin.ingredient_categories.destroy', $category) }}" style="display:inline-block" onsubmit="return confirm('Delete this ingredient category?');">
+                            <a class="btn secondary" href="{{ route('admin.product_option_categories.edit', $category) }}">{{ t("Edit") }}</a>
+                            <form method="POST" action="{{ route('admin.product_option_categories.destroy', $category) }}" style="display:inline-block" onsubmit="return confirm('Delete this product option category?');">
                                 @csrf
                                 @method('DELETE')
                                 <button class="btn secondary" type="submit">{{ t("Delete") }}</button>

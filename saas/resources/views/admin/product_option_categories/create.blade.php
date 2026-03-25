@@ -1,10 +1,10 @@
-@extends('manager.layout')
+@extends('admin.layout')
 
 @section('content')
-    <h1>{{ t("New Ingredient Category") }}</h1>
+    <h1>{{ t("New Product Option Category") }}</h1>
 
     <div class="card">
-        <form method="POST" action="{{ route('manager.ingredient_categories.store') }}">
+        <form method="POST" action="{{ route('admin.product_option_categories.store') }}">
             @csrf
             <div class="field">
                 <label>{{ t("Name") }}</label>
@@ -17,8 +17,8 @@
                     <option value="0">{{ t("No") }}</option>
                 </select>
             </div>
-            <button class="btn" type="submit">{{ t("Create Ingredient Category") }}</button>
-            <a class="btn secondary" href="{{ route('manager.ingredient_categories.index') }}">{{ t("Cancel") }}</a>
+            <button class="btn" type="submit">{{ t("Create Product Option Category") }}</button>
+            <a class="btn secondary" href="{{ route('admin.product_option_categories.index') }}">{{ t("Cancel") }}</a>
         </form>
     </div>
 @endsection

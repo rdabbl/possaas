@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
+use App\Models\Customer;
 use App\Models\Plan;
 use App\Models\Manager;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -61,12 +64,40 @@ class ManagerController extends Controller
 
         $manager = Manager::create($data);
 
+        $store = null;
+        $storeCount = Store::where('manager_id', $manager->id)->count();
+        if ($storeCount === 0) {
+            $currency = null;
+            if (!empty($manager->currency)) {
+                $currency = Currency::where('code', strtoupper($manager->currency))->first();
+            }
+            $currency ??= Currency::where('is_active', true)->orderBy('id')->first();
+
+            $storeName = $manager->name;
+            $store = Store::create([
+                'manager_id' => $manager->id,
+                'currency_id' => $currency?->id,
+                'name' => $storeName,
+                'code' => null,
+                'stock_enabled' => true,
+                'is_currency_right' => true,
+                'is_active' => true,
+            ]);
+
+            Customer::create([
+                'manager_id' => $manager->id,
+                'name' => $storeName . ' - CLIENT',
+                'is_active' => true,
+            ]);
+        }
+
         if (!empty($data['admin_email'])) {
             $adminName = $data['admin_name'] ?? $manager->name . ' Admin';
             $adminPassword = $data['admin_password'] ?? 'password123';
 
             User::create([
                 'manager_id' => $manager->id,
+                'store_id' => $store?->id,
                 'name' => $adminName,
                 'email' => $data['admin_email'],
                 'password' => Hash::make($adminPassword),
@@ -122,5 +153,17 @@ class ManagerController extends Controller
 
         return redirect()->route('admin.managers.index')
             ->with('success', 'Manager updated.');
+    }
+
+    public function destroy(Manager $manager)
+    {
+        try {
+            $manager->delete();
+            return redirect()->route('admin.managers.index')
+                ->with('success', 'Manager deleted.');
+        } catch (QueryException $e) {
+            return redirect()->route('admin.managers.index')
+                ->with('error', 'Unable to delete manager. Remove dependent records first.');
+        }
     }
 }

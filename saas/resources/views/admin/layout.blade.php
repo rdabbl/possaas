@@ -187,17 +187,17 @@
                 </span>
                 {{ t("Categories") }}
             </a>
-            <a href="{{ route('admin.ingredient_categories.index') }}" class="{{ request()->routeIs('admin.ingredient_categories.*') ? 'active' : '' }}">
+            <a href="{{ route('admin.product_option_categories.index') }}" class="{{ request()->routeIs('admin.product_option_categories.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
                 </span>
-                {{ t("Ingredient Categories") }}
+                {{ t("Product Option Categories") }}
             </a>
-            <a href="{{ route('admin.ingredients.index') }}" class="{{ request()->routeIs('admin.ingredients.*') ? 'active' : '' }}">
+            <a href="{{ route('admin.product_options.index') }}" class="{{ request()->routeIs('admin.product_options.*') ? 'active' : '' }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><path d="M6 2h12"></path><path d="M9 2v6l-5 9a4 4 0 0 0 3.5 6h9a4 4 0 0 0 3.5-6l-5-9V2"></path></svg>
                 </span>
-                {{ t("Ingredients") }}
+                {{ t("Product Options") }}
             </a>
             <a href="{{ route('admin.products.index') }}" class="{{ request()->routeIs('admin.products.*') ? 'active' : '' }}">
                 <span class="nav-icon">

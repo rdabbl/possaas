@@ -44,6 +44,10 @@
                         <td>{{ $product->is_active ? 'Yes' : 'No' }}</td>
                         <td>
                             <a class="btn secondary" href="{{ route('manager.products.edit', $product) }}">{{ t("Edit") }}</a>
+                            <form method="POST" action="{{ route('manager.products.duplicate', $product) }}" style="display:inline-block">
+                                @csrf
+                                <button class="btn secondary" type="submit">{{ t("Duplicate") }}</button>
+                            </form>
                             <form method="POST" action="{{ route('manager.products.destroy', $product) }}" style="display:inline-block" onsubmit="return confirm('Delete this product?');">
                                 @csrf
                                 @method('DELETE')

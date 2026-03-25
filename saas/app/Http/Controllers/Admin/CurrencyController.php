@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rule;
 
 class CurrencyController extends Controller
@@ -65,5 +66,17 @@ class CurrencyController extends Controller
 
         return redirect()->route('admin.currencies.index')
             ->with('success', 'Currency updated.');
+    }
+
+    public function destroy(Currency $currency)
+    {
+        try {
+            $currency->delete();
+            return redirect()->route('admin.currencies.index')
+                ->with('success', 'Currency deleted.');
+        } catch (QueryException $e) {
+            return redirect()->route('admin.currencies.index')
+                ->with('error', 'Unable to delete currency. Remove dependent records first.');
+        }
     }
 }

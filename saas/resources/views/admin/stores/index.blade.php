@@ -38,6 +38,7 @@
                     <th>{{ t("Code") }}</th>
                     <th>{{ t("Stock") }}</th>
                     <th>{{ t("Active") }}</th>
+                    <th>{{ t("Actions") }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,6 +50,15 @@
                         <td>{{ $store->code }}</td>
                         <td>{{ $store->stock_enabled ? 'Enabled' : 'Disabled' }}</td>
                         <td>{{ $store->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            <form method="POST" action="{{ route('admin.stores.destroy', $store) }}" style="display:inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn secondary" type="submit" onclick="return confirm('{{ t("Delete this store?") }}')">
+                                    {{ t("Delete") }}
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                 @endforeach
             </tbody>

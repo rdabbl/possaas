@@ -92,4 +92,25 @@ class CustomerController extends Controller
         return redirect()->route('manager.customers.index')
             ->with('success', 'Customer deleted.');
     }
+
+    public function duplicate(Request $request, Customer $customer)
+    {
+        $managerId = $request->user()->manager_id;
+        if ($customer->manager_id !== $managerId) {
+            abort(403);
+        }
+
+        $copy = $customer->replicate();
+        $copy->manager_id = $managerId;
+        $copy->name = $this->copyName($customer->name);
+        $copy->save();
+
+        return redirect()->route('manager.customers.index')
+            ->with('success', 'Customer duplicated.');
+    }
+
+    private function copyName(string $base): string
+    {
+        return trim($base) . ' (Copy)';
+    }
 }

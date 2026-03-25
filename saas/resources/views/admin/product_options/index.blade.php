@@ -3,14 +3,14 @@
 @section('content')
     <div class="row" style="justify-content: space-between; align-items: center;">
         <div>
-            <h1>{{ t("Ingredients") }}</h1>
-            <p class="muted">{{ t("Manage ingredient options.") }}</p>
+            <h1>{{ t("Product Options") }}</h1>
+            <p class="muted">{{ t("Manage product options.") }}</p>
         </div>
-        <a class="btn" href="{{ route('admin.ingredients.create') }}">{{ t("New Ingredient") }}</a>
+        <a class="btn" href="{{ route('admin.product_options.create') }}">{{ t("New Option") }}</a>
     </div>
 
     <div class="card" style="margin-bottom: 16px;">
-        <form method="GET" action="{{ route('admin.ingredients.index') }}" class="row">
+        <form method="GET" action="{{ route('admin.product_options.index') }}" class="row">
             <div style="min-width: 220px;">
                 <label>{{ t("Filter by Manager") }}</label>
                 <select name="manager_id">
@@ -41,22 +41,22 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($ingredients as $ingredient)
+                @foreach ($options as $option)
                     <tr>
-                        <td>{{ $ingredient->id }}</td>
-                        <td>{{ $ingredient->manager?->name ?? 'Global' }}</td>
+                        <td>{{ $option->id }}</td>
+                        <td>{{ $option->manager?->name ?? 'Global' }}</td>
                         <td>
-                            @if ($ingredient->image_path)
-                                <img src="{{ asset('storage/' . $ingredient->image_path) }}" alt="Ingredient image" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;">
+                            @if ($option->image_path)
+                                <img src="{{ asset('storage/' . $option->image_path) }}" alt="Option image" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;">
                             @else
                                 —
                             @endif
                         </td>
-                        <td>{{ $ingredient->name }}</td>
-                        <td>{{ $ingredient->is_active ? 'Yes' : 'No' }}</td>
+                        <td>{{ $option->name }}</td>
+                        <td>{{ $option->is_active ? 'Yes' : 'No' }}</td>
                         <td>
-                            <a class="btn secondary" href="{{ route('admin.ingredients.edit', $ingredient) }}">{{ t("Edit") }}</a>
-                            <form method="POST" action="{{ route('admin.ingredients.destroy', $ingredient) }}" style="display:inline-block" onsubmit="return confirm('Delete this ingredient?');">
+                            <a class="btn secondary" href="{{ route('admin.product_options.edit', $option) }}">{{ t("Edit") }}</a>
+                            <form method="POST" action="{{ route('admin.product_options.destroy', $option) }}" style="display:inline-block" onsubmit="return confirm('Delete this option?');">
                                 @csrf
                                 @method('DELETE')
                                 <button class="btn secondary" type="submit">{{ t("Delete") }}</button>
@@ -69,6 +69,6 @@
     </div>
 
     <div style="margin-top: 12px;">
-        {{ $ingredients->links() }}
+        {{ $options->links() }}
     </div>
 @endsection

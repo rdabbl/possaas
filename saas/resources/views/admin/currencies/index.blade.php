@@ -31,6 +31,13 @@
                         <td>{{ $currency->is_active ? 'Yes' : 'No' }}</td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.currencies.edit', $currency) }}">{{ t("Edit") }}</a>
+                            <form method="POST" action="{{ route('admin.currencies.destroy', $currency) }}" style="display:inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn secondary" type="submit" onclick="return confirm('{{ t("Delete this currency?") }}')">
+                                    {{ t("Delete") }}
+                                </button>
+                            </form>
                         </td>
                     </tr>
                 @endforeach

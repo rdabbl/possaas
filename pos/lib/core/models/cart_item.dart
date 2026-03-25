@@ -1,5 +1,5 @@
 import 'product.dart';
-import 'product_ingredient.dart';
+import 'product_option.dart';
 
 class CartItem {
   CartItem({
@@ -7,29 +7,29 @@ class CartItem {
     required this.product,
     this.quantity = 1,
     this.discount = 0,
-    List<ProductIngredient>? ingredients,
+    List<ProductOption>? options,
   })  : id = id ?? _generateId(),
-        ingredients = List.unmodifiable(ingredients ?? const []);
+        options = List.unmodifiable(options ?? const []);
 
   final String id;
   final Product product;
   final int quantity;
   final double discount;
-  final List<ProductIngredient> ingredients;
+  final List<ProductOption> options;
 
   double get subTotal => product.price * quantity;
 
   CartItem copyWith({
     int? quantity,
     double? discount,
-    List<ProductIngredient>? ingredients,
+    List<ProductOption>? options,
   }) {
     return CartItem(
       id: id,
       product: product,
       quantity: quantity ?? this.quantity,
       discount: discount ?? this.discount,
-      ingredients: ingredients ?? this.ingredients,
+      options: options ?? this.options,
     );
   }
 
@@ -45,12 +45,12 @@ class CartItem {
       'unit_price': product.price,
       'discount_amount': discountAmount,
       'tax_amount': taxAmount,
-      if (ingredients.isNotEmpty)
-        'ingredients': ingredients
-            .map((ingredient) => {
-                  'id': ingredient.id,
-                  'name': ingredient.name,
-                  'quantity': ingredient.quantity,
+      if (options.isNotEmpty)
+        'options': options
+            .map((option) => {
+                  'id': option.id,
+                  'name': option.name,
+                  'quantity': option.quantity,
                 })
             .toList(),
     };

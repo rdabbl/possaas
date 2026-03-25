@@ -26,8 +26,8 @@ class ProductController extends BaseApiController
         }
 
         $query = Product::where('manager_id', $manager->id)
-            ->with(['ingredientLinks' => function ($q) {
-                $q->where('ingredients.is_active', true)->orderBy('name');
+            ->with(['optionLinks' => function ($q) {
+                $q->where('product_options.is_active', true)->orderBy('name');
             }])
             ->orderBy('id', 'desc');
 
@@ -78,8 +78,8 @@ class ProductController extends BaseApiController
         }
 
         $query = Product::where('manager_id', $manager->id)
-            ->with(['ingredientLinks' => function ($q) {
-                $q->where('ingredients.is_active', true)->orderBy('name');
+            ->with(['optionLinks' => function ($q) {
+                $q->where('product_options.is_active', true)->orderBy('name');
             }]);
         if ($storeId && $store && $store->stock_enabled) {
             $query->withSum(['stockMovements as stock_quantity' => function ($q) use ($storeId) {

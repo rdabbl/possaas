@@ -11,12 +11,13 @@ import '../../../core/models/order_summary.dart';
 import '../../../core/models/product_category.dart';
 import '../../../core/models/customer.dart';
 import '../../../core/models/product.dart';
-import '../../../core/models/product_ingredient.dart';
+import '../../../core/models/product_option.dart';
 import '../../../core/models/currency.dart';
 import '../../../core/models/payment_method.dart';
 import '../../../core/models/register_details.dart';
 import '../../../core/models/warehouse.dart';
 import '../../../core/models/offline_sale.dart';
+import '../../../core/utils/media_url.dart';
 import '../data/pos_repository.dart';
 import '../data/offline_sales_storage.dart';
 import '../models/user_summary.dart';
@@ -205,9 +206,7 @@ class PosController extends ChangeNotifier {
         repository.fetchConfig(),
       ]);
       _customers = List<Customer>.from(results[0] as List<Customer>);
-      if (_customers.isEmpty) {
-        _customers = [Customer(id: 0, name: 'Client')];
-      }
+      _normalizeCustomers();
       final frontSettings = results[1] as Map<String, dynamic>;
       _applyFrontSetting(frontSettings);
       await _cacheFrontSetting(frontSettings);
@@ -229,7 +228,7 @@ class PosController extends ChangeNotifier {
       _assignDefaultWarehouse();
       await _restoreSavedSelections();
       await _loadProducts();
-      _selectedCustomer = _customers.first;
+      _ensureDefaultSelections();
       _errorMessage = null;
     } on ApiException catch (error) {
       await _loadCachedProducts();
@@ -652,9 +651,9 @@ class PosController extends ChangeNotifier {
     await _loadProducts(search: query);
   }
 
-  void addProduct(Product product, {List<ProductIngredient>? ingredients}) {
-    final selectedIngredients = _normalizeIngredients(
-      ingredients ?? product.ingredients,
+  void addProduct(Product product, {List<ProductOption>? options}) {
+    final selectedOptions = _normalizeOptions(
+      options ?? product.options,
     );
     final hasKnownStock = product.stockQuantity >= 0;
     if (hasKnownStock && product.stockQuantity == 0) {
@@ -670,10 +669,10 @@ class PosController extends ChangeNotifier {
     }
     final index = _cart.indexWhere((item) {
       return item.product.id == product.id &&
-          _ingredientsEqual(item.ingredients, selectedIngredients);
+          _optionsEqual(item.options, selectedOptions);
     });
     if (index == -1) {
-      _cart.add(CartItem(product: product, ingredients: selectedIngredients));
+      _cart.add(CartItem(product: product, options: selectedOptions));
     } else {
       final current = _cart[index];
       _cart[index] = current.copyWith(quantity: current.quantity + 1);
@@ -714,19 +713,19 @@ class PosController extends ChangeNotifier {
         .fold<int>(0, (sum, item) => sum + item.quantity);
   }
 
-  List<ProductIngredient> _normalizeIngredients(
-    List<ProductIngredient> ingredients,
+  List<ProductOption> _normalizeOptions(
+    List<ProductOption> options,
   ) {
-    final filtered = ingredients
-        .where((i) => i.id > 0 && i.quantity > 0)
+    final filtered = options
+        .where((o) => o.id > 0 && o.quantity > 0)
         .toList();
     filtered.sort((a, b) => a.id.compareTo(b.id));
     return filtered;
   }
 
-  bool _ingredientsEqual(
-    List<ProductIngredient> a,
-    List<ProductIngredient> b,
+  bool _optionsEqual(
+    List<ProductOption> a,
+    List<ProductOption> b,
   ) {
     if (a.length != b.length) return false;
     for (var i = 0; i < a.length; i++) {
@@ -816,11 +815,7 @@ class PosController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (_selectedCustomer == null) {
-      _errorMessage = 'Sélectionnez un client avant de finaliser la vente.';
-      notifyListeners();
-      return;
-    }
+    final customerId = _selectedCustomer?.id ?? 0;
     // Ensure a warehouse is selected (fallback to first cached)
     if (_selectedWarehouseId == null && _warehouses.isNotEmpty) {
       _selectedWarehouse = _warehouses.first;
@@ -860,7 +855,7 @@ class PosController extends ChangeNotifier {
     notifyListeners();
     try {
       await repository.submitSale(
-        customerId: _selectedCustomer!.id,
+        customerId: customerId,
         cartItems: _cart,
         grandTotal: grandTotal,
         warehouseId: _selectedWarehouseId,
@@ -1000,7 +995,7 @@ class PosController extends ChangeNotifier {
     final id = _generateOfflineId();
     final sale = OfflineSale(
       id: id,
-      customerId: _selectedCustomer!.id,
+      customerId: _selectedCustomer?.id ?? 0,
       warehouseId: _selectedWarehouseId,
       grandTotal: grandTotal,
       discount: discountAmount,
@@ -1116,7 +1111,7 @@ class PosController extends ChangeNotifier {
     _companyPhone = value['phone']?.toString() ?? _companyPhone;
     final logo = value['logo'] ?? value['logo_url'] ?? value['logoUrl'];
     if (logo != null) {
-      _companyLogo = logo.toString();
+      _companyLogo = normalizeMediaUrl(logo.toString()) ?? '';
     }
     if (frontStoreId != null && _selectedWarehouseId == null) {
       _selectedWarehouseId = int.tryParse('$frontStoreId');
@@ -1242,8 +1237,8 @@ class PosController extends ChangeNotifier {
         'product_price': product.price,
         'product_cost': product.cost,
         'category_id': product.categoryId,
-        'ingredient_links': product.ingredients
-            .map((ingredient) => ingredient.toJson())
+        'option_links': product.options
+            .map((option) => option.toJson())
             .toList(),
         'stock': {'quantity': product.stockQuantity},
         'order_tax': product.taxValue,
@@ -1434,9 +1429,7 @@ class PosController extends ChangeNotifier {
             .map((e) => Customer.fromJson(e.cast<String, dynamic>()))
             .toList();
       }
-      if (_customers.isEmpty) {
-        _customers = [Customer(id: 0, name: 'Client')];
-      }
+      _normalizeCustomers();
     } catch (_) {}
   }
 
@@ -1513,6 +1506,24 @@ class PosController extends ChangeNotifier {
     }
   }
 
+  void _normalizeCustomers() {
+    if (_customers.isEmpty) {
+      _customers = [Customer(id: 0, name: 'Client')];
+      return;
+    }
+    if (!_customers.any((c) => c.id == 0)) {
+      _customers = [Customer(id: 0, name: 'Client'), ..._customers];
+    }
+    if (_selectedCustomer != null) {
+      final matched = _customers.where((c) => c.id == _selectedCustomer!.id);
+      if (matched.isNotEmpty) {
+        _selectedCustomer = matched.first;
+      } else if (_customers.isNotEmpty) {
+        _selectedCustomer = _customers.first;
+      }
+    }
+  }
+
   List<OrderSummary> _offlineOrders() {
     return _offlineSales.map((sale) {
       final matched = _customers.firstWhere(
@@ -1537,18 +1548,18 @@ class PosController extends ChangeNotifier {
             } else if (qtyRaw is String) {
               qty = double.tryParse(qtyRaw) ?? 0;
             }
-            final ingredientsRaw = item['ingredients'];
-            final ingredients = ingredientsRaw is List
-                ? ingredientsRaw
+            final optionsRaw = item['options'] ?? item['ingredients'];
+            final options = optionsRaw is List
+                ? optionsRaw
                     .whereType<Map>()
-                    .map((i) => ProductIngredient.fromJson(i.cast<String, dynamic>()))
-                    .where((i) => i.id > 0 && i.name.trim().isNotEmpty)
+                    .map((i) => ProductOption.fromJson(i.cast<String, dynamic>()))
+                    .where((o) => o.id > 0 && o.name.trim().isNotEmpty)
                     .toList()
-                : <ProductIngredient>[];
+                : <ProductOption>[];
             return OrderItemSummary(
               name: name,
               quantity: qty,
-              ingredients: ingredients,
+              options: options,
             );
           })
           .where((d) => d.name.trim().isNotEmpty)

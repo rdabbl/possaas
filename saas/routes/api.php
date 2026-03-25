@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\StoreController;
 use App\Http\Controllers\Api\TaxController;
 use App\Http\Controllers\Api\TranslationController;
 use App\Http\Controllers\Api\LanguageController;
+use App\Http\Controllers\Api\MediaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -24,6 +25,7 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/devices/auth', [DeviceController::class, 'authenticateDevice']);
 Route::get('/languages', [LanguageController::class, 'index']);
 Route::get('/translations', [TranslationController::class, 'index']);
+Route::get('/media/{path}', [MediaController::class, 'show'])->where('path', '.*');
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);

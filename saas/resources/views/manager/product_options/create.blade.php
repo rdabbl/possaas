@@ -1,18 +1,18 @@
-@extends('admin.layout')
+@extends('manager.layout')
 
 @section('content')
-    <h1>{{ t("New Ingredient") }}</h1>
+    <h1>{{ t("New Product Option") }}</h1>
 
     <div class="card">
-        <form method="POST" action="{{ route('admin.ingredients.store') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('manager.product_options.store') }}" enctype="multipart/form-data">
             @csrf
             <div class="field">
                 <label>{{ t("Category") }}</label>
-                <select name="ingredient_category_id">
+                <select name="product_option_category_id">
                     <option value="">{{ t("No Category") }}</option>
                     @foreach ($categories as $category)
-                        <option value="{{ $category->id }}" {{ old('ingredient_category_id') == $category->id ? 'selected' : '' }}>
-                            {{ $category->name }}
+                        <option value="{{ $category->id }}" {{ old('product_option_category_id') == $category->id ? 'selected' : '' }}>
+                            {{ $category->name }}@if (!$category->manager_id) (Global)@endif
                         </option>
                     @endforeach
                 </select>
@@ -32,8 +32,8 @@
                     <option value="0">{{ t("No") }}</option>
                 </select>
             </div>
-            <button class="btn" type="submit">{{ t("Create Ingredient") }}</button>
-            <a class="btn secondary" href="{{ route('admin.ingredients.index') }}">{{ t("Cancel") }}</a>
+            <button class="btn" type="submit">{{ t("Create Option") }}</button>
+            <a class="btn secondary" href="{{ route('manager.product_options.index') }}">{{ t("Cancel") }}</a>
         </form>
     </div>
 @endsection

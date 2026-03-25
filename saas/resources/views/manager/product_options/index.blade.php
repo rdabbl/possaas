@@ -3,10 +3,10 @@
 @section('content')
     <div class="row" style="justify-content: space-between; align-items: center;">
         <div>
-            <h1>{{ t("Categories") }}</h1>
-            <p class="muted">{{ t("Manage your product categories.") }}</p>
+            <h1>{{ t("Product Options") }}</h1>
+            <p class="muted">{{ t("Manage product options.") }}</p>
         </div>
-        <a class="btn" href="{{ route('manager.categories.create') }}">{{ t("New Category") }}</a>
+        <a class="btn" href="{{ route('manager.product_options.create') }}">{{ t("New Option") }}</a>
     </div>
 
     <div class="card">
@@ -15,31 +15,29 @@
                 <tr>
                     <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
-                    <th>{{ t("Parent") }}</th>
                     <th>{{ t("Active") }}</th>
                     <th>{{ t("Actions") }}</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach ($categories as $category)
+                @foreach ($options as $option)
                     <tr>
-                        <td>{{ $category->id }}</td>
+                        <td>{{ $option->id }}</td>
                         <td>
-                            {{ $category->name }}
-                            @if (!$category->manager_id)
+                            {{ $option->name }}
+                            @if (!$option->manager_id)
                                 <span class="muted">{{ t("(Global)") }}</span>
                             @endif
                         </td>
-                        <td>{{ $category->parent?->name }}</td>
-                        <td>{{ $category->is_active ? 'Yes' : 'No' }}</td>
+                        <td>{{ $option->is_active ? 'Yes' : 'No' }}</td>
                         <td>
-                            <form method="POST" action="{{ route('manager.categories.duplicate', $category) }}" style="display:inline-block">
+                            <form method="POST" action="{{ route('manager.product_options.duplicate', $option) }}" style="display:inline-block">
                                 @csrf
                                 <button class="btn secondary" type="submit">{{ t("Duplicate") }}</button>
                             </form>
-                            @if ($category->manager_id)
-                                <a class="btn secondary" href="{{ route('manager.categories.edit', $category) }}">{{ t("Edit") }}</a>
-                                <form method="POST" action="{{ route('manager.categories.destroy', $category) }}" style="display:inline-block" onsubmit="return confirm('Delete this category?');">
+                            @if ($option->manager_id)
+                                <a class="btn secondary" href="{{ route('manager.product_options.edit', $option) }}">{{ t("Edit") }}</a>
+                                <form method="POST" action="{{ route('manager.product_options.destroy', $option) }}" style="display:inline-block" onsubmit="return confirm('Delete this option?');">
                                     @csrf
                                     @method('DELETE')
                                     <button class="btn secondary" type="submit">{{ t("Delete") }}</button>
@@ -53,6 +51,6 @@
     </div>
 
     <div style="margin-top: 12px;">
-        {{ $categories->links() }}
+        {{ $options->links() }}
     </div>
 @endsection

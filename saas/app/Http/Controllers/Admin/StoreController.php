@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\Currency;
 use App\Models\Store;
 use App\Models\Manager;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -74,9 +76,29 @@ class StoreController extends Controller
             $data['logo_path'] = $request->file('logo')->store('stores', 'public');
         }
 
-        Store::create($data);
+        $store = Store::create($data);
+        Customer::create([
+            'manager_id' => $store->manager_id,
+            'name' => $store->name . ' - CLIENT',
+            'is_active' => true,
+        ]);
 
         return redirect()->route('admin.stores.index')
             ->with('success', 'Store created.');
+    }
+
+    public function destroy(Store $store)
+    {
+        try {
+            if ($store->logo_path) {
+                Storage::disk('public')->delete($store->logo_path);
+            }
+            $store->delete();
+            return redirect()->route('admin.stores.index')
+                ->with('success', 'Store deleted.');
+        } catch (QueryException $e) {
+            return redirect()->route('admin.stores.index')
+                ->with('error', 'Unable to delete store. Remove dependent records first.');
+        }
     }
 }

@@ -3,7 +3,7 @@
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DeviceController as AdminDeviceController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
-use App\Http\Controllers\Admin\IngredientCategoryController as AdminIngredientCategoryController;
+use App\Http\Controllers\Admin\ProductOptionCategoryController as AdminProductOptionCategoryController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
@@ -17,7 +17,7 @@ use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\TaxController as AdminTaxController;
 use App\Http\Controllers\Admin\DiscountController as AdminDiscountController;
 use App\Http\Controllers\Admin\CurrencyController as AdminCurrencyController;
-use App\Http\Controllers\Admin\IngredientController as AdminIngredientController;
+use App\Http\Controllers\Admin\ProductOptionController as AdminProductOptionController;
 use App\Http\Controllers\Admin\LanguageController as AdminLanguageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\TranslationController as AdminTranslationController;
@@ -33,8 +33,8 @@ use App\Http\Controllers\Manager\SaleController as ManagerSaleController;
 use App\Http\Controllers\Manager\StoreController as ManagerStoreController;
 use App\Http\Controllers\Manager\StockController as ManagerStockController;
 use App\Http\Controllers\Manager\UserController as ManagerUserController;
-use App\Http\Controllers\Manager\IngredientController as ManagerIngredientController;
-use App\Http\Controllers\Manager\IngredientCategoryController as ManagerIngredientCategoryController;
+use App\Http\Controllers\Manager\ProductOptionController as ManagerProductOptionController;
+use App\Http\Controllers\Manager\ProductOptionCategoryController as ManagerProductOptionCategoryController;
 use App\Http\Controllers\Manager\TaxController as ManagerTaxController;
 use App\Http\Controllers\Manager\DiscountController as ManagerDiscountController;
 
@@ -83,6 +83,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::post('/managers', [ManagerController::class, 'store'])->name('managers.store');
     Route::get('/managers/{manager}/edit', [ManagerController::class, 'edit'])->name('managers.edit');
     Route::put('/managers/{manager}', [ManagerController::class, 'update'])->name('managers.update');
+    Route::delete('/managers/{manager}', [ManagerController::class, 'destroy'])->name('managers.destroy');
 
     Route::get('/plans', [AdminPlanController::class, 'index'])->name('plans.index');
     Route::get('/plans/create', [AdminPlanController::class, 'create'])->name('plans.create');
@@ -94,6 +95,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::get('/stores', [AdminStoreController::class, 'index'])->name('stores.index');
     Route::get('/stores/create', [AdminStoreController::class, 'create'])->name('stores.create');
     Route::post('/stores', [AdminStoreController::class, 'store'])->name('stores.store');
+    Route::delete('/stores/{store}', [AdminStoreController::class, 'destroy'])->name('stores.destroy');
 
     Route::get('/devices', [AdminDeviceController::class, 'index'])->name('devices.index');
     Route::get('/devices/create', [AdminDeviceController::class, 'create'])->name('devices.create');
@@ -102,12 +104,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::get('/payment-methods', [PaymentMethodController::class, 'index'])->name('payment_methods.index');
     Route::get('/payment-methods/create', [PaymentMethodController::class, 'create'])->name('payment_methods.create');
     Route::post('/payment-methods', [PaymentMethodController::class, 'store'])->name('payment_methods.store');
+    Route::delete('/payment-methods/{paymentMethod}', [PaymentMethodController::class, 'destroy'])->name('payment_methods.destroy');
 
     Route::get('/currencies', [AdminCurrencyController::class, 'index'])->name('currencies.index');
     Route::get('/currencies/create', [AdminCurrencyController::class, 'create'])->name('currencies.create');
     Route::post('/currencies', [AdminCurrencyController::class, 'store'])->name('currencies.store');
     Route::get('/currencies/{currency}/edit', [AdminCurrencyController::class, 'edit'])->name('currencies.edit');
     Route::put('/currencies/{currency}', [AdminCurrencyController::class, 'update'])->name('currencies.update');
+    Route::delete('/currencies/{currency}', [AdminCurrencyController::class, 'destroy'])->name('currencies.destroy');
 
     Route::get('/categories', [AdminCategoryController::class, 'index'])->name('categories.index');
     Route::get('/categories/create', [AdminCategoryController::class, 'create'])->name('categories.create');
@@ -116,19 +120,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::put('/categories/{category}', [AdminCategoryController::class, 'update'])->name('categories.update');
     Route::delete('/categories/{category}', [AdminCategoryController::class, 'destroy'])->name('categories.destroy');
 
-    Route::get('/ingredient-categories', [AdminIngredientCategoryController::class, 'index'])->name('ingredient_categories.index');
-    Route::get('/ingredient-categories/create', [AdminIngredientCategoryController::class, 'create'])->name('ingredient_categories.create');
-    Route::post('/ingredient-categories', [AdminIngredientCategoryController::class, 'store'])->name('ingredient_categories.store');
-    Route::get('/ingredient-categories/{ingredientCategory}/edit', [AdminIngredientCategoryController::class, 'edit'])->name('ingredient_categories.edit');
-    Route::put('/ingredient-categories/{ingredientCategory}', [AdminIngredientCategoryController::class, 'update'])->name('ingredient_categories.update');
-    Route::delete('/ingredient-categories/{ingredientCategory}', [AdminIngredientCategoryController::class, 'destroy'])->name('ingredient_categories.destroy');
+    Route::get('/product-option-categories', [AdminProductOptionCategoryController::class, 'index'])->name('product_option_categories.index');
+    Route::get('/product-option-categories/create', [AdminProductOptionCategoryController::class, 'create'])->name('product_option_categories.create');
+    Route::post('/product-option-categories', [AdminProductOptionCategoryController::class, 'store'])->name('product_option_categories.store');
+    Route::get('/product-option-categories/{productOptionCategory}/edit', [AdminProductOptionCategoryController::class, 'edit'])->name('product_option_categories.edit');
+    Route::put('/product-option-categories/{productOptionCategory}', [AdminProductOptionCategoryController::class, 'update'])->name('product_option_categories.update');
+    Route::delete('/product-option-categories/{productOptionCategory}', [AdminProductOptionCategoryController::class, 'destroy'])->name('product_option_categories.destroy');
 
-    Route::get('/ingredients', [AdminIngredientController::class, 'index'])->name('ingredients.index');
-    Route::get('/ingredients/create', [AdminIngredientController::class, 'create'])->name('ingredients.create');
-    Route::post('/ingredients', [AdminIngredientController::class, 'store'])->name('ingredients.store');
-    Route::get('/ingredients/{ingredient}/edit', [AdminIngredientController::class, 'edit'])->name('ingredients.edit');
-    Route::put('/ingredients/{ingredient}', [AdminIngredientController::class, 'update'])->name('ingredients.update');
-    Route::delete('/ingredients/{ingredient}', [AdminIngredientController::class, 'destroy'])->name('ingredients.destroy');
+    Route::get('/product-options', [AdminProductOptionController::class, 'index'])->name('product_options.index');
+    Route::get('/product-options/create', [AdminProductOptionController::class, 'create'])->name('product_options.create');
+    Route::post('/product-options', [AdminProductOptionController::class, 'store'])->name('product_options.store');
+    Route::get('/product-options/{productOption}/edit', [AdminProductOptionController::class, 'edit'])->name('product_options.edit');
+    Route::put('/product-options/{productOption}', [AdminProductOptionController::class, 'update'])->name('product_options.update');
+    Route::delete('/product-options/{productOption}', [AdminProductOptionController::class, 'destroy'])->name('product_options.destroy');
 
     Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
     Route::get('/products/import', [AdminProductController::class, 'importForm'])->name('products.import_form');
@@ -205,21 +209,24 @@ Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])
         Route::post('/categories', [ManagerCategoryController::class, 'store'])->name('categories.store');
         Route::get('/categories/{category}/edit', [ManagerCategoryController::class, 'edit'])->name('categories.edit');
         Route::put('/categories/{category}', [ManagerCategoryController::class, 'update'])->name('categories.update');
+        Route::post('/categories/{category}/duplicate', [ManagerCategoryController::class, 'duplicate'])->name('categories.duplicate');
         Route::delete('/categories/{category}', [ManagerCategoryController::class, 'destroy'])->name('categories.destroy');
 
-        Route::get('/ingredient-categories', [ManagerIngredientCategoryController::class, 'index'])->name('ingredient_categories.index');
-        Route::get('/ingredient-categories/create', [ManagerIngredientCategoryController::class, 'create'])->name('ingredient_categories.create');
-        Route::post('/ingredient-categories', [ManagerIngredientCategoryController::class, 'store'])->name('ingredient_categories.store');
-        Route::get('/ingredient-categories/{ingredientCategory}/edit', [ManagerIngredientCategoryController::class, 'edit'])->name('ingredient_categories.edit');
-        Route::put('/ingredient-categories/{ingredientCategory}', [ManagerIngredientCategoryController::class, 'update'])->name('ingredient_categories.update');
-        Route::delete('/ingredient-categories/{ingredientCategory}', [ManagerIngredientCategoryController::class, 'destroy'])->name('ingredient_categories.destroy');
+        Route::get('/product-option-categories', [ManagerProductOptionCategoryController::class, 'index'])->name('product_option_categories.index');
+        Route::get('/product-option-categories/create', [ManagerProductOptionCategoryController::class, 'create'])->name('product_option_categories.create');
+        Route::post('/product-option-categories', [ManagerProductOptionCategoryController::class, 'store'])->name('product_option_categories.store');
+        Route::get('/product-option-categories/{productOptionCategory}/edit', [ManagerProductOptionCategoryController::class, 'edit'])->name('product_option_categories.edit');
+        Route::put('/product-option-categories/{productOptionCategory}', [ManagerProductOptionCategoryController::class, 'update'])->name('product_option_categories.update');
+        Route::post('/product-option-categories/{productOptionCategory}/duplicate', [ManagerProductOptionCategoryController::class, 'duplicate'])->name('product_option_categories.duplicate');
+        Route::delete('/product-option-categories/{productOptionCategory}', [ManagerProductOptionCategoryController::class, 'destroy'])->name('product_option_categories.destroy');
 
-        Route::get('/ingredients', [ManagerIngredientController::class, 'index'])->name('ingredients.index');
-        Route::get('/ingredients/create', [ManagerIngredientController::class, 'create'])->name('ingredients.create');
-        Route::post('/ingredients', [ManagerIngredientController::class, 'store'])->name('ingredients.store');
-        Route::get('/ingredients/{ingredient}/edit', [ManagerIngredientController::class, 'edit'])->name('ingredients.edit');
-        Route::put('/ingredients/{ingredient}', [ManagerIngredientController::class, 'update'])->name('ingredients.update');
-        Route::delete('/ingredients/{ingredient}', [ManagerIngredientController::class, 'destroy'])->name('ingredients.destroy');
+        Route::get('/product-options', [ManagerProductOptionController::class, 'index'])->name('product_options.index');
+        Route::get('/product-options/create', [ManagerProductOptionController::class, 'create'])->name('product_options.create');
+        Route::post('/product-options', [ManagerProductOptionController::class, 'store'])->name('product_options.store');
+        Route::get('/product-options/{productOption}/edit', [ManagerProductOptionController::class, 'edit'])->name('product_options.edit');
+        Route::put('/product-options/{productOption}', [ManagerProductOptionController::class, 'update'])->name('product_options.update');
+        Route::post('/product-options/{productOption}/duplicate', [ManagerProductOptionController::class, 'duplicate'])->name('product_options.duplicate');
+        Route::delete('/product-options/{productOption}', [ManagerProductOptionController::class, 'destroy'])->name('product_options.destroy');
 
         Route::get('/products', [ManagerProductController::class, 'index'])->name('products.index');
         Route::get('/products/import', [ManagerProductController::class, 'importForm'])->name('products.import_form');
@@ -228,6 +235,7 @@ Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])
         Route::post('/products', [ManagerProductController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [ManagerProductController::class, 'edit'])->name('products.edit');
         Route::put('/products/{product}', [ManagerProductController::class, 'update'])->name('products.update');
+        Route::post('/products/{product}/duplicate', [ManagerProductController::class, 'duplicate'])->name('products.duplicate');
         Route::delete('/products/{product}', [ManagerProductController::class, 'destroy'])->name('products.destroy');
         Route::post('/products/{product}/variants', [ManagerProductVariantController::class, 'store'])->name('products.variants.store');
         Route::put('/products/{product}/variants/{variant}', [ManagerProductVariantController::class, 'update'])->name('products.variants.update');
@@ -242,6 +250,7 @@ Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])
         Route::post('/customers', [ManagerCustomerController::class, 'store'])->name('customers.store');
         Route::get('/customers/{customer}/edit', [ManagerCustomerController::class, 'edit'])->name('customers.edit');
         Route::put('/customers/{customer}', [ManagerCustomerController::class, 'update'])->name('customers.update');
+        Route::post('/customers/{customer}/duplicate', [ManagerCustomerController::class, 'duplicate'])->name('customers.duplicate');
         Route::delete('/customers/{customer}', [ManagerCustomerController::class, 'destroy'])->name('customers.destroy');
 
         Route::get('/taxes', [ManagerTaxController::class, 'index'])->name('taxes.index');
@@ -266,6 +275,7 @@ Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])
         Route::post('/users', [ManagerUserController::class, 'store'])->name('users.store');
         Route::get('/users/{user}/edit', [ManagerUserController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [ManagerUserController::class, 'update'])->name('users.update');
+        Route::post('/users/{user}/duplicate', [ManagerUserController::class, 'duplicate'])->name('users.duplicate');
         Route::delete('/users/{user}', [ManagerUserController::class, 'destroy'])->name('users.destroy');
     });
 });

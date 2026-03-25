@@ -72,10 +72,10 @@ class SaleController extends BaseApiController
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'items.*.tax_amount' => ['nullable', 'numeric', 'min:0'],
-            'items.*.ingredients' => ['nullable', 'array'],
-            'items.*.ingredients.*.id' => ['nullable', 'integer'],
-            'items.*.ingredients.*.name' => ['nullable', 'string', 'max:255'],
-            'items.*.ingredients.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'items.*.options' => ['nullable', 'array'],
+            'items.*.options.*.id' => ['nullable', 'integer'],
+            'items.*.options.*.name' => ['nullable', 'string', 'max:255'],
+            'items.*.options.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'payments' => ['nullable', 'array'],
             'payments.*.payment_method_id' => ['required_with:payments', 'integer'],
             'payments.*.amount' => ['required_with:payments', 'numeric', 'min:0'],
@@ -116,17 +116,17 @@ class SaleController extends BaseApiController
                 $unitPrice = (float) $item['unit_price'];
                 $discountAmount = (float) ($item['discount_amount'] ?? 0);
                 $taxAmount = (float) ($item['tax_amount'] ?? 0);
-                $ingredients = $item['ingredients'] ?? null;
-                if (is_array($ingredients)) {
-                    $ingredients = array_values(array_filter($ingredients, function ($ingredient) {
-                        if (!is_array($ingredient)) {
+                $options = $item['options'] ?? null;
+                if (is_array($options)) {
+                    $options = array_values(array_filter($options, function ($option) {
+                        if (!is_array($option)) {
                             return false;
                         }
-                        $qty = $ingredient['quantity'] ?? 0;
+                        $qty = $option['quantity'] ?? 0;
                         return is_numeric($qty) && (float) $qty > 0;
                     }));
                 } else {
-                    $ingredients = null;
+                    $options = null;
                 }
 
                 $lineSubtotal = $unitPrice * $quantity;
@@ -145,7 +145,7 @@ class SaleController extends BaseApiController
                     'unit_price' => $unitPrice,
                     'discount_amount' => $discountAmount,
                     'tax_amount' => $taxAmount,
-                    'ingredients' => $ingredients,
+                    'options' => $options,
                     'total' => $lineTotal,
                 ];
             }

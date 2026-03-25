@@ -1,4 +1,4 @@
-import 'product_ingredient.dart';
+import 'product_option.dart';
 
 class OrderSummary {
   OrderSummary({
@@ -91,18 +91,18 @@ class OrderSummary {
               } else if (qtyRaw is String) {
                 qty = double.tryParse(qtyRaw) ?? 0;
               }
-              final ingredientsRaw = item['ingredients'];
-              final ingredients = ingredientsRaw is List
-                  ? ingredientsRaw
+              final optionsRaw = item['options'] ?? item['ingredients'];
+              final options = optionsRaw is List
+                  ? optionsRaw
                       .whereType<Map>()
-                      .map((i) => ProductIngredient.fromJson(i.cast<String, dynamic>()))
-                      .where((i) => i.id > 0 && i.name.trim().isNotEmpty)
+                      .map((i) => ProductOption.fromJson(i.cast<String, dynamic>()))
+                      .where((o) => o.id > 0 && o.name.trim().isNotEmpty)
                       .toList()
-                  : <ProductIngredient>[];
+                  : <ProductOption>[];
               return OrderItemSummary(
                 name: name.toString(),
                 quantity: qty,
-                ingredients: ingredients,
+                options: options,
               );
             })
             .where((item) => item.name.trim().isNotEmpty)
@@ -163,9 +163,9 @@ class OrderItemSummary {
   OrderItemSummary({
     required this.name,
     required this.quantity,
-    this.ingredients = const [],
+    this.options = const [],
   });
   final String name;
   final double quantity;
-  final List<ProductIngredient> ingredients;
+  final List<ProductOption> options;
 }
