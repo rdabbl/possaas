@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Manager") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Email") }}</th>
@@ -44,12 +43,16 @@
             <tbody>
                 @foreach ($customers as $customer)
                     <tr>
-                        <td>{{ $customer->id }}</td>
                         <td>{{ $customer->manager?->name }}</td>
                         <td>{{ $customer->name }}</td>
                         <td>{{ $customer->email }}</td>
                         <td>{{ $customer->phone }}</td>
-                        <td>{{ $customer->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'customers', 'id' => $customer->id]),
+                                'checked' => $customer->is_active,
+                            ])
+                        </td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.customers.edit', $customer) }}">{{ t("Edit") }}</a>
                             <form method="POST" action="{{ route('admin.customers.destroy', $customer) }}" style="display:inline-block" onsubmit="return confirm('Delete this customer?');">

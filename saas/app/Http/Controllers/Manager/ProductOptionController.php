@@ -54,12 +54,22 @@ class ProductOptionController extends Controller
                         ->orWhere('manager_id', $managerId);
                 }),
             ],
+            'option_type' => ['required', Rule::in(['boolean', 'quantity'])],
+            'step_action' => [Rule::requiredIf($request->input('option_type') === 'quantity'), Rule::in(['add', 'reduce'])],
+            'step_value' => [Rule::requiredIf($request->input('option_type') === 'quantity'), 'integer', 'min:1'],
             'image' => ['nullable', 'image', 'max:4096'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $data['manager_id'] = $managerId;
         $data['is_active'] = $data['is_active'] ?? true;
+        if ($data['option_type'] === 'boolean') {
+            $data['step_action'] = null;
+            $data['step_value'] = null;
+        } else {
+            $data['step_action'] = $data['step_action'] ?? 'add';
+            $data['step_value'] = $data['step_value'] ?? 1;
+        }
         if ($request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('product-options', 'public');
         }
@@ -106,9 +116,20 @@ class ProductOptionController extends Controller
                         ->orWhere('manager_id', $managerId);
                 }),
             ],
+            'option_type' => ['required', Rule::in(['boolean', 'quantity'])],
+            'step_action' => [Rule::requiredIf($request->input('option_type') === 'quantity'), Rule::in(['add', 'reduce'])],
+            'step_value' => [Rule::requiredIf($request->input('option_type') === 'quantity'), 'integer', 'min:1'],
             'image' => ['nullable', 'image', 'max:4096'],
             'is_active' => ['nullable', 'boolean'],
         ]);
+
+        if ($data['option_type'] === 'boolean') {
+            $data['step_action'] = null;
+            $data['step_value'] = null;
+        } else {
+            $data['step_action'] = $data['step_action'] ?? 'add';
+            $data['step_value'] = $data['step_value'] ?? 1;
+        }
 
         if ($request->hasFile('image')) {
             if ($productOption->image_path) {

@@ -14,6 +14,15 @@
             --accent: #0f766e;
             --border: #e5e7eb;
         }
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --bg: #0b1220;
+            --card: #0f172a;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #14b8a6;
+            --border: #1f2937;
+        }
         body {
             margin: 0;
             font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -29,7 +38,9 @@
             box-sizing: border-box;
         }
         .brand a { color: var(--text); text-decoration: none; font-weight: 700; }
-        nav { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+        nav { margin-top: 20px; display: flex; flex-direction: column; gap: 16px; }
+        .nav-section { display: flex; flex-direction: column; gap: 8px; }
+        .nav-title { font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); padding: 0 10px; }
         nav a {
             color: var(--muted);
             text-decoration: none;
@@ -39,6 +50,7 @@
             align-items: center;
             gap: 10px;
         }
+        nav a:hover { background: rgba(15, 118, 110, 0.08); color: var(--text); }
         .nav-icon {
             width: 18px;
             height: 18px;
@@ -65,9 +77,14 @@
             display: flex;
             align-items: center;
             justify-content: flex-end;
+            flex-wrap: wrap;
             gap: 16px;
         }
         .header-right { display: flex; align-items: center; gap: 12px; }
+        .header-controls { display: flex; align-items: center; gap: 12px; }
+        .lang-select select { width: 160px; }
+        .theme-toggle { display: inline-flex; align-items: center; gap: 8px; }
+        .small { font-size: 12px; }
         .user-chip { color: var(--muted); font-size: 14px; }
         main { padding: 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
         .card {
@@ -77,9 +94,23 @@
             padding: 16px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
+        .card-link { display: block; text-decoration: none; color: inherit; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+        .card-link:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.12); border-color: var(--accent); }
         .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
         .muted { color: var(--muted); }
         .row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #0f766e, #10b981);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
         .qty-control { display: inline-flex; align-items: center; gap: 8px; }
         .qty-btn {
             width: 32px;
@@ -109,6 +140,35 @@
             cursor: pointer;
         }
         .btn.secondary { background: #374151; }
+        .toggle-form { display: inline-flex; align-items: center; }
+        .toggle {
+            position: relative;
+            display: inline-flex;
+            width: 38px;
+            height: 22px;
+            align-items: center;
+        }
+        .toggle input { display: none; }
+        .toggle span {
+            position: absolute;
+            inset: 0;
+            background: #e5e7eb;
+            border-radius: 999px;
+            transition: background .2s ease;
+        }
+        .toggle span::before {
+            content: "";
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 2px;
+            top: 2px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s ease;
+        }
+        .toggle input:checked + span { background: var(--accent); }
+        .toggle input:checked + span::before { transform: translateX(16px); }
         table { width: 100%; border-collapse: collapse; }
         th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
         th { font-size: 12px; text-transform: uppercase; color: var(--muted); letter-spacing: .04em; }
@@ -128,7 +188,7 @@
         @media (max-width: 900px) {
             .layout { flex-direction: column; }
             .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid var(--border); }
-            nav { flex-direction: row; flex-wrap: wrap; }
+            nav { flex-direction: column; }
         }
     </style>
 </head>
@@ -139,131 +199,173 @@
             <a href="{{ route('admin.dashboard') }}">{{ t("POS SaaS Admin") }}</a>
         </div>
         <nav>
-            <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path></svg>
-                </span>
-                {{ t("Dashboard") }}
-            </a>
-            <a href="{{ route('admin.managers.index') }}" class="{{ request()->routeIs('admin.managers.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                </span>
-                {{ t("Managers") }}
-            </a>
-            <a href="{{ route('admin.plans.index') }}" class="{{ request()->routeIs('admin.plans.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path></svg>
-                </span>
-                {{ t("Plans") }}
-            </a>
-            <a href="{{ route('admin.stores.index') }}" class="{{ request()->routeIs('admin.stores.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M3 9l2-5h14l2 5"></path><path d="M5 9v11h14V9"></path><path d="M9 20v-6h6v6"></path></svg>
-                </span>
-                {{ t("Stores") }}
-            </a>
-            <a href="{{ route('admin.devices.index') }}" class="{{ request()->routeIs('admin.devices.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>
-                </span>
-                {{ t("Devices") }}
-            </a>
-            <a href="{{ route('admin.payment_methods.index') }}" class="{{ request()->routeIs('admin.payment_methods.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>
-                </span>
-                {{ t("Payment Methods") }}
-            </a>
-            <a href="{{ route('admin.currencies.index') }}" class="{{ request()->routeIs('admin.currencies.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9a4 4 0 0 0 0 8h6a4 4 0 0 1 0 8H6"></path></svg>
-                </span>
-                {{ t("Currencies") }}
-            </a>
-            <a href="{{ route('admin.categories.index') }}" class="{{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M20.59 13.41L11 3.83V2h-3v3l9.59 9.59a2 2 0 0 0 2.83 0l.17-.17a2 2 0 0 0 0-2.83z"></path><circle cx="7.5" cy="7.5" r="1.5"></circle></svg>
-                </span>
-                {{ t("Categories") }}
-            </a>
-            <a href="{{ route('admin.product_option_categories.index') }}" class="{{ request()->routeIs('admin.product_option_categories.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
-                </span>
-                {{ t("Product Option Categories") }}
-            </a>
-            <a href="{{ route('admin.product_options.index') }}" class="{{ request()->routeIs('admin.product_options.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M6 2h12"></path><path d="M9 2v6l-5 9a4 4 0 0 0 3.5 6h9a4 4 0 0 0 3.5-6l-5-9V2"></path></svg>
-                </span>
-                {{ t("Product Options") }}
-            </a>
-            <a href="{{ route('admin.products.index') }}" class="{{ request()->routeIs('admin.products.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3.27 6.96L12 12l8.73-5.04"></path><path d="M12 22V12"></path></svg>
-                </span>
-                {{ t("Products") }}
-            </a>
-            <a href="{{ route('admin.customers.index') }}" class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                </span>
-                {{ t("Customers") }}
-            </a>
-            <a href="{{ route('admin.taxes.index') }}" class="{{ request()->routeIs('admin.taxes.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg>
-                </span>
-                {{ t("Taxes") }}
-            </a>
-            <a href="{{ route('admin.discounts.index') }}" class="{{ request()->routeIs('admin.discounts.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"></path><path d="M16 5h6v6"></path><path d="M10 14l12-12"></path></svg>
-                </span>
-                {{ t("Discounts") }}
-            </a>
-            <a href="{{ route('admin.roles.index') }}" class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"></path></svg>
-                </span>
-                {{ t("Roles") }}
-            </a>
-            <a href="{{ route('admin.permissions.index') }}" class="{{ request()->routeIs('admin.permissions.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M21 8v6"></path><path d="M3 8v6"></path><rect x="7" y="8" width="10" height="10" rx="2"></rect><path d="M12 8V5a3 3 0 0 1 6 0"></path></svg>
-                </span>
-                {{ t("Permissions") }}
-            </a>
-            <a href="{{ route('admin.printing.index') }}" class="{{ request()->routeIs('admin.printing.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><rect x="6" y="14" width="12" height="8" rx="1"></rect><rect x="4" y="9" width="16" height="6" rx="2"></rect></svg>
-                </span>
-                {{ t("Printing") }}
-            </a>
-            <a href="{{ route('admin.reports.index') }}" class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M3 3v18h18"></path><path d="M7 14l3-3 4 4 5-6"></path></svg>
-                </span>
-                {{ t("Reports") }}
-            </a>
-            <a href="{{ route('admin.languages.index') }}" class="{{ request()->routeIs('admin.languages.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M2 5h12"></path><path d="M2 9h12"></path><path d="M2 13h6"></path><path d="M14 17l4-10 4 10"></path><path d="M16 13h4"></path></svg>
-                </span>
-                {{ t("Languages") }}
-            </a>
-            <a href="{{ route('admin.translations.index') }}" class="{{ request()->routeIs('admin.translations.*') ? 'active' : '' }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M4 4h16v10H4z"></path><path d="M8 20l4-4 4 4"></path></svg>
-                </span>
-                {{ t("Translations") }}
-            </a>
+            <div class="nav-section">
+                <div class="nav-title">{{ t("SaaS Menu") }}</div>
+                <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path></svg>
+                    </span>
+                    {{ t("Dashboard") }}
+                </a>
+                <a href="{{ route('admin.managers.index') }}" class="{{ request()->routeIs('admin.managers.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </span>
+                    {{ t("Managers") }}
+                </a>
+                <a href="{{ route('admin.plans.index') }}" class="{{ request()->routeIs('admin.plans.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path></svg>
+                    </span>
+                    {{ t("Plans") }}
+                </a>
+                <a href="{{ route('admin.subscriptions.index') }}" class="{{ request()->routeIs('admin.subscriptions.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M7 8h10"></path><path d="M7 12h6"></path><path d="M7 16h8"></path></svg>
+                    </span>
+                    {{ t("Subscriptions") }}
+                </a>
+                <a href="{{ route('admin.stores.index') }}" class="{{ request()->routeIs('admin.stores.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M3 9l2-5h14l2 5"></path><path d="M5 9v11h14V9"></path><path d="M9 20v-6h6v6"></path></svg>
+                    </span>
+                    {{ t("Stores") }}
+                </a>
+                <a href="{{ route('admin.devices.index') }}" class="{{ request()->routeIs('admin.devices.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>
+                    </span>
+                    {{ t("Devices") }}
+                </a>
+                <a href="{{ route('admin.payment_methods.index') }}" class="{{ request()->routeIs('admin.payment_methods.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>
+                    </span>
+                    {{ t("Payment Methods") }}
+                </a>
+                <a href="{{ route('admin.currencies.index') }}" class="{{ request()->routeIs('admin.currencies.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9a4 4 0 0 0 0 8h6a4 4 0 0 1 0 8H6"></path></svg>
+                    </span>
+                    {{ t("Currencies") }}
+                </a>
+                <a href="{{ route('admin.languages.index') }}" class="{{ request()->routeIs('admin.languages.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M2 5h12"></path><path d="M2 9h12"></path><path d="M2 13h6"></path><path d="M14 17l4-10 4 10"></path><path d="M16 13h4"></path></svg>
+                    </span>
+                    {{ t("Languages") }}
+                </a>
+                <a href="{{ route('admin.translations.index') }}" class="{{ request()->routeIs('admin.translations.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M4 4h16v10H4z"></path><path d="M8 20l4-4 4 4"></path></svg>
+                    </span>
+                    {{ t("Translations") }}
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-title">{{ t("Manager Menu") }}</div>
+                <a href="{{ route('admin.categories.index') }}" class="{{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M20.59 13.41L11 3.83V2h-3v3l9.59 9.59a2 2 0 0 0 2.83 0l.17-.17a2 2 0 0 0 0-2.83z"></path><circle cx="7.5" cy="7.5" r="1.5"></circle></svg>
+                    </span>
+                    {{ t("Categories") }}
+                </a>
+                <a href="{{ route('admin.product_option_categories.index') }}" class="{{ request()->routeIs('admin.product_option_categories.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+                    </span>
+                    {{ t("Product Option Categories") }}
+                </a>
+                <a href="{{ route('admin.product_options.index') }}" class="{{ request()->routeIs('admin.product_options.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M6 2h12"></path><path d="M9 2v6l-5 9a4 4 0 0 0 3.5 6h9a4 4 0 0 0 3.5-6l-5-9V2"></path></svg>
+                    </span>
+                    {{ t("Product Options") }}
+                </a>
+                <a href="{{ route('admin.products.index') }}" class="{{ request()->routeIs('admin.products.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3.27 6.96L12 12l8.73-5.04"></path><path d="M12 22V12"></path></svg>
+                    </span>
+                    {{ t("Products") }}
+                </a>
+                <a href="{{ route('admin.customers.index') }}" class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </span>
+                    {{ t("Customers") }}
+                </a>
+                <a href="{{ route('admin.taxes.index') }}" class="{{ request()->routeIs('admin.taxes.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg>
+                    </span>
+                    {{ t("Taxes") }}
+                </a>
+                <a href="{{ route('admin.discounts.index') }}" class="{{ request()->routeIs('admin.discounts.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"></path><path d="M16 5h6v6"></path><path d="M10 14l12-12"></path></svg>
+                    </span>
+                    {{ t("Discounts") }}
+                </a>
+                <a href="{{ route('admin.shipping.index') }}" class="{{ request()->routeIs('admin.shipping.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M3 7h11v9H3z"></path><path d="M14 10h4l3 3v3h-7z"></path><circle cx="7" cy="19" r="2"></circle><circle cx="17" cy="19" r="2"></circle></svg>
+                    </span>
+                    {{ t("Shipping") }}
+                </a>
+                <a href="{{ route('admin.roles.index') }}" class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"></path></svg>
+                    </span>
+                    {{ t("Roles") }}
+                </a>
+                <a href="{{ route('admin.permissions.index') }}" class="{{ request()->routeIs('admin.permissions.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M21 8v6"></path><path d="M3 8v6"></path><rect x="7" y="8" width="10" height="10" rx="2"></rect><path d="M12 8V5a3 3 0 0 1 6 0"></path></svg>
+                    </span>
+                    {{ t("Permissions") }}
+                </a>
+                <a href="{{ route('admin.printing.index') }}" class="{{ request()->routeIs('admin.printing.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><rect x="6" y="14" width="12" height="8" rx="1"></rect><rect x="4" y="9" width="16" height="6" rx="2"></rect></svg>
+                    </span>
+                    {{ t("Printing") }}
+                </a>
+                <a href="{{ route('admin.reports.index') }}" class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M3 3v18h18"></path><path d="M7 14l3-3 4 4 5-6"></path></svg>
+                    </span>
+                    {{ t("Reports") }}
+                </a>
+            </div>
         </nav>
     </aside>
     <div class="content">
+        @php
+            $headerLanguages = \App\Models\Language::orderBy('name')->get();
+            $currentLang = app()->getLocale();
+        @endphp
         <header>
             <div class="header-right">
+                <div class="header-controls">
+                    @if ($headerLanguages->count())
+                        <div class="lang-select">
+                            <select data-lang-select>
+                                @foreach ($headerLanguages as $language)
+                                    <option value="{{ $language->code }}" {{ $currentLang === $language->code ? 'selected' : '' }}>
+                                        {{ $language->name }} ({{ strtoupper($language->code) }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                    <div class="theme-toggle">
+                        <span class="muted small">{{ t("Dark") }}</span>
+                        <label class="toggle">
+                            <input type="checkbox" data-theme-toggle>
+                            <span></span>
+                        </label>
+                    </div>
+                </div>
                 @if (auth()->check())
                     <div class="user-chip">{{ auth()->user()->name }}</div>
                     <form method="POST" action="{{ route('logout') }}">
@@ -292,5 +394,62 @@
         </main>
     </div>
 </div>
+<script>
+    const themeToggle = document.querySelector('[data-theme-toggle]');
+    const langSelect = document.querySelector('[data-lang-select]');
+    const toggleForms = document.querySelectorAll('[data-toggle-form]');
+
+    const applyTheme = (theme) => {
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    };
+
+    if (themeToggle) {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            applyTheme(savedTheme);
+            themeToggle.checked = savedTheme === 'dark';
+        }
+
+        themeToggle.addEventListener('change', () => {
+            const theme = themeToggle.checked ? 'dark' : 'light';
+            localStorage.setItem('theme', theme);
+            applyTheme(theme);
+        });
+    }
+
+    if (langSelect) {
+        langSelect.addEventListener('change', () => {
+            const url = new URL(window.location.href);
+            url.searchParams.set('lang', langSelect.value);
+            window.location.href = url.toString();
+        });
+    }
+
+    toggleForms.forEach((form) => {
+        const input = form.querySelector('input[type=\"checkbox\"]');
+        if (!input) {
+            return;
+        }
+        input.addEventListener('change', () => form.submit());
+    });
+
+    const optionTypeSelects = document.querySelectorAll('[data-option-type]');
+    optionTypeSelects.forEach((select) => {
+        const form = select.closest('form');
+        const stepFields = form ? form.querySelectorAll('[data-option-steps]') : [];
+        const sync = () => {
+            const show = select.value === 'quantity';
+            stepFields.forEach((field) => {
+                field.style.display = show ? '' : 'none';
+            });
+        };
+        sync();
+        select.addEventListener('change', sync);
+    });
+</script>
 </body>
 </html>

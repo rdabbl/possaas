@@ -13,9 +13,11 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
+                    <th>{{ t("Profile") }}</th>
                     <th>{{ t("Name") }}</th>
-                    <th>{{ t("Slug") }}</th>
+                    <th>{{ t("Username") }}</th>
+                    <th>{{ t("Plan") }}</th>
+                    <th>{{ t("Expires In") }}</th>
                     <th>{{ t("Active") }}</th>
                     <th>{{ t("Max Stores") }}</th>
                     <th>{{ t("Max Devices") }}</th>
@@ -25,10 +27,42 @@
             <tbody>
                 @foreach ($managers as $manager)
                     <tr>
-                        <td>{{ $manager->id }}</td>
+                        <td>
+                            @php
+                                $initials = collect(explode(' ', trim($manager->name)))
+                                    ->filter()
+                                    ->take(2)
+                                    ->map(fn ($part) => strtoupper(substr($part, 0, 1)))
+                                    ->implode('');
+                            @endphp
+                            <div class="avatar">{{ $initials ?: 'M' }}</div>
+                        </td>
                         <td>{{ $manager->name }}</td>
-                        <td>{{ $manager->slug }}</td>
-                        <td>{{ $manager->is_active ? 'Yes' : 'No' }}</td>
+                        <td>{{ $manager->username }}</td>
+                        <td>{{ $manager->plan?->name ?? $manager->plan_name ?? t("No Plan") }}</td>
+                        <td>
+                            @php
+                                $expiresAt = $manager->latestSubscription?->ends_at;
+                                if (!$expiresAt) {
+                                    $duration = $manager->plan?->duration_days;
+                                    $expiresAt = $duration ? $manager->created_at?->copy()->addDays($duration) : null;
+                                }
+                                $daysLeft = $expiresAt ? now()->diffInDays($expiresAt, false) : null;
+                            @endphp
+                            @if (is_null($daysLeft))
+                                —
+                            @elseif ($daysLeft < 0)
+                                {{ t("Expired") }} ({{ abs($daysLeft) }} {{ t("days") }})
+                            @else
+                                {{ $daysLeft }} {{ t("days") }}
+                            @endif
+                        </td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'managers', 'id' => $manager->id]),
+                                'checked' => $manager->is_active,
+                            ])
+                        </td>
                         <td>{{ $manager->max_stores ?? 'Unlimited' }}</td>
                         <td>{{ $manager->max_devices ?? 'Unlimited' }}</td>
                         <td>

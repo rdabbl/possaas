@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Manager") }}</th>
                     <th>{{ t("Store") }}</th>
                     <th>{{ t("Name") }}</th>
@@ -44,13 +43,17 @@
             <tbody>
                 @foreach ($devices as $device)
                     <tr>
-                        <td>{{ $device->id }}</td>
                         <td>{{ $device->manager?->name }}</td>
                         <td>{{ $device->store?->name }}</td>
                         <td>{{ $device->name }}</td>
                         <td>{{ $device->type }}</td>
                         <td>{{ $device->platform }}</td>
-                        <td>{{ $device->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'devices', 'id' => $device->id]),
+                                'checked' => $device->is_active,
+                            ])
+                        </td>
                     </tr>
                 @endforeach
             </tbody>

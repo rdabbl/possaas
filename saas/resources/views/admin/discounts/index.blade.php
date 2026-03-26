@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Scope") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Type") }}</th>
@@ -45,13 +44,17 @@
             <tbody>
                 @foreach ($discounts as $discount)
                     <tr>
-                        <td>{{ $discount->id }}</td>
                         <td>{{ $discount->manager?->name ?? 'Global' }}</td>
                         <td>{{ $discount->name }}</td>
                         <td>{{ $discount->type }}</td>
                         <td>{{ $discount->value }}</td>
                         <td>{{ $discount->scope }}</td>
-                        <td>{{ $discount->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'discounts', 'id' => $discount->id]),
+                                'checked' => $discount->is_active,
+                            ])
+                        </td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.discounts.edit', $discount) }}">{{ t("Edit") }}</a>
                             <form method="POST" action="{{ route('admin.discounts.destroy', $discount) }}" style="display:inline-block" onsubmit="return confirm('Delete this discount?');">

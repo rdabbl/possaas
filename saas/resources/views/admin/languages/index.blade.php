@@ -30,7 +30,12 @@
                         <td>{{ $language->native_name ?? '—' }}</td>
                         <td>{{ strtoupper($language->direction) }}</td>
                         <td>{{ $language->is_default ? 'Yes' : 'No' }}</td>
-                        <td>{{ $language->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'languages', 'id' => $language->id]),
+                                'checked' => $language->is_active,
+                            ])
+                        </td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.languages.edit', $language) }}">{{ t("Edit") }}</a>
                         </td>

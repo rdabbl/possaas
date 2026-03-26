@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Scope") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Active") }}</th>
@@ -42,10 +41,14 @@
             <tbody>
                 @foreach ($categories as $category)
                     <tr>
-                        <td>{{ $category->id }}</td>
                         <td>{{ $category->manager?->name ?? 'Global' }}</td>
                         <td>{{ $category->name }}</td>
-                        <td>{{ $category->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'product_option_categories', 'id' => $category->id]),
+                                'checked' => $category->is_active,
+                            ])
+                        </td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.product_option_categories.edit', $category) }}">{{ t("Edit") }}</a>
                             <form method="POST" action="{{ route('admin.product_option_categories.destroy', $category) }}" style="display:inline-block" onsubmit="return confirm('Delete this product option category?');">

@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Scope") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Type") }}</th>
@@ -44,12 +43,16 @@
             <tbody>
                 @foreach ($methods as $method)
                     <tr>
-                        <td>{{ $method->id }}</td>
                         <td>{{ $method->manager?->name ?? 'Global' }}</td>
                         <td>{{ $method->name }}</td>
                         <td>{{ $method->type }}</td>
                         <td>{{ $method->is_default ? 'Yes' : 'No' }}</td>
-                        <td>{{ $method->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'payment_methods', 'id' => $method->id]),
+                                'checked' => $method->is_active,
+                            ])
+                        </td>
                         <td>
                             <form method="POST" action="{{ route('admin.payment_methods.destroy', $method) }}" style="display:inline;">
                                 @csrf

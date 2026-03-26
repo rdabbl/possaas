@@ -13,7 +13,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Code") }}</th>
                     <th>{{ t("Symbol") }}</th>
@@ -24,11 +23,15 @@
             <tbody>
                 @foreach ($currencies as $currency)
                     <tr>
-                        <td>{{ $currency->id }}</td>
                         <td>{{ $currency->name }}</td>
                         <td>{{ $currency->code }}</td>
                         <td>{{ $currency->symbol }}</td>
-                        <td>{{ $currency->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'currencies', 'id' => $currency->id]),
+                                'checked' => $currency->is_active,
+                            ])
+                        </td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.currencies.edit', $currency) }}">{{ t("Edit") }}</a>
                             <form method="POST" action="{{ route('admin.currencies.destroy', $currency) }}" style="display:inline;">

@@ -16,7 +16,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Picture") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("SKU") }}</th>
@@ -29,7 +28,6 @@
             <tbody>
                 @foreach ($products as $product)
                     <tr>
-                        <td>{{ $product->id }}</td>
                         <td>
                             @if ($product->image_url)
                                 <img src="{{ $product->image_url }}" alt="Product image" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;">

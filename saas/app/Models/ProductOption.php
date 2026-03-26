@@ -15,6 +15,9 @@ class ProductOption extends Model
         'manager_id',
         'product_option_category_id',
         'name',
+        'option_type',
+        'step_action',
+        'step_value',
         'image_path',
         'is_active',
     ];
@@ -22,6 +25,7 @@ class ProductOption extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'product_option_category_id' => 'integer',
+        'step_value' => 'integer',
     ];
 
     public function manager()

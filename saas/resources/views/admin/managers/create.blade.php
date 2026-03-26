@@ -11,8 +11,8 @@
                 <input name="name" value="{{ old('name') }}" required>
             </div>
             <div class="field">
-                <label>{{ t("Slug") }}</label>
-                <input name="slug" value="{{ old('slug') }}">
+                <label>{{ t("Username") }}</label>
+                <input name="username" value="{{ old('username') }}" required>
             </div>
             <div class="field">
                 <label>{{ t("Active") }}</label>

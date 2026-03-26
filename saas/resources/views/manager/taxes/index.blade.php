@@ -13,7 +13,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Rate") }}</th>
                     <th>{{ t("Type") }}</th>
@@ -24,7 +23,6 @@
             <tbody>
                 @foreach ($taxes as $tax)
                     <tr>
-                        <td>{{ $tax->id }}</td>
                         <td>
                             {{ $tax->name }}
                             @if (!$tax->manager_id)

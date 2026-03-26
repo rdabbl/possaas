@@ -11,6 +11,7 @@ class Manager extends Model
 
     protected $fillable = [
         'name',
+        'username',
         'slug',
         'is_active',
         'max_stores',
@@ -76,5 +77,15 @@ class Manager extends Model
     public function discounts()
     {
         return $this->hasMany(Discount::class);
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function latestSubscription()
+    {
+        return $this->hasOne(Subscription::class)->latestOfMany('ends_at');
     }
 }

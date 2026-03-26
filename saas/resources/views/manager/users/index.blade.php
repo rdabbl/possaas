@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Email") }}</th>
                     <th>{{ t("Store") }}</th>
@@ -43,7 +42,6 @@
             <tbody>
                 @forelse ($users as $user)
                     <tr>
-                        <td>{{ $user->id }}</td>
                         <td>{{ $user->name }}</td>
                         <td>{{ $user->email }}</td>
                         <td>{{ $user->store?->name }}</td>

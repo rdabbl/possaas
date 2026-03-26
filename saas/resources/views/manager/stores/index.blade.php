@@ -13,7 +13,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Code") }}</th>
                     <th>{{ t("Stock") }}</th>
@@ -24,7 +23,6 @@
             <tbody>
                 @foreach ($stores as $store)
                     <tr>
-                        <td>{{ $store->id }}</td>
                         <td>{{ $store->name }}</td>
                         <td>{{ $store->code }}</td>
                         <td>{{ $store->stock_enabled ? 'Yes' : 'No' }}</td>

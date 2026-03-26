@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Scope") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Type") }}</th>
@@ -44,12 +43,16 @@
             <tbody>
                 @foreach ($taxes as $tax)
                     <tr>
-                        <td>{{ $tax->id }}</td>
                         <td>{{ $tax->manager?->name ?? 'Global' }}</td>
                         <td>{{ $tax->name }}</td>
                         <td>{{ $tax->type }}</td>
                         <td>{{ $tax->rate }}</td>
-                        <td>{{ $tax->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'taxes', 'id' => $tax->id]),
+                                'checked' => $tax->is_active,
+                            ])
+                        </td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.taxes.edit', $tax) }}">{{ t("Edit") }}</a>
                             <form method="POST" action="{{ route('admin.taxes.destroy', $tax) }}" style="display:inline-block" onsubmit="return confirm('Delete this tax?');">

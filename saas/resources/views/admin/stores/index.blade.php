@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Manager") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Code") }}</th>
@@ -44,12 +43,16 @@
             <tbody>
                 @foreach ($stores as $store)
                     <tr>
-                        <td>{{ $store->id }}</td>
                         <td>{{ $store->manager?->name }}</td>
                         <td>{{ $store->name }}</td>
                         <td>{{ $store->code }}</td>
                         <td>{{ $store->stock_enabled ? 'Enabled' : 'Disabled' }}</td>
-                        <td>{{ $store->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'stores', 'id' => $store->id]),
+                                'checked' => $store->is_active,
+                            ])
+                        </td>
                         <td>
                             <form method="POST" action="{{ route('admin.stores.destroy', $store) }}" style="display:inline;">
                                 @csrf

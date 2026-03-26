@@ -12,6 +12,9 @@ class TranslationService
     {
         $locale = $locale ?: app()->getLocale();
         $map = $this->getMap($locale, $scope);
+        if (!array_key_exists($key, $map)) {
+            $this->ensureKeyExists($key, $scope, $fallback ?? $key);
+        }
         return $map[$key] ?? $fallback ?? $key;
     }
 
@@ -41,5 +44,31 @@ class TranslationService
     private function cacheKey(string $locale, string $scope): string
     {
         return 'translations.' . $locale . '.' . $scope;
+    }
+
+    private function ensureKeyExists(string $key, string $scope, string $value): void
+    {
+        if ($key === '') {
+            return;
+        }
+
+        $languages = Language::orderBy('id')->get();
+        if ($languages->isEmpty()) {
+            return;
+        }
+
+        foreach ($languages as $language) {
+            Translation::firstOrCreate(
+                [
+                    'language_id' => $language->id,
+                    'scope' => $scope,
+                    'key' => $key,
+                ],
+                [
+                    'value' => $value,
+                ]
+            );
+            $this->forget($language->code, $scope);
+        }
     }
 }

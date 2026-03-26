@@ -13,7 +13,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Description") }}</th>
                     <th>{{ t("Actions") }}</th>
@@ -22,7 +21,6 @@
             <tbody>
                 @foreach ($permissions as $permission)
                     <tr>
-                        <td>{{ $permission->id }}</td>
                         <td>{{ $permission->name }}</td>
                         <td>{{ $permission->description }}</td>
                         <td>

@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Scope") }}</th>
                     <th>{{ t("Picture") }}</th>
                     <th>{{ t("Name") }}</th>
@@ -44,7 +43,6 @@
             <tbody>
                 @foreach ($categories as $category)
                     <tr>
-                        <td>{{ $category->id }}</td>
                         <td>{{ $category->manager?->name ?? 'Global' }}</td>
                         <td>
                             @if ($category->image_path)
@@ -55,7 +53,12 @@
                         </td>
                         <td>{{ $category->name }}</td>
                         <td>{{ $category->parent?->name }}</td>
-                        <td>{{ $category->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'categories', 'id' => $category->id]),
+                                'checked' => $category->is_active,
+                            ])
+                        </td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.categories.edit', $category) }}">{{ t("Edit") }}</a>
                             <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" style="display:inline-block" onsubmit="return confirm('Delete this category?');">

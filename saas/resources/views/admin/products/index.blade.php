@@ -35,7 +35,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Manager") }}</th>
                     <th>{{ t("Picture") }}</th>
                     <th>{{ t("Name") }}</th>
@@ -49,7 +48,6 @@
             <tbody>
                 @foreach ($products as $product)
                     <tr>
-                        <td>{{ $product->id }}</td>
                         <td>{{ $product->manager?->name }}</td>
                         <td>
                             @if ($product->image_url)
@@ -62,7 +60,12 @@
                         <td>{{ $product->sku }}</td>
                         <td>{{ number_format((float) $product->price, 2) }}</td>
                         <td>{{ $product->track_stock ? 'Yes' : 'No' }}</td>
-                        <td>{{ $product->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'products', 'id' => $product->id]),
+                                'checked' => $product->is_active,
+                            ])
+                        </td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.products.edit', $product) }}">{{ t("Edit") }}</a>
                             <form method="POST" action="{{ route('admin.products.destroy', $product) }}" style="display:inline-block" onsubmit="return confirm('Delete this product?');">

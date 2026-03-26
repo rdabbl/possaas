@@ -13,7 +13,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Email") }}</th>
                     <th>{{ t("Phone") }}</th>
@@ -24,7 +23,6 @@
             <tbody>
                 @foreach ($customers as $customer)
                     <tr>
-                        <td>{{ $customer->id }}</td>
                         <td>{{ $customer->name }}</td>
                         <td>{{ $customer->email }}</td>
                         <td>{{ $customer->phone }}</td>

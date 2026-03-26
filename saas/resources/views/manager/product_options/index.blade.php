@@ -13,7 +13,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Active") }}</th>
                     <th>{{ t("Actions") }}</th>
@@ -22,7 +21,6 @@
             <tbody>
                 @foreach ($options as $option)
                     <tr>
-                        <td>{{ $option->id }}</td>
                         <td>
                             {{ $option->name }}
                             @if (!$option->manager_id)

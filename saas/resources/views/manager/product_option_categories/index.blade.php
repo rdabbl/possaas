@@ -13,7 +13,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Active") }}</th>
                     <th>{{ t("Actions") }}</th>
@@ -22,7 +21,6 @@
             <tbody>
                 @foreach ($categories as $category)
                     <tr>
-                        <td>{{ $category->id }}</td>
                         <td>
                             {{ $category->name }}
                             @if (!$category->manager_id)

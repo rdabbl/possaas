@@ -13,7 +13,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Duration (days)") }}</th>
                     <th>{{ t("Max Stores") }}</th>
@@ -25,12 +24,16 @@
             <tbody>
                 @foreach ($plans as $plan)
                     <tr>
-                        <td>{{ $plan->id }}</td>
                         <td>{{ $plan->name }}</td>
                         <td>{{ $plan->duration_days ?? '—' }}</td>
                         <td>{{ $plan->max_stores ?? '—' }}</td>
                         <td>{{ $plan->max_devices ?? '—' }}</td>
-                        <td>{{ $plan->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'plans', 'id' => $plan->id]),
+                                'checked' => $plan->is_active,
+                            ])
+                        </td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.plans.edit', $plan) }}">{{ t("Edit") }}</a>
                             <form method="POST" action="{{ route('admin.plans.destroy', $plan) }}" style="display:inline-block" onsubmit="return confirm('Delete this plan?');">

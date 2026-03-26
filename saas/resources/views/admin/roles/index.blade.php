@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Manager") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("System") }}</th>
@@ -42,7 +41,6 @@
             <tbody>
                 @foreach ($roles as $role)
                     <tr>
-                        <td>{{ $role->id }}</td>
                         <td>{{ $role->manager?->name ?? 'Global' }}</td>
                         <td>{{ $role->name }}</td>
                         <td>{{ $role->is_system ? 'Yes' : 'No' }}</td>

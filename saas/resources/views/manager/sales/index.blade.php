@@ -8,7 +8,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Status") }}</th>
                     <th>{{ t("Subtotal") }}</th>
                     <th>{{ t("Tax") }}</th>
@@ -20,7 +19,6 @@
             <tbody>
                 @foreach ($sales as $sale)
                     <tr>
-                        <td>{{ $sale->id }}</td>
                         <td>{{ $sale->status }}</td>
                         <td>{{ number_format((float) $sale->subtotal, 2) }}</td>
                         <td>{{ number_format((float) $sale->tax_total, 2) }}</td>

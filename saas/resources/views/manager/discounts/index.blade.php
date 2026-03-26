@@ -13,7 +13,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Value") }}</th>
                     <th>{{ t("Type") }}</th>
@@ -24,7 +23,6 @@
             <tbody>
                 @foreach ($discounts as $discount)
                     <tr>
-                        <td>{{ $discount->id }}</td>
                         <td>
                             {{ $discount->name }}
                             @if (!$discount->manager_id)

@@ -14,6 +14,15 @@
             --accent: #1d4ed8;
             --border: #e2e8f0;
         }
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --bg: #0b1220;
+            --card: #0f172a;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --border: #1f2937;
+        }
         body { margin:0; font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
         .layout { display: flex; min-height: 100vh; }
         .sidebar {
@@ -33,8 +42,12 @@
         }
         nav a.active { color: var(--accent); font-weight: 600; background: #eff6ff; }
         .content { flex: 1; display: flex; flex-direction: column; }
-        header { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 24px; display:flex; align-items:center; justify-content: flex-end; gap: 16px; }
+        header { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 24px; display:flex; align-items:center; justify-content: flex-end; flex-wrap: wrap; gap: 16px; }
         .header-right { display:flex; align-items:center; gap: 12px; }
+        .header-controls { display: flex; align-items: center; gap: 12px; }
+        .lang-select select { width: 160px; }
+        .theme-toggle { display: inline-flex; align-items: center; gap: 8px; }
+        .small { font-size: 12px; }
         .user-chip { color: var(--muted); font-size: 14px; }
         main { padding: 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
         .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
@@ -61,6 +74,34 @@
         }
         .btn { display:inline-block; padding: 8px 12px; background: var(--accent); color: #fff; border-radius: 8px; text-decoration:none; border:0; cursor:pointer; }
         .btn.secondary { background: #334155; }
+        .toggle {
+            position: relative;
+            display: inline-flex;
+            width: 38px;
+            height: 22px;
+            align-items: center;
+        }
+        .toggle input { display: none; }
+        .toggle span {
+            position: absolute;
+            inset: 0;
+            background: #e5e7eb;
+            border-radius: 999px;
+            transition: background .2s ease;
+        }
+        .toggle span::before {
+            content: "";
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 2px;
+            top: 2px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s ease;
+        }
+        .toggle input:checked + span { background: var(--accent); }
+        .toggle input:checked + span::before { transform: translateX(16px); }
         table { width:100%; border-collapse: collapse; }
         th, td { text-align:left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
         th { font-size: 12px; text-transform: uppercase; color: var(--muted); letter-spacing:.04em; }
@@ -100,8 +141,32 @@
         </nav>
     </aside>
     <div class="content">
+        @php
+            $headerLanguages = \App\Models\Language::orderBy('name')->get();
+            $currentLang = app()->getLocale();
+        @endphp
         <header>
             <div class="header-right">
+                <div class="header-controls">
+                    @if ($headerLanguages->count())
+                        <div class="lang-select">
+                            <select data-lang-select>
+                                @foreach ($headerLanguages as $language)
+                                    <option value="{{ $language->code }}" {{ $currentLang === $language->code ? 'selected' : '' }}>
+                                        {{ $language->name }} ({{ strtoupper($language->code) }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                    <div class="theme-toggle">
+                        <span class="muted small">{{ t("Dark") }}</span>
+                        <label class="toggle">
+                            <input type="checkbox" data-theme-toggle>
+                            <span></span>
+                        </label>
+                    </div>
+                </div>
                 @if (auth()->check())
                     <div class="user-chip">{{ auth()->user()->name }}</div>
                     <form method="POST" action="{{ route('logout') }}">
@@ -130,5 +195,53 @@
         </main>
     </div>
 </div>
+<script>
+    const themeToggle = document.querySelector('[data-theme-toggle]');
+    const langSelect = document.querySelector('[data-lang-select]');
+
+    const applyTheme = (theme) => {
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    };
+
+    if (themeToggle) {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            applyTheme(savedTheme);
+            themeToggle.checked = savedTheme === 'dark';
+        }
+
+        themeToggle.addEventListener('change', () => {
+            const theme = themeToggle.checked ? 'dark' : 'light';
+            localStorage.setItem('theme', theme);
+            applyTheme(theme);
+        });
+    }
+
+    if (langSelect) {
+        langSelect.addEventListener('change', () => {
+            const url = new URL(window.location.href);
+            url.searchParams.set('lang', langSelect.value);
+            window.location.href = url.toString();
+        });
+    }
+
+    const optionTypeSelects = document.querySelectorAll('[data-option-type]');
+    optionTypeSelects.forEach((select) => {
+        const form = select.closest('form');
+        const stepFields = form ? form.querySelectorAll('[data-option-steps]') : [];
+        const sync = () => {
+            const show = select.value === 'quantity';
+            stepFields.forEach((field) => {
+                field.style.display = show ? '' : 'none';
+            });
+        };
+        sync();
+        select.addEventListener('change', sync);
+    });
+</script>
 </body>
 </html>

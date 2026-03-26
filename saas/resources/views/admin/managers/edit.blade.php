@@ -12,8 +12,8 @@
                 <input name="name" value="{{ old('name', $manager->name) }}" required>
             </div>
             <div class="field">
-                <label>{{ t("Slug") }}</label>
-                <input name="slug" value="{{ old('slug', $manager->slug) }}" required>
+                <label>{{ t("Username") }}</label>
+                <input name="username" value="{{ old('username', $manager->username) }}" required>
             </div>
             <div class="field">
                 <label>{{ t("Active") }}</label>

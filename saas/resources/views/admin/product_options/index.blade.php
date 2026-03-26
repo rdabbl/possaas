@@ -32,7 +32,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>{{ t("ID") }}</th>
                     <th>{{ t("Scope") }}</th>
                     <th>{{ t("Picture") }}</th>
                     <th>{{ t("Name") }}</th>
@@ -43,7 +42,6 @@
             <tbody>
                 @foreach ($options as $option)
                     <tr>
-                        <td>{{ $option->id }}</td>
                         <td>{{ $option->manager?->name ?? 'Global' }}</td>
                         <td>
                             @if ($option->image_path)
@@ -53,7 +51,12 @@
                             @endif
                         </td>
                         <td>{{ $option->name }}</td>
-                        <td>{{ $option->is_active ? 'Yes' : 'No' }}</td>
+                        <td>
+                            @include('admin.partials.active_toggle', [
+                                'route' => route('admin.toggle_active', ['type' => 'product_options', 'id' => $option->id]),
+                                'checked' => $option->is_active,
+                            ])
+                        </td>
                         <td>
                             <a class="btn secondary" href="{{ route('admin.product_options.edit', $option) }}">{{ t("Edit") }}</a>
                             <form method="POST" action="{{ route('admin.product_options.destroy', $option) }}" style="display:inline-block" onsubmit="return confirm('Delete this option?');">

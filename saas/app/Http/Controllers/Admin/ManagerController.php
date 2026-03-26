@@ -18,7 +18,7 @@ class ManagerController extends Controller
 {
     public function index()
     {
-        $managers = Manager::orderBy('id', 'desc')->paginate(20);
+        $managers = Manager::with(['plan', 'latestSubscription'])->orderBy('id', 'desc')->paginate(20);
 
         return view('admin.managers.index', compact('managers'));
     }
@@ -36,7 +36,7 @@ class ManagerController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', 'unique:managers,slug'],
+            'username' => ['required', 'string', 'max:255', 'unique:managers,username'],
             'is_active' => ['nullable', 'boolean'],
             'max_stores' => ['nullable', 'integer', 'min:0'],
             'max_devices' => ['nullable', 'integer', 'min:0'],
@@ -48,7 +48,7 @@ class ManagerController extends Controller
             'admin_password' => ['nullable', 'string', 'min:6'],
         ]);
 
-        $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
+        $data['slug'] = $this->generateUniqueSlug($data['name']);
         $data['is_active'] = $data['is_active'] ?? true;
         $data['currency'] = $data['currency'] ?? 'USD';
         $data['timezone'] = $data['timezone'] ?? 'UTC';
@@ -123,7 +123,7 @@ class ManagerController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'unique:managers,slug,' . $manager->id],
+            'username' => ['required', 'string', 'max:255', 'unique:managers,username,' . $manager->id],
             'is_active' => ['nullable', 'boolean'],
             'max_stores' => ['nullable', 'integer', 'min:0'],
             'max_devices' => ['nullable', 'integer', 'min:0'],
@@ -132,6 +132,7 @@ class ManagerController extends Controller
             'plan_id' => ['nullable', 'exists:plans,id'],
         ]);
 
+        $data['slug'] = $this->generateUniqueSlug($data['name'], $manager->id);
         $data['is_active'] = $data['is_active'] ?? false;
         $data['currency'] = $data['currency'] ?? $manager->currency;
         $data['timezone'] = $data['timezone'] ?? $manager->timezone;
@@ -165,5 +166,24 @@ class ManagerController extends Controller
             return redirect()->route('admin.managers.index')
                 ->with('error', 'Unable to delete manager. Remove dependent records first.');
         }
+    }
+
+    private function generateUniqueSlug(string $name, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($name);
+        if ($base === '') {
+            $base = 'manager';
+        }
+        $slug = $base;
+        $counter = 1;
+
+        while (Manager::where('slug', $slug)->when($ignoreId, function ($query) use ($ignoreId) {
+            $query->where('id', '!=', $ignoreId);
+        })->exists()) {
+            $counter++;
+            $slug = $base . '-' . $counter;
+        }
+
+        return $slug;
     }
 }

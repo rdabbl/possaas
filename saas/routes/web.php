@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ActiveToggleController;
 use App\Http\Controllers\Admin\DeviceController as AdminDeviceController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\ProductOptionCategoryController as AdminProductOptionCategoryController;
@@ -19,6 +20,8 @@ use App\Http\Controllers\Admin\DiscountController as AdminDiscountController;
 use App\Http\Controllers\Admin\CurrencyController as AdminCurrencyController;
 use App\Http\Controllers\Admin\ProductOptionController as AdminProductOptionController;
 use App\Http\Controllers\Admin\LanguageController as AdminLanguageController;
+use App\Http\Controllers\Admin\ShippingController as AdminShippingController;
+use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\TranslationController as AdminTranslationController;
 use Illuminate\Http\Request;
@@ -77,6 +80,7 @@ Route::middleware('auth')->group(function () {
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::patch('/toggle-active/{type}/{id}', [ActiveToggleController::class, 'update'])->name('toggle_active');
 
     Route::get('/managers', [ManagerController::class, 'index'])->name('managers.index');
     Route::get('/managers/create', [ManagerController::class, 'create'])->name('managers.create');
@@ -191,6 +195,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::post('/translations', [AdminTranslationController::class, 'store'])->name('translations.store');
     Route::get('/translations/{translation}/edit', [AdminTranslationController::class, 'edit'])->name('translations.edit');
     Route::put('/translations/{translation}', [AdminTranslationController::class, 'update'])->name('translations.update');
+
+    Route::get('/shipping', [AdminShippingController::class, 'index'])->name('shipping.index');
+
+    Route::get('/subscriptions', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
+    Route::get('/subscriptions/create', [AdminSubscriptionController::class, 'create'])->name('subscriptions.create');
+    Route::post('/subscriptions', [AdminSubscriptionController::class, 'store'])->name('subscriptions.store');
+    Route::get('/subscriptions/{subscription}/edit', [AdminSubscriptionController::class, 'edit'])->name('subscriptions.edit');
+    Route::put('/subscriptions/{subscription}', [AdminSubscriptionController::class, 'update'])->name('subscriptions.update');
 });
 
 Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])->group(function () {
