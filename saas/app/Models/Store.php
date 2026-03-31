@@ -20,12 +20,14 @@ class Store extends Model
         'logo_path',
         'stock_enabled',
         'is_currency_right',
+        'allow_loyalty_redeem',
         'is_active',
     ];
 
     protected $casts = [
         'stock_enabled' => 'boolean',
         'is_currency_right' => 'boolean',
+        'allow_loyalty_redeem' => 'boolean',
         'is_active' => 'boolean',
     ];
 
@@ -47,5 +49,10 @@ class Store extends Model
     public function sales()
     {
         return $this->hasMany(Sale::class);
+    }
+
+    public function printingServices()
+    {
+        return $this->hasMany(PrintingService::class);
     }
 }

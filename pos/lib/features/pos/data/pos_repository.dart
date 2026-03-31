@@ -6,10 +6,13 @@ import '../../../core/models/customer.dart';
 import '../../../core/models/currency.dart';
 import '../../../core/models/payment_method.dart';
 import '../../../core/models/product.dart';
+import '../../../core/models/discount.dart';
+import '../../../core/models/shipping_method.dart';
 import '../../../core/models/warehouse.dart';
 import '../../../core/models/order_summary.dart';
 import '../../../core/models/register_details.dart';
 import '../models/user_summary.dart';
+import '../models/printing_service.dart';
 
 class PosRepository {
   PosRepository({required this.apiClient});
@@ -100,6 +103,46 @@ class PosRepository {
     return methods;
   }
 
+  Future<List<Discount>> fetchDiscounts() async {
+    final result = await apiClient.getList(
+      ApiEndpoints.discounts,
+      queryParameters: {'per_page': 200},
+    );
+    return result
+        .whereType<Map<String, dynamic>>()
+        .map(Discount.fromJson)
+        .toList();
+  }
+
+  Future<List<ShippingMethod>> fetchShippingMethods() async {
+    final result = await apiClient.getList(
+      ApiEndpoints.shippingMethods,
+      queryParameters: {'per_page': 200},
+    );
+    return result
+        .whereType<Map<String, dynamic>>()
+        .map(ShippingMethod.fromJson)
+        .toList();
+  }
+
+  Future<List<PrintingService>> fetchPrintingServices({int? storeId}) async {
+    final result = await apiClient.getList(
+      ApiEndpoints.printingServices,
+      queryParameters: {
+        if (storeId != null) 'store_id': storeId,
+      },
+    );
+    final services = result
+        .whereType<Map<String, dynamic>>()
+        .map(PrintingService.fromJson)
+        .toList();
+    services.sort((a, b) {
+      final order = a.sortOrder.compareTo(b.sortOrder);
+      return order != 0 ? order : a.name.compareTo(b.name);
+    });
+    return services;
+  }
+
   Future<List<UserSummary>> fetchUsers() async {
     final response = await apiClient.get(ApiEndpoints.authMe);
     if (response.isEmpty) return [];
@@ -135,6 +178,8 @@ class PosRepository {
     int paymentStatusId = 1,
     String? notes,
     double receivedAmount = 0,
+    double loyaltyRedeemAmount = 0,
+    int loyaltyRedeemPoints = 0,
   }) async {
     if (warehouseId == null) {
       throw ApiException('Store requis pour enregistrer une vente.');
@@ -167,6 +212,13 @@ class PosRepository {
     if (payments.isNotEmpty) {
       payload['payments'] = payments;
     }
+    if (loyaltyRedeemAmount > 0) {
+      payload['loyalty_redeem_amount'] =
+          double.parse(loyaltyRedeemAmount.toStringAsFixed(2));
+    }
+    if (loyaltyRedeemPoints > 0) {
+      payload['loyalty_redeem_points'] = loyaltyRedeemPoints;
+    }
 
     await apiClient.post(ApiEndpoints.sales, body: payload);
   }
@@ -183,6 +235,8 @@ class PosRepository {
     int paymentStatusId = 1,
     String? notes,
     double receivedAmount = 0,
+    double loyaltyRedeemAmount = 0,
+    int loyaltyRedeemPoints = 0,
   }) async {
     if (warehouseId == null) {
       throw ApiException('Store requis pour enregistrer une vente.');
@@ -203,6 +257,13 @@ class PosRepository {
     );
     if (payments.isNotEmpty) {
       payload['payments'] = payments;
+    }
+    if (loyaltyRedeemAmount > 0) {
+      payload['loyalty_redeem_amount'] =
+          double.parse(loyaltyRedeemAmount.toStringAsFixed(2));
+    }
+    if (loyaltyRedeemPoints > 0) {
+      payload['loyalty_redeem_points'] = loyaltyRedeemPoints;
     }
     await apiClient.post(ApiEndpoints.sales, body: payload);
   }

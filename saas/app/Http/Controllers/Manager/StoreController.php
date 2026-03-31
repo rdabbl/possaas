@@ -60,12 +60,14 @@ class StoreController extends Controller
             'logo' => ['nullable', 'image', 'max:4096'],
             'stock_enabled' => ['nullable', 'boolean'],
             'is_currency_right' => ['nullable', 'boolean'],
+            'allow_loyalty_redeem' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $data['manager_id'] = $manager->id;
         $data['stock_enabled'] = $data['stock_enabled'] ?? true;
         $data['is_currency_right'] = $data['is_currency_right'] ?? true;
+        $data['allow_loyalty_redeem'] = $data['allow_loyalty_redeem'] ?? true;
         $data['is_active'] = $data['is_active'] ?? true;
         if ($request->hasFile('logo')) {
             $data['logo_path'] = $request->file('logo')->store('stores', 'public');
@@ -122,6 +124,7 @@ class StoreController extends Controller
             'logo' => ['nullable', 'image', 'max:4096'],
             'stock_enabled' => ['nullable', 'boolean'],
             'is_currency_right' => ['nullable', 'boolean'],
+            'allow_loyalty_redeem' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 

@@ -14,6 +14,7 @@ class OrderSummary {
     required this.itemsDetail,
     this.userName,
     this.userId,
+    this.note,
     this.createdAt,
     this.isLocal = false,
   });
@@ -23,6 +24,7 @@ class OrderSummary {
   final String customerName;
   final String? userName;
   final int? userId;
+  final String? note;
   final String status;
   final String paymentStatus;
   final double grandTotal;
@@ -32,6 +34,11 @@ class OrderSummary {
   final List<OrderItemSummary> itemsDetail;
   final DateTime? createdAt;
   final bool isLocal;
+
+  bool get isKioskOrder {
+    final value = (note ?? '').toLowerCase();
+    return value.contains('borne') || value.contains('kiosk');
+  }
 
   factory OrderSummary.fromJson(Map<String, dynamic> json) {
     final attributes = json['attributes'] is Map<String, dynamic>
@@ -143,6 +150,9 @@ class OrderSummary {
           ? null
           : (source['user_name'] ?? source['created_by'] ?? source['created_by_name']).toString(),
       userId: source['user_id'] != null ? int.tryParse('${source['user_id']}') : null,
+      note: (source['note'] ?? '').toString().trim().isEmpty
+          ? null
+          : (source['note']).toString(),
       status: status,
       paymentStatus:
           (source['payment_status'] ?? source['paymentStatus'] ?? status).toString(),

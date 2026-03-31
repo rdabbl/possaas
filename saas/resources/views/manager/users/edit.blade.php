@@ -52,6 +52,17 @@
                     <option value="0" {{ old('is_active', $user->is_active ? 1 : 0) == 0 ? 'selected' : '' }}>{{ t("No") }}</option>
                 </select>
             </div>
+            <div class="field">
+                <label>{{ t("Allow Loyalty Redemption") }}</label>
+                <select name="allow_loyalty_redeem">
+                    @php
+                        $allowLoyalty = old('allow_loyalty_redeem', $user->allow_loyalty_redeem);
+                    @endphp
+                    <option value="" {{ $allowLoyalty === null || $allowLoyalty === '' ? 'selected' : '' }}>{{ t("Inherit store setting") }}</option>
+                    <option value="1" {{ (string) $allowLoyalty === '1' ? 'selected' : '' }}>{{ t("Yes") }}</option>
+                    <option value="0" {{ (string) $allowLoyalty === '0' ? 'selected' : '' }}>{{ t("No") }}</option>
+                </select>
+            </div>
             <button class="btn" type="submit">{{ t("Save") }}</button>
             <a class="btn secondary" href="{{ route('manager.users.index') }}">{{ t("Cancel") }}</a>
         </form>

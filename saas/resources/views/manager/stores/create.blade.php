@@ -49,6 +49,13 @@
                 </select>
             </div>
             <div class="field">
+                <label>{{ t("Allow Loyalty Redemption") }}</label>
+                <select name="allow_loyalty_redeem">
+                    <option value="1" selected>{{ t("Yes") }}</option>
+                    <option value="0">{{ t("No") }}</option>
+                </select>
+            </div>
+            <div class="field">
                 <label>{{ t("Active") }}</label>
                 <select name="is_active">
                     <option value="1" selected>{{ t("Yes") }}</option>

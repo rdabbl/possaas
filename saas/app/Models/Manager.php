@@ -20,6 +20,11 @@ class Manager extends Model
         'timezone',
         'plan_name',
         'plan_id',
+        'loyalty_enabled',
+        'loyalty_points_per_order',
+        'loyalty_points_per_item',
+        'loyalty_amount_per_point',
+        'loyalty_point_value',
     ];
 
     protected $casts = [
@@ -27,6 +32,11 @@ class Manager extends Model
         'max_stores' => 'integer',
         'max_devices' => 'integer',
         'plan_id' => 'integer',
+        'loyalty_enabled' => 'boolean',
+        'loyalty_points_per_order' => 'integer',
+        'loyalty_points_per_item' => 'integer',
+        'loyalty_amount_per_point' => 'decimal:2',
+        'loyalty_point_value' => 'decimal:2',
     ];
 
     public function plan()

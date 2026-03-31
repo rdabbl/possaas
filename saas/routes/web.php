@@ -40,6 +40,9 @@ use App\Http\Controllers\Manager\ProductOptionController as ManagerProductOption
 use App\Http\Controllers\Manager\ProductOptionCategoryController as ManagerProductOptionCategoryController;
 use App\Http\Controllers\Manager\TaxController as ManagerTaxController;
 use App\Http\Controllers\Manager\DiscountController as ManagerDiscountController;
+use App\Http\Controllers\Manager\LoyaltyController as ManagerLoyaltyController;
+use App\Http\Controllers\Manager\ShippingController as ManagerShippingController;
+use App\Http\Controllers\Manager\PrintingServiceController as ManagerPrintingServiceController;
 
 Route::get('/', function () {
     return redirect()->route('admin.dashboard');
@@ -197,6 +200,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::put('/translations/{translation}', [AdminTranslationController::class, 'update'])->name('translations.update');
 
     Route::get('/shipping', [AdminShippingController::class, 'index'])->name('shipping.index');
+    Route::get('/shipping/create', [AdminShippingController::class, 'create'])->name('shipping.create');
+    Route::post('/shipping', [AdminShippingController::class, 'store'])->name('shipping.store');
+    Route::get('/shipping/{shipping}/edit', [AdminShippingController::class, 'edit'])->name('shipping.edit');
+    Route::put('/shipping/{shipping}', [AdminShippingController::class, 'update'])->name('shipping.update');
+    Route::delete('/shipping/{shipping}', [AdminShippingController::class, 'destroy'])->name('shipping.destroy');
 
     Route::get('/subscriptions', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
     Route::get('/subscriptions/create', [AdminSubscriptionController::class, 'create'])->name('subscriptions.create');
@@ -215,6 +223,13 @@ Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])
         Route::post('/stores', [ManagerStoreController::class, 'store'])->name('stores.store');
         Route::get('/stores/{store}/edit', [ManagerStoreController::class, 'edit'])->name('stores.edit');
         Route::put('/stores/{store}', [ManagerStoreController::class, 'update'])->name('stores.update');
+
+        Route::get('/printing-services', [ManagerPrintingServiceController::class, 'index'])->name('printing_services.index');
+        Route::get('/printing-services/create', [ManagerPrintingServiceController::class, 'create'])->name('printing_services.create');
+        Route::post('/printing-services', [ManagerPrintingServiceController::class, 'store'])->name('printing_services.store');
+        Route::get('/printing-services/{printingService}/edit', [ManagerPrintingServiceController::class, 'edit'])->name('printing_services.edit');
+        Route::put('/printing-services/{printingService}', [ManagerPrintingServiceController::class, 'update'])->name('printing_services.update');
+        Route::delete('/printing-services/{printingService}', [ManagerPrintingServiceController::class, 'destroy'])->name('printing_services.destroy');
 
         Route::get('/categories', [ManagerCategoryController::class, 'index'])->name('categories.index');
         Route::get('/categories/create', [ManagerCategoryController::class, 'create'])->name('categories.create');
@@ -278,6 +293,16 @@ Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])
         Route::get('/discounts/{discount}/edit', [ManagerDiscountController::class, 'edit'])->name('discounts.edit');
         Route::put('/discounts/{discount}', [ManagerDiscountController::class, 'update'])->name('discounts.update');
         Route::delete('/discounts/{discount}', [ManagerDiscountController::class, 'destroy'])->name('discounts.destroy');
+
+        Route::get('/shipping', [ManagerShippingController::class, 'index'])->name('shipping.index');
+        Route::get('/shipping/create', [ManagerShippingController::class, 'create'])->name('shipping.create');
+        Route::post('/shipping', [ManagerShippingController::class, 'store'])->name('shipping.store');
+        Route::get('/shipping/{shipping}/edit', [ManagerShippingController::class, 'edit'])->name('shipping.edit');
+        Route::put('/shipping/{shipping}', [ManagerShippingController::class, 'update'])->name('shipping.update');
+        Route::delete('/shipping/{shipping}', [ManagerShippingController::class, 'destroy'])->name('shipping.destroy');
+
+        Route::get('/loyalty', [ManagerLoyaltyController::class, 'edit'])->name('loyalty.edit');
+        Route::put('/loyalty', [ManagerLoyaltyController::class, 'update'])->name('loyalty.update');
 
         Route::get('/sales', [ManagerSaleController::class, 'index'])->name('sales.index');
         Route::get('/sales/{sale}', [ManagerSaleController::class, 'show'])->name('sales.show');

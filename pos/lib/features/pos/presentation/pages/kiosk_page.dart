@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/models/cart_item.dart';
 import '../../../../core/models/product.dart';
 import '../../../../core/models/product_category.dart';
 import '../../../../core/i18n/translation_controller.dart';
 import '../../state/pos_controller.dart';
+import '../../state/printer_controller.dart';
+import '../../models/printing_service.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import 'package:pos_nimirik/core/i18n/i18n.dart';
 
@@ -24,21 +27,21 @@ String _formatCurrency(double value, String symbol, bool symbolOnRight) {
 class _KioskStrings {
   const _KioskStrings();
 
-  String get backToPos => tr('Back to POS');
-  String get kioskMenu => tr('Kiosk Menu');
+  String get backToPos => tr('Retour POS');
+  String get kioskMenu => tr('Menu borne');
   String get all => tr('All');
-  String get noProducts => tr('No products available.');
-  String get selectProduct => tr('Select a product');
+  String get noProducts => tr('Aucun produit disponible.');
+  String get selectProduct => tr('Sélectionnez un produit');
   String get extras => tr('Extras');
   String get notes => tr('Notes');
   String cartSummary(int count) {
-    return '${tr('Cart')}: $count ${tr('item(s)')}';
+    return '${tr('Panier')}: $count ${tr('article(s)')}';
   }
 
-  String get addToCart => tr('Add to cart');
-  String get checkout => tr('Checkout');
-  String get order => tr('Place order');
-  String get addRequired => tr('Add a product first.');
+  String get addToCart => tr('Ajouter au panier');
+  String get checkout => tr('Commander et payer');
+  String get order => tr('Commander à la caisse');
+  String get addRequired => tr('Ajoutez un produit d\'abord.');
 }
 
 class KioskPage extends StatefulWidget {
@@ -50,6 +53,7 @@ class KioskPage extends StatefulWidget {
 
 class _KioskPageState extends State<KioskPage> {
   Product? _selectedProduct;
+  final List<CartItem> _cart = [];
   _KioskStrings get _strings => const _KioskStrings();
 
   Product? _resolveSelected(List<Product> products) {
@@ -63,6 +67,28 @@ class _KioskPageState extends State<KioskPage> {
       (product) => product.id == _selectedProduct!.id,
       orElse: () => products.first,
     );
+  }
+
+  int get _cartCount =>
+      _cart.fold<int>(0, (sum, item) => sum + item.quantity);
+
+  double get _cartTotal =>
+      _cart.fold<double>(0, (sum, item) => sum + item.subTotal);
+
+  void _addToCart(Product product) {
+    final index = _cart.indexWhere((item) => item.product.id == product.id);
+    if (index == -1) {
+      _cart.add(CartItem(product: product));
+    } else {
+      final current = _cart[index];
+      _cart[index] = current.copyWith(quantity: current.quantity + 1);
+    }
+    setState(() {});
+  }
+
+  void _clearCart() {
+    _cart.clear();
+    setState(() {});
   }
 
   @override
@@ -107,13 +133,13 @@ class _KioskPageState extends State<KioskPage> {
                               product: selectedProduct,
                               currencySymbol: pos.currencySymbol,
                               symbolOnRight: pos.isCurrencySymbolRight,
-                              cartCount: pos.totalQuantity,
-                              cartTotal: pos.grandTotal,
+                              cartCount: _cartCount,
+                              cartTotal: _cartTotal,
                               strings: strings,
                               onAdd: () {
                                 final selected = selectedProduct;
                                 if (selected != null) {
-                                  pos.addProduct(selected);
+                                  _addToCart(selected);
                                 }
                               },
                               onCheckout: () => _handleSubmit(
@@ -150,13 +176,13 @@ class _KioskPageState extends State<KioskPage> {
                             product: selectedProduct,
                             currencySymbol: pos.currencySymbol,
                             symbolOnRight: pos.isCurrencySymbolRight,
-                            cartCount: pos.totalQuantity,
-                            cartTotal: pos.grandTotal,
+                            cartCount: _cartCount,
+                            cartTotal: _cartTotal,
                             strings: strings,
                             onAdd: () {
                               final selected = selectedProduct;
                               if (selected != null) {
-                                pos.addProduct(selected);
+                                _addToCart(selected);
                               }
                             },
                             onCheckout: () => _handleSubmit(
@@ -223,29 +249,127 @@ class _KioskPageState extends State<KioskPage> {
     Product? selected,
     {required bool markUnpaid}
   ) async {
-    if (pos.cartItems.isEmpty && selected == null) {
+    if (_cart.isEmpty && selected == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_strings.addRequired)),
       );
       return;
     }
 
-    if (pos.cartItems.isEmpty && selected != null) {
-      pos.addProduct(selected);
+    if (_cart.isEmpty && selected != null) {
+      _addToCart(selected);
     }
 
-    await pos.checkout(
+    final queueNumber = pos.kioskQueueNumber;
+    final taxTotal = _cartTotal * (pos.taxRate / 100);
+    final totalWithTax = _cartTotal + taxTotal;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => _KioskReceiptPreviewDialog(
+        items: List<CartItem>.from(_cart),
+        currencySymbol: pos.currencySymbol,
+        currencyOnRight: pos.isCurrencySymbolRight,
+        companyName: pos.companyName,
+        queueNumber: queueNumber,
+        total: totalWithTax,
+        confirmLabel:
+            markUnpaid ? tr('Confirmer la commande') : tr('Payer & imprimer'),
+      ),
+    );
+    if (confirmed != true) return;
+
+    final ok = await pos.submitKioskOrder(
+      items: List<CartItem>.from(_cart),
+      markUnpaid: markUnpaid,
+      queueNumber: queueNumber,
+      receivedAmount: markUnpaid ? 0 : totalWithTax,
       paymentTypeId: 1,
-      paymentStatusId: markUnpaid ? 2 : 1,
     );
     if (!mounted) return;
-    final message = pos.errorMessage ?? pos.successMessage;
-    if (message != null && message.isNotEmpty) {
+    if (!ok) {
+      final message = pos.errorMessage ?? tr('Erreur lors de la commande.');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
       pos.clearMessages();
+      return;
     }
+
+    final printer = context.read<PrinterSettingsController>();
+    final services = pos.activePrintingServices;
+    final resolved = services.isNotEmpty
+        ? services
+        : [PrintingService.fallback(storeId: pos.selectedWarehouse?.id ?? 0)];
+    printer.syncServices(resolved);
+    for (final service in resolved) {
+      await printer.printSaleReceipt(
+        items: List<CartItem>.from(_cart),
+        subTotal: _cartTotal,
+        discount: 0,
+        tax: taxTotal,
+        shipping: 0,
+        grandTotal: totalWithTax,
+        currencySymbol: pos.currencySymbol,
+        currencyOnRight: pos.isCurrencySymbolRight,
+        customerName: null,
+        userLabel: null,
+        companyName: pos.companyName,
+        companyAddress: pos.companyAddress,
+        companyEmail: pos.companyEmail,
+        companyPhone: pos.companyPhone,
+        warehouseName: pos.selectedWarehouse?.name,
+        companyLogoUrl: pos.companyLogo,
+        paymentType: tr('Espèce'),
+        paymentStatus: markUnpaid ? tr('Impayée') : tr('Payée'),
+        receivedAmount: markUnpaid ? 0 : totalWithTax,
+        change: 0,
+        serviceId: service.id,
+        template: service.template,
+      );
+    }
+
+    _clearCart();
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(tr('Commande confirmée')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              tr('Merci pour votre commande.'),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              markUnpaid
+                  ? tr('Vous pouvez prendre votre place à la caisse.')
+                  : tr('Votre paiement est confirmé.'),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${tr('Votre numéro est')} $queueNumber',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(tr('OK')),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -297,7 +421,6 @@ class _KioskMenuPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = <Color>[
       const Color(0xFFFFE8A3),
       const Color(0xFFFFE0D6),
@@ -331,13 +454,6 @@ class _KioskMenuPanel extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  strings.kioskMenu,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -428,14 +544,6 @@ class _KioskDetailPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back),
-              ),
-            ),
-            const SizedBox(height: 8),
             AppNetworkImage(
               url: product?.imageUrl,
               width: 220,
@@ -466,18 +574,6 @@ class _KioskDetailPanel extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
-            const SizedBox(height: 18),
-            _OptionButton(
-              label: strings.extras,
-              icon: Icons.add,
-              onTap: hasProduct ? () {} : null,
-            ),
-            const SizedBox(height: 12),
-            _OptionButton(
-              label: strings.notes,
-              icon: Icons.edit,
-              onTap: hasProduct ? () {} : null,
-            ),
             const Spacer(),
             if (cartCount > 0)
               Padding(
@@ -485,11 +581,36 @@ class _KioskDetailPanel extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(strings.cartSummary(cartCount),
-                        style: theme.textTheme.bodyMedium),
-                    Text(
-                      _formatCurrency(cartTotal, currencySymbol, symbolOnRight),
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(strings.cartSummary(cartCount),
+                              style: theme.textTheme.bodyMedium),
+                          Text(
+                            _formatCurrency(
+                              cartTotal,
+                              currencySymbol,
+                              symbolOnRight,
+                            ),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4C62F),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.shopping_cart_outlined,
+                        color: Colors.black,
+                      ),
                     ),
                   ],
                 ),
@@ -684,6 +805,111 @@ class _OptionButton extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
+    );
+  }
+}
+
+class _KioskReceiptPreviewDialog extends StatelessWidget {
+  const _KioskReceiptPreviewDialog({
+    required this.items,
+    required this.currencySymbol,
+    required this.currencyOnRight,
+    required this.companyName,
+    required this.queueNumber,
+    required this.total,
+    required this.confirmLabel,
+  });
+
+  final List<CartItem> items;
+  final String currencySymbol;
+  final bool currencyOnRight;
+  final String companyName;
+  final int queueNumber;
+  final double total;
+  final String confirmLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    String format(double value) =>
+        _formatCurrency(value, currencySymbol, currencyOnRight);
+    return AlertDialog(
+      title: Text(tr('Prévisualisation ticket')),
+      content: SizedBox(
+        width: 320,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (companyName.isNotEmpty)
+                Text(
+                  companyName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              const SizedBox(height: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFDF5D8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFF6D58F)),
+                ),
+                child: Text(
+                  '${tr('Numéro')} $queueNumber',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Divider(),
+              ...items.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${item.quantity} x ${item.product.name}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      Text(
+                        format(item.subTotal),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Divider(),
+              Row(
+                children: [
+                  Expanded(child: Text(tr('Total'))),
+                  Text(
+                    format(total),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(tr('Annuler')),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(confirmLabel),
+        ),
+      ],
     );
   }
 }

@@ -6,6 +6,7 @@ import '../../../core/models/cart_item.dart';
 import '../../../core/models/order_summary.dart';
 import '../../../core/models/register_details.dart';
 import '../data/printer_settings_storage.dart';
+import '../models/printing_service.dart';
 
 enum PrinterConnectionType { lan, wifi, usb, bluetooth, system }
 
@@ -61,6 +62,8 @@ class PrinterSettingsController extends ChangeNotifier {
   String _wifiPassword = '';
   bool _hasLoadedInitialSettings = false;
   String? _activeUserLabel;
+  List<PrintingService> _services = [];
+  int? _activeServiceId;
 
   UnmodifiableListView<PrinterDeviceInfo> get devices =>
       UnmodifiableListView(_devices);
@@ -78,6 +81,8 @@ class PrinterSettingsController extends ChangeNotifier {
   String get manualPort => _manualPort;
   String get wifiSsid => _wifiSsid;
   String get wifiPassword => _wifiPassword;
+  List<PrintingService> get services => List.unmodifiable(_services);
+  int? get activeServiceId => _activeServiceId;
 
   bool get isTestEnabled => false;
   bool get canDiscover => false;
@@ -85,6 +90,20 @@ class PrinterSettingsController extends ChangeNotifier {
   bool get currentTypeSupported => false;
   List<PrinterConnectionType> get availableTypes =>
       PrinterConnectionType.values;
+
+  void syncServices(List<PrintingService> services, {int? preferredServiceId}) {
+    final normalized = services.isNotEmpty ? services : [PrintingService.fallback()];
+    _services = List<PrintingService>.from(normalized);
+    _activeServiceId = preferredServiceId ??
+        (_services.isNotEmpty ? _services.first.id : null);
+    notifyListeners();
+  }
+
+  Future<void> selectService(int serviceId) async {
+    if (_activeServiceId == serviceId) return;
+    _activeServiceId = serviceId;
+    await _loadSettings();
+  }
 
   Future<void> attachToUser(String? userLabel) async {
     if (_hasLoadedInitialSettings && _activeUserLabel == userLabel) return;
@@ -190,6 +209,8 @@ class PrinterSettingsController extends ChangeNotifier {
     required String paymentStatus,
     double? receivedAmount,
     double? change,
+    int? serviceId,
+    String? template,
   }) async {
     _setStatus('Impression non disponible sur Web.', true);
   }
@@ -200,21 +221,33 @@ class PrinterSettingsController extends ChangeNotifier {
     required String currencySymbol,
     required bool currencyOnRight,
     required String? userLabel,
+    int? serviceId,
   }) async {
     _setStatus('Impression non disponible sur Web.', true);
   }
 
   Future<void> _loadSettings() async {
     final stored = await _storage.read(_activeUserLabel);
-    if (stored != null) {
-      _paperWidth = _doubleFrom(stored['paperWidth']) ?? _paperWidth;
-      _paperHeight = _doubleFrom(stored['paperHeight']) ?? _paperHeight;
-      _autoCut = _boolFrom(stored['autoCut']) ?? _autoCut;
-      _fontScale = _doubleFrom(stored['fontScale']) ?? _fontScale;
-      _manualAddress = _stringFrom(stored['manualAddress']) ?? '';
-      _manualPort = _stringFrom(stored['manualPort']) ?? '9100';
-      _wifiSsid = _stringFrom(stored['wifiSsid']) ?? '';
-      _wifiPassword = _stringFrom(stored['wifiPassword']) ?? '';
+    final serviceKey = _serviceKey(_activeServiceId);
+    final settings = _extractServiceSettings(stored, serviceKey);
+    if (settings != null) {
+      _paperWidth = _doubleFrom(settings['paperWidth']) ?? _paperWidth;
+      _paperHeight = _doubleFrom(settings['paperHeight']) ?? _paperHeight;
+      _autoCut = _boolFrom(settings['autoCut']) ?? _autoCut;
+      _fontScale = _doubleFrom(settings['fontScale']) ?? _fontScale;
+      _manualAddress = _stringFrom(settings['manualAddress']) ?? '';
+      _manualPort = _stringFrom(settings['manualPort']) ?? '9100';
+      _wifiSsid = _stringFrom(settings['wifiSsid']) ?? '';
+      _wifiPassword = _stringFrom(settings['wifiPassword']) ?? '';
+    } else {
+      _paperWidth = 80;
+      _paperHeight = 200;
+      _autoCut = true;
+      _fontScale = 0.8;
+      _manualAddress = '';
+      _manualPort = '9100';
+      _wifiSsid = '';
+      _wifiPassword = '';
     }
     _hasLoadedInitialSettings = true;
     notifyListeners();
@@ -231,7 +264,11 @@ class PrinterSettingsController extends ChangeNotifier {
       'wifiSsid': _wifiSsid,
       'wifiPassword': _wifiPassword,
     };
-    await _storage.write(_activeUserLabel, payload);
+    final stored = await _storage.read(_activeUserLabel) ?? <String, dynamic>{};
+    final services = _asStringKeyMap(stored['services']) ?? <String, dynamic>{};
+    services[_serviceKey(_activeServiceId)] = payload;
+    stored['services'] = services;
+    await _storage.write(_activeUserLabel, stored);
   }
 
   void _setStatus(String message, bool isError) {
@@ -256,5 +293,36 @@ class PrinterSettingsController extends ChangeNotifier {
   String? _stringFrom(dynamic value) {
     if (value == null) return null;
     return value.toString();
+  }
+
+  Map<String, dynamic>? _extractServiceSettings(
+    Map<String, dynamic>? stored,
+    String serviceKey,
+  ) {
+    if (stored == null) return null;
+    final services = _asStringKeyMap(stored['services']);
+    if (services != null) {
+      final candidate = _asStringKeyMap(services[serviceKey]);
+      if (candidate != null) return candidate;
+    }
+    if (stored.containsKey('paperWidth') ||
+        stored.containsKey('paperHeight') ||
+        stored.containsKey('autoCut')) {
+      return stored;
+    }
+    return null;
+  }
+
+  Map<String, dynamic>? _asStringKeyMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, val) => MapEntry('$key', val));
+    }
+    return null;
+  }
+
+  String _serviceKey(int? serviceId) {
+    if (serviceId == null) return 'default';
+    return serviceId.toString();
   }
 }

@@ -34,11 +34,13 @@ class CustomerController extends Controller
             'phone' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string'],
+            'loyalty_points_balance' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $data['manager_id'] = $managerId;
         $data['is_active'] = $data['is_active'] ?? true;
+        $data['loyalty_points_balance'] = $data['loyalty_points_balance'] ?? 0;
 
         Customer::create($data);
 
@@ -71,6 +73,7 @@ class CustomerController extends Controller
             'phone' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string'],
+            'loyalty_points_balance' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 

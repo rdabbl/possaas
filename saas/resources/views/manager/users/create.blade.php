@@ -50,6 +50,14 @@
                     <option value="0">{{ t("No") }}</option>
                 </select>
             </div>
+            <div class="field">
+                <label>{{ t("Allow Loyalty Redemption") }}</label>
+                <select name="allow_loyalty_redeem">
+                    <option value="" selected>{{ t("Inherit store setting") }}</option>
+                    <option value="1">{{ t("Yes") }}</option>
+                    <option value="0">{{ t("No") }}</option>
+                </select>
+            </div>
             <button class="btn" type="submit">{{ t("Create User") }}</button>
             <a class="btn secondary" href="{{ route('manager.users.index') }}">{{ t("Cancel") }}</a>
         </form>

@@ -15,6 +15,7 @@ use App\Models\Plan;
 use App\Models\Product;
 use App\Models\ProductOption;
 use App\Models\ProductOptionCategory;
+use App\Models\ShippingMethod;
 use App\Models\Store;
 use App\Models\Tax;
 use Illuminate\Http\RedirectResponse;
@@ -38,6 +39,7 @@ class ActiveToggleController extends Controller
             'customers' => Customer::class,
             'taxes' => Tax::class,
             'discounts' => Discount::class,
+            'shipping_methods' => ShippingMethod::class,
             'languages' => Language::class,
         ];
 

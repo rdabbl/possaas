@@ -79,6 +79,16 @@ class AuthController extends BaseApiController
         $logoUrl = $store?->logo_path ? asset('storage/' . $store->logo_path) : null;
         $payload['logo_url'] = $logoUrl;
         $payload['logo'] = $payload['logo'] ?? $logoUrl;
+        $payload['allow_loyalty_redeem'] = $user?->allow_loyalty_redeem
+            ?? $store?->allow_loyalty_redeem
+            ?? true;
+        if ($manager) {
+            $payload['loyalty_enabled'] = $manager->loyalty_enabled ?? false;
+            $payload['loyalty_points_per_order'] = $manager->loyalty_points_per_order ?? 0;
+            $payload['loyalty_points_per_item'] = $manager->loyalty_points_per_item ?? 0;
+            $payload['loyalty_amount_per_point'] = $manager->loyalty_amount_per_point ?? 0;
+            $payload['loyalty_point_value'] = $manager->loyalty_point_value ?? 0;
+        }
 
         return response()->json($payload);
     }

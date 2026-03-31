@@ -16,6 +16,8 @@ class OfflineSale {
     this.paymentTypeId = 1,
     this.paymentStatusId = 1,
     this.receivedAmount = 0,
+    this.loyaltyRedeemAmount = 0,
+    this.loyaltyRedeemPoints = 0,
     this.notes,
     this.status = OfflineSaleStatus.pending,
     this.errorMessage,
@@ -31,6 +33,8 @@ class OfflineSale {
   final int paymentTypeId;
   final int paymentStatusId;
   final double receivedAmount;
+  final double loyaltyRedeemAmount;
+  final int loyaltyRedeemPoints;
   final String? notes;
   final List<Map<String, dynamic>> saleItems;
   final DateTime createdAt;
@@ -52,6 +56,8 @@ class OfflineSale {
       paymentTypeId: paymentTypeId,
       paymentStatusId: paymentStatusId,
       receivedAmount: receivedAmount,
+      loyaltyRedeemAmount: loyaltyRedeemAmount,
+      loyaltyRedeemPoints: loyaltyRedeemPoints,
       notes: notes,
       saleItems: saleItems,
       createdAt: createdAt,
@@ -72,6 +78,8 @@ class OfflineSale {
       'paymentTypeId': paymentTypeId,
       'paymentStatusId': paymentStatusId,
       'receivedAmount': receivedAmount,
+      'loyaltyRedeemAmount': loyaltyRedeemAmount,
+      'loyaltyRedeemPoints': loyaltyRedeemPoints,
       'notes': notes,
       'saleItems': saleItems,
       'createdAt': createdAt.toIso8601String(),
@@ -93,6 +101,8 @@ class OfflineSale {
       paymentTypeId: json['paymentTypeId'] as int? ?? 1,
       paymentStatusId: json['paymentStatusId'] as int? ?? 1,
       receivedAmount: (json['receivedAmount'] as num?)?.toDouble() ?? 0,
+      loyaltyRedeemAmount: (json['loyaltyRedeemAmount'] as num?)?.toDouble() ?? 0,
+      loyaltyRedeemPoints: json['loyaltyRedeemPoints'] as int? ?? 0,
       notes: json['notes'] as String?,
       saleItems: (json['saleItems'] as List<dynamic>)
           .map((e) => Map<String, dynamic>.from(e as Map))

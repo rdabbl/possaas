@@ -48,12 +48,14 @@ class StoreController extends BaseApiController
             'address' => ['nullable', 'string', 'max:255'],
             'stock_enabled' => ['nullable', 'boolean'],
             'is_currency_right' => ['nullable', 'boolean'],
+            'allow_loyalty_redeem' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $data['manager_id'] = $manager->id;
         $data['stock_enabled'] = $data['stock_enabled'] ?? true;
         $data['is_currency_right'] = $data['is_currency_right'] ?? true;
+        $data['allow_loyalty_redeem'] = $data['allow_loyalty_redeem'] ?? true;
         $data['is_active'] = $data['is_active'] ?? true;
 
         $store = Store::create($data);
@@ -78,6 +80,7 @@ class StoreController extends BaseApiController
             'currency' => ['nullable', 'integer'],
             'currency_id' => ['nullable', Rule::exists('currencies', 'id')->where('is_active', true)],
             'is_currency_right' => ['nullable', 'boolean'],
+            'allow_loyalty_redeem' => ['nullable', 'boolean'],
         ]);
 
         if (array_key_exists('currency', $data) && empty($data['currency_id'])) {

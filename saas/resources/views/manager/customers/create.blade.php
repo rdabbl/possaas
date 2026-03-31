@@ -27,6 +27,10 @@
                 <input name="note" value="{{ old('note') }}">
             </div>
             <div class="field">
+                <label>{{ t("Loyalty Points") }}</label>
+                <input name="loyalty_points_balance" type="number" min="0" value="{{ old('loyalty_points_balance', 0) }}">
+            </div>
+            <div class="field">
                 <label>{{ t("Active") }}</label>
                 <select name="is_active">
                     <option value="1" selected>{{ t("Yes") }}</option>

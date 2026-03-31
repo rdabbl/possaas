@@ -16,6 +16,7 @@
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Email") }}</th>
                     <th>{{ t("Phone") }}</th>
+                    <th>{{ t("Points") }}</th>
                     <th>{{ t("Active") }}</th>
                     <th>{{ t("Actions") }}</th>
                 </tr>
@@ -26,6 +27,7 @@
                         <td>{{ $customer->name }}</td>
                         <td>{{ $customer->email }}</td>
                         <td>{{ $customer->phone }}</td>
+                        <td>{{ $customer->loyalty_points_balance ?? 0 }}</td>
                         <td>{{ $customer->is_active ? 'Yes' : 'No' }}</td>
                         <td>
                             <a class="btn secondary" href="{{ route('manager.customers.edit', $customer) }}">{{ t("Edit") }}</a>

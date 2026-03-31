@@ -28,6 +28,10 @@
                 <input name="note" value="{{ old('note', $customer->note) }}">
             </div>
             <div class="field">
+                <label>{{ t("Loyalty Points") }}</label>
+                <input name="loyalty_points_balance" type="number" min="0" value="{{ old('loyalty_points_balance', $customer->loyalty_points_balance ?? 0) }}">
+            </div>
+            <div class="field">
                 <label>{{ t("Active") }}</label>
                 <select name="is_active">
                     <option value="1" {{ old('is_active', $customer->is_active ? 1 : 0) == 1 ? 'selected' : '' }}>Yes</option>

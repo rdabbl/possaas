@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\DiscountController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\PrintingServiceController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StockMovementController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Api\TaxController;
 use App\Http\Controllers\Api\TranslationController;
 use App\Http\Controllers\Api\LanguageController;
 use App\Http\Controllers\Api\MediaController;
+use App\Http\Controllers\Api\ShippingMethodController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -78,5 +80,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/payment-methods/{id}', [PaymentMethodController::class, 'update']);
     Route::delete('/payment-methods/{id}', [PaymentMethodController::class, 'destroy']);
 
+    Route::get('/shipping-methods', [ShippingMethodController::class, 'index']);
+
     Route::get('/currencies', [CurrencyController::class, 'index']);
+
+    Route::get('/printing-services', [PrintingServiceController::class, 'index']);
 });

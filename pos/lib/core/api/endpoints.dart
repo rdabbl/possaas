@@ -12,7 +12,10 @@ class ApiEndpoints {
   static const String sales = '/sales';
   static const String taxes = '/taxes';
   static const String paymentMethods = '/payment-methods';
+  static const String discounts = '/discounts';
+  static const String shippingMethods = '/shipping-methods';
   static const String currencies = '/currencies';
+  static const String printingServices = '/printing-services';
 
   // Legacy aliases (kept for existing repository methods).
   static const String cashPayment = sales;

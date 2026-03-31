@@ -128,6 +128,7 @@
         <nav>
             <a href="{{ route('manager.dashboard') }}" class="{{ request()->routeIs('manager.dashboard') ? 'active' : '' }}">Dashboard</a>
             <a href="{{ route('manager.stores.index') }}" class="{{ request()->routeIs('manager.stores.*') ? 'active' : '' }}">Stores</a>
+            <a href="{{ route('manager.printing_services.index') }}" class="{{ request()->routeIs('manager.printing_services.*') ? 'active' : '' }}">Printing</a>
             <a href="{{ route('manager.categories.index') }}" class="{{ request()->routeIs('manager.categories.*') ? 'active' : '' }}">Categories</a>
             <a href="{{ route('manager.product_option_categories.index') }}" class="{{ request()->routeIs('manager.product_option_categories.*') ? 'active' : '' }}">Product Option Categories</a>
             <a href="{{ route('manager.product_options.index') }}" class="{{ request()->routeIs('manager.product_options.*') ? 'active' : '' }}">Product Options</a>
@@ -136,6 +137,8 @@
             <a href="{{ route('manager.customers.index') }}" class="{{ request()->routeIs('manager.customers.*') ? 'active' : '' }}">Customers</a>
             <a href="{{ route('manager.taxes.index') }}" class="{{ request()->routeIs('manager.taxes.*') ? 'active' : '' }}">Taxes</a>
             <a href="{{ route('manager.discounts.index') }}" class="{{ request()->routeIs('manager.discounts.*') ? 'active' : '' }}">Discounts</a>
+            <a href="{{ route('manager.shipping.index') }}" class="{{ request()->routeIs('manager.shipping.*') ? 'active' : '' }}">Shipping</a>
+            <a href="{{ route('manager.loyalty.edit') }}" class="{{ request()->routeIs('manager.loyalty.*') ? 'active' : '' }}">Loyalty</a>
             <a href="{{ route('manager.sales.index') }}" class="{{ request()->routeIs('manager.sales.*') ? 'active' : '' }}">Sales</a>
             <a href="{{ route('manager.users.index') }}" class="{{ request()->routeIs('manager.users.*') ? 'active' : '' }}">Users</a>
         </nav>

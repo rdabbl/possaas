@@ -36,6 +36,7 @@
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Email") }}</th>
                     <th>{{ t("Phone") }}</th>
+                    <th>{{ t("Points") }}</th>
                     <th>{{ t("Active") }}</th>
                     <th>{{ t("Actions") }}</th>
                 </tr>
@@ -47,6 +48,7 @@
                         <td>{{ $customer->name }}</td>
                         <td>{{ $customer->email }}</td>
                         <td>{{ $customer->phone }}</td>
+                        <td>{{ $customer->loyalty_points_balance ?? 0 }}</td>
                         <td>
                             @include('admin.partials.active_toggle', [
                                 'route' => route('admin.toggle_active', ['type' => 'customers', 'id' => $customer->id]),

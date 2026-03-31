@@ -28,6 +28,7 @@ class User extends Authenticatable
         'password',
         'is_super_admin',
         'is_active',
+        'allow_loyalty_redeem',
     ];
 
     /**
@@ -52,6 +53,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
             'is_active' => 'boolean',
+            'allow_loyalty_redeem' => 'boolean',
         ];
     }
 

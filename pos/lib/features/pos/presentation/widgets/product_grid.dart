@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/models/product.dart';
+import '../../../../core/models/product_category.dart';
 import '../../state/appearance_controller.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import 'package:pos_nimirik/core/i18n/i18n.dart';
@@ -12,6 +13,7 @@ class ProductGrid extends StatelessWidget {
   const ProductGrid({
     super.key,
     required this.products,
+    required this.categories,
     required this.isLoading,
     required this.onRefresh,
     required this.onAdd,
@@ -21,6 +23,7 @@ class ProductGrid extends StatelessWidget {
   });
 
   final List<Product> products;
+  final List<ProductCategory> categories;
   final bool isLoading;
   final VoidCallback onRefresh;
   final void Function(Product product) onAdd;
@@ -37,6 +40,9 @@ class ProductGrid extends StatelessWidget {
     final appearance = context.watch<AppearanceController>();
     final showAddToCart = appearance.showAddToCartButton;
     final showStock = appearance.showStockInfo;
+    final categoryMap = {
+      for (final category in categories) category.id: category.name,
+    };
 
     if (products.isEmpty) {
       return Center(
@@ -89,6 +95,7 @@ class ProductGrid extends StatelessWidget {
             final product = products[index];
             return _ProductCard(
               product: product,
+              categoryName: categoryMap[product.categoryId] ?? '',
               currencySymbol: currencySymbol,
               currencySymbolRight: currencySymbolRight,
               onTap: () => onAdd(product),
@@ -104,6 +111,7 @@ class ProductGrid extends StatelessWidget {
 class _ProductCard extends StatefulWidget {
   const _ProductCard({
     required this.product,
+    required this.categoryName,
     required this.currencySymbol,
     required this.currencySymbolRight,
     required this.onTap,
@@ -111,6 +119,7 @@ class _ProductCard extends StatefulWidget {
   });
 
   final Product product;
+  final String categoryName;
   final String currencySymbol;
   final bool currencySymbolRight;
   final VoidCallback onTap;
@@ -144,8 +153,11 @@ class _ProductCardState extends State<_ProductCard> {
       scale: _isPressed ? 0.98 : 1.0,
       child: Material(
         color: Colors.white,
-        borderRadius: borderRadius,
         elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: borderRadius,
+          side: const BorderSide(color: Color(0xFFE5E7EB)),
+        ),
         shadowColor: Colors.black12,
         child: InkWell(
           borderRadius: borderRadius,
@@ -153,7 +165,7 @@ class _ProductCardState extends State<_ProductCard> {
           onTapDown: (_) => _playClick(context),
           onHighlightChanged: (isDown) => setState(() => _isPressed = isDown),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 16, 12, 14),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -167,7 +179,7 @@ class _ProductCardState extends State<_ProductCard> {
                   iconSize: 32,
                   iconColor: Colors.black54,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(
                   widget.product.name,
                   maxLines: 2,
@@ -179,13 +191,13 @@ class _ProductCardState extends State<_ProductCard> {
                     color: Color(0xFF111827),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
-                  widget.product.variationName?.isNotEmpty == true
-                      ? widget.product.variationName!
+                  widget.categoryName.isNotEmpty
+                      ? widget.categoryName
                       : (widget.product.unitLabel?.isNotEmpty == true
                           ? widget.product.unitLabel!
-                          : 'Fresh & tasty'),
+                          : tr('Catégorie')),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -205,22 +217,25 @@ class _ProductCardState extends State<_ProductCard> {
                     ),
                   ),
                 ],
-                const Spacer(),
+                const SizedBox(height: 2),
                 Row(
                   children: [
-                    Text(
-                      _formatProductAmount(
-                        widget.product.price,
-                        widget.currencySymbol,
-                        widget.currencySymbolRight,
-                      ),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF111827),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          _formatProductAmount(
+                            widget.product.price,
+                            widget.currencySymbol,
+                            widget.currencySymbolRight,
+                          ),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
                       ),
                     ),
-                    const Spacer(),
                     if (widget.showAddToCart)
                       InkWell(
                         onTap: () => _handleTap(context),

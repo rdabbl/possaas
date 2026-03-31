@@ -17,10 +17,13 @@ import '../../../core/models/payment_method.dart';
 import '../../../core/models/register_details.dart';
 import '../../../core/models/warehouse.dart';
 import '../../../core/models/offline_sale.dart';
+import '../../../core/models/discount.dart';
+import '../../../core/models/shipping_method.dart';
 import '../../../core/utils/media_url.dart';
 import '../data/pos_repository.dart';
 import '../data/offline_sales_storage.dart';
 import '../models/user_summary.dart';
+import '../models/printing_service.dart';
 
 enum DiscountMode { fixed, percentage }
 
@@ -34,6 +37,7 @@ class PosController extends ChangeNotifier {
   static const _cachedCustomersKey = 'pos_cached_customers';
   static const _cachedWarehousesKey = 'pos_cached_warehouses';
   static const _cachedFrontSettingsKey = 'pos_cached_front_settings';
+  static const _cachedPrintingServicesKey = 'pos_cached_printing_services';
   static const _selectedCustomerKey = 'pos_selected_customer';
   static const _selectedWarehouseKey = 'pos_selected_warehouse';
 
@@ -44,15 +48,26 @@ class PosController extends ChangeNotifier {
   List<Warehouse> _warehouses = [];
   List<ProductCategory> _categories = [];
   List<PaymentMethod> _paymentMethods = [];
+  List<ShippingMethod> _shippingMethods = [];
+  List<Discount> _discounts = [];
+  List<PrintingService> _printingServices = [];
   final List<CartItem> _cart = [];
   Customer? _selectedCustomer;
   Warehouse? _selectedWarehouse;
+  ShippingMethod? _selectedShippingMethod;
   int? _selectedWarehouseId;
   int? _selectedCategoryId;
   double _shipping = 0;
   double _discountInput = 0;
   DiscountMode _discountMode = DiscountMode.fixed;
   double _taxRate = 0;
+  bool _loyaltyEnabled = false;
+  bool _allowLoyaltyRedeem = true;
+  int _loyaltyPointsPerOrder = 0;
+  int _loyaltyPointsPerItem = 0;
+  double _loyaltyAmountPerPoint = 0;
+  double _loyaltyPointValue = 0;
+  double _loyaltyRedeemInput = 0;
   String _currencySymbol = 'DH';
   int? _currencyId;
   String _searchQuery = '';
@@ -88,15 +103,59 @@ class PosController extends ChangeNotifier {
   List<Warehouse> get warehouses => _warehouses;
   List<ProductCategory> get categories => _categories;
   List<PaymentMethod> get paymentMethods => _paymentMethods;
+  List<ShippingMethod> get shippingMethods => _shippingMethods;
+  ShippingMethod? get selectedShippingMethod => _selectedShippingMethod;
+  List<Discount> get discounts => List.unmodifiable(_discounts);
+  List<PrintingService> get printingServices => List.unmodifiable(_printingServices);
+  List<PrintingService> get activePrintingServices {
+    final storeId = _selectedWarehouseId;
+    final filtered = _printingServices.where((service) {
+      if (!service.isActive) return false;
+      if (storeId == null) return true;
+      return service.storeId == storeId;
+    }).toList();
+    filtered.sort((a, b) {
+      final order = a.sortOrder.compareTo(b.sortOrder);
+      return order != 0 ? order : a.name.compareTo(b.name);
+    });
+    return List.unmodifiable(filtered);
+  }
+
+  PrintingService? get primaryReceiptService {
+    final services = activePrintingServices;
+    for (final service in services) {
+      if (service.isReceipt) return service;
+    }
+    return services.isNotEmpty ? services.first : null;
+  }
   Customer? get selectedCustomer => _selectedCustomer;
   Warehouse? get selectedWarehouse => _selectedWarehouse;
   int? get selectedCategoryId => _selectedCategoryId;
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
-  double get shipping => _shipping;
+  double get shipping => _calculateShipping();
   double get discountInput => _discountInput;
   double get taxRate => _taxRate;
   DiscountMode get discountMode => _discountMode;
+  bool get loyaltyEnabled => _loyaltyEnabled;
+  bool get allowLoyaltyRedeem => _allowLoyaltyRedeem;
+  int get selectedCustomerPoints => _selectedCustomer?.loyaltyPoints ?? 0;
+  double get loyaltyPointValue => _loyaltyPointValue;
+  double get loyaltyAvailableAmount => selectedCustomerPoints * _loyaltyPointValue;
+  double get loyaltyRedeemAmount => _effectiveLoyaltyRedeemAmount();
+  double get loyaltyMaxRedeemAmount => _maxLoyaltyRedeemAmount();
+  int get loyaltyEstimatedPoints => _estimateLoyaltyPoints();
+  int get loyaltyRedeemPoints =>
+      _loyaltyPointValue > 0 ? (loyaltyRedeemAmount / _loyaltyPointValue).floor() : 0;
+  List<double> get discountPresets {
+    final candidates = _discountMode == DiscountMode.percentage
+        ? _percentDiscountPresets()
+        : _fixedDiscountPresets();
+    if (candidates.isNotEmpty) return candidates;
+    return _discountMode == DiscountMode.percentage
+        ? <double>[0, 5, 10, 15, 20]
+        : <double>[0, 100, 500, 1000, 2000];
+  }
 
   String get currencySymbol => _currencySymbol;
   int? get currencyId => _currencyId;
@@ -142,6 +201,11 @@ class PosController extends ChangeNotifier {
       ? _registerDetails.itemsCount
       : _recentOrders.fold(0, (sum, order) => sum + (order.itemCount));
 
+  int get kioskQueueNumber {
+    final count = _recentOrders.where((order) => order.isKioskOrder).length;
+    return count + 1;
+  }
+
   List<Product> get products {
     if (_searchQuery.isEmpty) {
       return _products;
@@ -161,12 +225,14 @@ class PosController extends ChangeNotifier {
   double get itemsSubTotal =>
       _cart.fold<double>(0, (sum, item) => sum + item.subTotal);
 
-  double get discountAmount {
+  double get manualDiscountAmount {
     if (_discountMode == DiscountMode.percentage) {
       return itemsSubTotal * (_discountInput / 100);
     }
     return _discountInput;
   }
+
+  double get discountAmount => manualDiscountAmount + loyaltyRedeemAmount;
 
   double get subTotal {
     final value = itemsSubTotal - discountAmount;
@@ -175,7 +241,106 @@ class PosController extends ChangeNotifier {
 
   double get taxTotal => subTotal * (_taxRate / 100);
 
-  double get grandTotal => subTotal + taxTotal + _shipping;
+  double get grandTotal => subTotal + taxTotal + shipping;
+
+  double _calculateShipping() {
+    final method = _selectedShippingMethod;
+    if (method == null) return _shipping;
+    if (method.isFree) return 0;
+    if (method.isManual) return _shipping;
+    if (method.isOrderPercent) {
+      return (subTotal * (method.value / 100)).clamp(0, double.infinity);
+    }
+    if (method.isPerItem) {
+      return (totalQuantity * method.value).clamp(0, double.infinity);
+    }
+    return _shipping;
+  }
+
+  double _totalBeforeLoyalty() {
+    final value = itemsSubTotal - manualDiscountAmount;
+    final subTotalBefore = value < 0 ? 0 : value;
+    final taxBefore = subTotalBefore * (_taxRate / 100);
+    return subTotalBefore + taxBefore + shipping;
+  }
+
+  double _maxLoyaltyRedeemAmount() {
+    if (!_loyaltyEnabled) return 0;
+    if (!_allowLoyaltyRedeem) return 0;
+    if (_selectedCustomer == null || _selectedCustomer!.id == 0) return 0;
+    if (_loyaltyPointValue <= 0) return 0;
+    final available = loyaltyAvailableAmount;
+    final base = _totalBeforeLoyalty();
+    return min(available, base);
+  }
+
+  double _effectiveLoyaltyRedeemAmount() {
+    if (!_allowLoyaltyRedeem) return 0;
+    final maxAmount = _maxLoyaltyRedeemAmount();
+    if (_loyaltyRedeemInput <= 0) return 0;
+    if (_loyaltyRedeemInput >= maxAmount) return maxAmount;
+    return _loyaltyRedeemInput;
+  }
+
+  int _estimateLoyaltyPoints() {
+    if (!_loyaltyEnabled) return 0;
+    if (_selectedCustomer == null || _selectedCustomer!.id == 0) return 0;
+    int points = 0;
+    if (_cart.isNotEmpty && _loyaltyPointsPerOrder > 0) {
+      points += _loyaltyPointsPerOrder;
+    }
+    if (_loyaltyPointsPerItem > 0) {
+      final itemCount = _cart.fold<int>(0, (sum, item) => sum + item.quantity);
+      points += itemCount * _loyaltyPointsPerItem;
+    }
+    if (_loyaltyAmountPerPoint > 0) {
+      points += (grandTotal / _loyaltyAmountPerPoint).floor();
+    }
+    return points;
+  }
+
+  List<double> _percentDiscountPresets() {
+    final values = _discounts
+        .where((d) => d.isActive && d.isPercent && d.scope == 'order')
+        .map((d) => d.value)
+        .toList();
+    values.sort();
+    return values.toSet().toList();
+  }
+
+  List<double> _fixedDiscountPresets() {
+    final values = _discounts
+        .where((d) => d.isActive && d.isFixed && d.scope == 'order')
+        .map((d) => d.value)
+        .toList();
+    values.sort();
+    return values.toSet().toList();
+  }
+
+  void _applyShippingMethods(List<ShippingMethod> methods) {
+    final active = methods.where((method) => method.isActive).toList();
+    active.sort((a, b) => a.name.compareTo(b.name));
+    _shippingMethods = active;
+    if (_shippingMethods.isEmpty) {
+      _selectedShippingMethod = null;
+      return;
+    }
+    if (_selectedShippingMethod != null) {
+      final matched = _shippingMethods.where(
+        (method) => method.id == _selectedShippingMethod!.id,
+      );
+      if (matched.isNotEmpty) {
+        _selectedShippingMethod = matched.first;
+        return;
+      }
+    }
+    final manual = _shippingMethods.where((method) => method.isManual);
+    _selectedShippingMethod =
+        manual.isNotEmpty ? manual.first : _shippingMethods.first;
+    if (_selectedShippingMethod?.isFree == true) {
+      _shipping = 0;
+    }
+  }
 
   void clearMessages() {
     _errorMessage = null;
@@ -192,6 +357,7 @@ class PosController extends ChangeNotifier {
       await _loadCachedCustomers();
       await _loadCachedWarehouses();
       await _loadCachedFrontSettings();
+      await _loadCachedPrintingServices();
       if (_offlineMode) {
         await _restoreSavedSelections();
         _setLoading(false);
@@ -204,6 +370,8 @@ class PosController extends ChangeNotifier {
         repository.fetchWarehouses(),
         repository.fetchPaymentMethods(),
         repository.fetchConfig(),
+        repository.fetchDiscounts(),
+        repository.fetchShippingMethods(),
       ]);
       _customers = List<Customer>.from(results[0] as List<Customer>);
       _normalizeCustomers();
@@ -223,6 +391,11 @@ class PosController extends ChangeNotifier {
         _paymentMethods = [PaymentMethod.fallback()];
       }
       _applyConfig(results[5] as Map<String, dynamic>);
+      _discounts = List<Discount>.from(results[6] as List<Discount>);
+      final shippingMethods =
+          List<ShippingMethod>.from(results[7] as List<ShippingMethod>);
+      _applyShippingMethods(shippingMethods);
+      await _refreshPrintingServices();
       await _cacheCustomers(_customers);
       await _cacheWarehouses(_warehouses);
       _assignDefaultWarehouse();
@@ -267,6 +440,7 @@ class PosController extends ChangeNotifier {
       await _loadProducts();
       await loadOrderHistory();
       await _refreshFrontSetting();
+      await _refreshPrintingServices();
       _lastSyncAt = DateTime.now();
       notifyListeners();
     } on ApiException catch (error) {
@@ -495,6 +669,7 @@ class PosController extends ChangeNotifier {
                     customerName: o.customerName,
                     userName: _activeUserLabel,
                     userId: o.userId,
+                    note: o.note,
                     status: o.status,
                     paymentStatus: o.paymentStatus,
                     grandTotal: o.grandTotal,
@@ -591,6 +766,7 @@ class PosController extends ChangeNotifier {
       customerName: order.customerName,
       userName: order.userName,
       userId: order.userId,
+      note: order.note,
       status: order.status,
       paymentStatus: order.paymentStatus,
       grandTotal: order.grandTotal,
@@ -613,6 +789,7 @@ class PosController extends ChangeNotifier {
       customerName: order.customerName,
       userName: order.userName,
       userId: order.userId,
+      note: order.note,
       status: order.status,
       paymentStatus: order.paymentStatus,
       grandTotal: order.grandTotal,
@@ -628,7 +805,11 @@ class PosController extends ChangeNotifier {
   }
 
   void selectCustomer(Customer? customer) {
+    final previousId = _selectedCustomer?.id;
     _selectedCustomer = customer;
+    if (previousId != customer?.id) {
+      _loyaltyRedeemInput = 0;
+    }
     _persistSelectedCustomer();
     notifyListeners();
   }
@@ -639,6 +820,14 @@ class PosController extends ChangeNotifier {
     _applyWarehouseCurrency(warehouse);
     await _persistSelectedWarehouse();
     await _loadProducts();
+  }
+
+  void selectShippingMethod(ShippingMethod? method) {
+    _selectedShippingMethod = method;
+    if (method == null || method.isFree) {
+      _shipping = 0;
+    }
+    notifyListeners();
   }
 
   Future<void> selectCategory(int? categoryId) async {
@@ -740,6 +929,16 @@ class PosController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateLoyaltyRedeemAmount(double value) {
+    if (!_allowLoyaltyRedeem) {
+      _loyaltyRedeemInput = 0;
+      notifyListeners();
+      return;
+    }
+    _loyaltyRedeemInput = value < 0 ? 0 : value;
+    notifyListeners();
+  }
+
   void updateDiscountMode(DiscountMode mode) {
     _discountMode = mode;
     notifyListeners();
@@ -751,6 +950,9 @@ class PosController extends ChangeNotifier {
   }
 
   void updateShipping(double value) {
+    if (_selectedShippingMethod != null && !_selectedShippingMethod!.isManual) {
+      return;
+    }
     _shipping = value;
     notifyListeners();
   }
@@ -766,6 +968,7 @@ class PosController extends ChangeNotifier {
     _discountInput = 0;
     _taxRate = 0;
     _discountMode = DiscountMode.fixed;
+    _loyaltyRedeemInput = 0;
   }
 
   void setCashInHand(double value) {
@@ -841,6 +1044,13 @@ class PosController extends ChangeNotifier {
         paymentStatusId: paymentStatusId,
         receivedAmount: receivedAmount,
       );
+      final shouldApplyLoyalty = loyaltyEnabled && customerId > 0 && paymentStatusId != 2;
+      final canEarnPoints =
+          shouldApplyLoyalty && (paymentStatusId != 3 || receivedAmount >= grandTotal);
+      _applyLocalLoyaltyAdjustments(
+        earned: canEarnPoints ? loyaltyEstimatedPoints : 0,
+        redeemed: shouldApplyLoyalty ? loyaltyRedeemPoints : 0,
+      );
       _cart.clear();
       _resetAdjustments();
       _isProcessingSale = false;
@@ -866,6 +1076,15 @@ class PosController extends ChangeNotifier {
         paymentStatusId: paymentStatusId,
         notes: notes,
         receivedAmount: receivedAmount,
+        loyaltyRedeemAmount: loyaltyRedeemAmount,
+        loyaltyRedeemPoints: loyaltyRedeemPoints,
+      );
+      final shouldApplyLoyalty = loyaltyEnabled && customerId > 0 && paymentStatusId != 2;
+      final canEarnPoints =
+          shouldApplyLoyalty && (paymentStatusId != 3 || receivedAmount >= grandTotal);
+      _applyLocalLoyaltyAdjustments(
+        earned: canEarnPoints ? loyaltyEstimatedPoints : 0,
+        redeemed: shouldApplyLoyalty ? loyaltyRedeemPoints : 0,
       );
       _cart.clear();
       _resetAdjustments();
@@ -899,6 +1118,14 @@ class PosController extends ChangeNotifier {
           paymentStatusId: paymentStatusId,
           receivedAmount: receivedAmount,
         );
+        final shouldApplyLoyalty =
+            loyaltyEnabled && customerId > 0 && paymentStatusId != 2;
+        final canEarnPoints =
+            shouldApplyLoyalty && (paymentStatusId != 3 || receivedAmount >= grandTotal);
+        _applyLocalLoyaltyAdjustments(
+          earned: canEarnPoints ? loyaltyEstimatedPoints : 0,
+          redeemed: shouldApplyLoyalty ? loyaltyRedeemPoints : 0,
+        );
         _cart.clear();
         _resetAdjustments();
         _errorMessage = null;
@@ -913,6 +1140,14 @@ class PosController extends ChangeNotifier {
         paymentStatusId: paymentStatusId,
         receivedAmount: receivedAmount,
       );
+      final shouldApplyLoyalty =
+          loyaltyEnabled && customerId > 0 && paymentStatusId != 2;
+      final canEarnPoints =
+          shouldApplyLoyalty && (paymentStatusId != 3 || receivedAmount >= grandTotal);
+      _applyLocalLoyaltyAdjustments(
+        earned: canEarnPoints ? loyaltyEstimatedPoints : 0,
+        redeemed: shouldApplyLoyalty ? loyaltyRedeemPoints : 0,
+      );
       _cart.clear();
       _resetAdjustments();
       _errorMessage = null;
@@ -920,6 +1155,78 @@ class PosController extends ChangeNotifier {
     } finally {
       _isProcessingSale = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> submitKioskOrder({
+    required List<CartItem> items,
+    required bool markUnpaid,
+    required int queueNumber,
+    double receivedAmount = 0,
+    int paymentTypeId = 1,
+  }) async {
+    if (items.isEmpty) {
+      _errorMessage = 'Ajoutez au moins un produit au panier.';
+      notifyListeners();
+      return false;
+    }
+    if (_offlineMode) {
+      _errorMessage = 'Mode hors ligne: la borne nécessite une connexion.';
+      notifyListeners();
+      return false;
+    }
+    if (_selectedWarehouseId == null && _warehouses.isNotEmpty) {
+      _selectedWarehouse = _warehouses.first;
+      _selectedWarehouseId = _selectedWarehouse?.id;
+    }
+    if (_selectedWarehouseId == null) {
+      _errorMessage = 'Sélectionnez un magasin avant de finaliser la vente.';
+      notifyListeners();
+      return false;
+    }
+
+    _isProcessingSale = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+    try {
+      final itemsSubTotal =
+          items.fold<double>(0, (sum, item) => sum + item.subTotal);
+      final taxTotal = itemsSubTotal * (_taxRate / 100);
+      final grandTotal = itemsSubTotal + taxTotal;
+      final note = markUnpaid
+          ? 'BORNE #$queueNumber - CAISSE'
+          : 'BORNE #$queueNumber - PAYE';
+      await repository.submitSale(
+        customerId: 0,
+        cartItems: items,
+        grandTotal: grandTotal,
+        warehouseId: _selectedWarehouseId,
+        discount: 0,
+        shipping: 0,
+        taxRate: _taxRate,
+        paymentTypeId: paymentTypeId,
+        paymentStatusId: markUnpaid ? 2 : 1,
+        notes: note,
+        receivedAmount: receivedAmount,
+      );
+      _successMessage = markUnpaid
+          ? 'Commande borne enregistrée.'
+          : 'Paiement borne effectué.';
+      _lastSyncAt = DateTime.now();
+      await loadOrderHistory(hours: _historyHours);
+      notifyListeners();
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      notifyListeners();
+      return false;
+    } catch (error) {
+      _errorMessage = error.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _isProcessingSale = false;
     }
   }
 
@@ -1004,6 +1311,8 @@ class PosController extends ChangeNotifier {
       paymentTypeId: paymentTypeId,
       paymentStatusId: paymentStatusId,
       receivedAmount: receivedAmount,
+      loyaltyRedeemAmount: loyaltyRedeemAmount,
+      loyaltyRedeemPoints: loyaltyRedeemPoints,
       notes: notes,
       saleItems: saleItems,
       createdAt: DateTime.now(),
@@ -1046,6 +1355,8 @@ class PosController extends ChangeNotifier {
             paymentStatusId: sale.paymentStatusId,
             notes: sale.notes,
             receivedAmount: sale.receivedAmount,
+            loyaltyRedeemAmount: sale.loyaltyRedeemAmount,
+            loyaltyRedeemPoints: sale.loyaltyRedeemPoints,
           );
           syncedSomething = true;
         } on ApiException catch (error) {
@@ -1116,6 +1427,42 @@ class PosController extends ChangeNotifier {
     if (frontStoreId != null && _selectedWarehouseId == null) {
       _selectedWarehouseId = int.tryParse('$frontStoreId');
     }
+    final loyaltyEnabled =
+        value['loyalty_enabled'] ?? value['loyaltyEnabled'];
+    if (loyaltyEnabled != null) {
+      _loyaltyEnabled = _parseBool(loyaltyEnabled);
+      if (!_loyaltyEnabled) {
+        _loyaltyRedeemInput = 0;
+      }
+    }
+    final allowRedeem =
+        value['allow_loyalty_redeem'] ?? value['allowLoyaltyRedeem'];
+    if (allowRedeem != null) {
+      _allowLoyaltyRedeem = _parseBool(allowRedeem);
+      if (!_allowLoyaltyRedeem) {
+        _loyaltyRedeemInput = 0;
+      }
+    }
+    final pointsPerOrder =
+        value['loyalty_points_per_order'] ?? value['loyaltyPointsPerOrder'];
+    if (pointsPerOrder != null) {
+      _loyaltyPointsPerOrder = _parseInt(pointsPerOrder);
+    }
+    final pointsPerItem =
+        value['loyalty_points_per_item'] ?? value['loyaltyPointsPerItem'];
+    if (pointsPerItem != null) {
+      _loyaltyPointsPerItem = _parseInt(pointsPerItem);
+    }
+    final amountPerPoint =
+        value['loyalty_amount_per_point'] ?? value['loyaltyAmountPerPoint'];
+    if (amountPerPoint != null) {
+      _loyaltyAmountPerPoint = _parseDouble(amountPerPoint);
+    }
+    final pointValue =
+        value['loyalty_point_value'] ?? value['loyaltyPointValue'];
+    if (pointValue != null) {
+      _loyaltyPointValue = _parseDouble(pointValue);
+    }
   }
 
   void _applyConfig(Map<String, dynamic> config) {
@@ -1127,6 +1474,29 @@ class PosController extends ChangeNotifier {
     }
   }
 
+  void _applyLocalLoyaltyAdjustments({
+    required int earned,
+    required int redeemed,
+  }) {
+    if (!_loyaltyEnabled) return;
+    if (_selectedCustomer == null || _selectedCustomer!.id == 0) return;
+    if (earned == 0 && redeemed == 0) return;
+    final current = _selectedCustomer!;
+    final updatedPoints = max(0, current.loyaltyPoints + earned - redeemed);
+    final updated = Customer(
+      id: current.id,
+      name: current.name,
+      email: current.email,
+      phone: current.phone,
+      loyaltyPoints: updatedPoints,
+    );
+    _selectedCustomer = updated;
+    final index = _customers.indexWhere((c) => c.id == current.id);
+    if (index != -1) {
+      _customers[index] = updated;
+    }
+  }
+
   bool _parseBool(dynamic value) {
     if (value is bool) return value;
     if (value is num) return value != 0;
@@ -1135,6 +1505,18 @@ class PosController extends ChangeNotifier {
       return normalized == 'true' || normalized == '1';
     }
     return false;
+  }
+
+  int _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse('$value') ?? 0;
+  }
+
+  double _parseDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    return double.tryParse('$value') ?? 0;
   }
 
   void _assignDefaultWarehouse() {
@@ -1271,6 +1653,7 @@ class PosController extends ChangeNotifier {
         'paid_amount': order.paidAmount,
         'item_count': order.itemCount,
         'product_names': order.productNames,
+        'note': order.note,
         'sale_items': saleItems,
         'created_at': order.createdAt?.toIso8601String(),
       },
@@ -1467,6 +1850,42 @@ class PosController extends ChangeNotifier {
     }
   }
 
+  Future<void> _refreshPrintingServices() async {
+    try {
+      _printingServices = await repository.fetchPrintingServices();
+      await _cachePrintingServices(_printingServices);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> _cachePrintingServices(List<PrintingService> services) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final payload = services.map((service) => service.toJson()).toList();
+      await prefs.setString(_cachedPrintingServicesKey, jsonEncode(payload));
+    } catch (_) {}
+  }
+
+  Future<void> _loadCachedPrintingServices() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_cachedPrintingServicesKey);
+      if (stored == null || stored.isEmpty) return;
+      final decoded = jsonDecode(stored);
+      if (decoded is List) {
+        _printingServices = decoded
+            .whereType<Map>()
+            .map((item) =>
+                PrintingService.fromJson(item.map((k, v) => MapEntry('$k', v))))
+            .toList();
+        _printingServices.sort((a, b) {
+          final order = a.sortOrder.compareTo(b.sortOrder);
+          return order != 0 ? order : a.name.compareTo(b.name);
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _persistSelectedWarehouse() async {
     final prefs = await SharedPreferences.getInstance();
     if (_selectedWarehouseId != null) {
@@ -1569,12 +1988,13 @@ class PosController extends ChangeNotifier {
           : names.length;
       final statusLabel = sale.status == OfflineSaleStatus.pending ? 'LOCAL' : 'ERREUR';
       return OrderSummary(
-        id: sale.hashCode,
-        referenceCode: sale.id,
-        customerName: customerName,
-        userName: _activeUserLabel,
-        userId: null,
-        status: statusLabel,
+      id: sale.hashCode,
+      referenceCode: sale.id,
+      customerName: customerName,
+      userName: _activeUserLabel,
+      userId: null,
+      note: sale.notes,
+      status: statusLabel,
         paymentStatus: sale.paymentStatusId.toString(),
         grandTotal: sale.grandTotal,
         paidAmount: sale.grandTotal,

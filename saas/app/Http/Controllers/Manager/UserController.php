@@ -39,6 +39,7 @@ class UserController extends Controller
             'email' => $user->email,
             'store_id' => $user->store_id,
             'is_active' => $user->is_active,
+            'allow_loyalty_redeem' => $user->allow_loyalty_redeem,
             'roles' => $user->roles()->pluck('roles.id')->sort()->values()->toArray(),
         ];
     }
@@ -123,6 +124,7 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
             'is_active' => ['nullable', 'boolean'],
+            'allow_loyalty_redeem' => ['nullable', 'boolean'],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['integer', 'exists:roles,id'],
         ]);
@@ -135,6 +137,7 @@ class UserController extends Controller
             'password' => Hash::make($data['password']),
             'is_active' => $data['is_active'] ?? true,
             'is_super_admin' => false,
+            'allow_loyalty_redeem' => $data['allow_loyalty_redeem'] ?? null,
         ]);
 
         $roles = $request->input('roles', []);
@@ -193,6 +196,7 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'password' => ['nullable', 'string', 'min:6'],
             'is_active' => ['nullable', 'boolean'],
+            'allow_loyalty_redeem' => ['nullable', 'boolean'],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['integer', 'exists:roles,id'],
         ]);
@@ -202,6 +206,7 @@ class UserController extends Controller
         $user->email = $data['email'];
         $user->store_id = $data['store_id'];
         $user->is_active = $data['is_active'] ?? $user->is_active;
+        $user->allow_loyalty_redeem = $data['allow_loyalty_redeem'] ?? null;
         if (!empty($data['password'])) {
             $user->password = Hash::make($data['password']);
         }
@@ -258,6 +263,7 @@ class UserController extends Controller
             'password' => Hash::make(Str::random(12)),
             'is_active' => false,
             'is_super_admin' => false,
+            'allow_loyalty_redeem' => $user->allow_loyalty_redeem,
         ]);
 
         $roleIds = $user->roles()->pluck('roles.id')->toArray();

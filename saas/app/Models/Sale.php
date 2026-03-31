@@ -23,6 +23,9 @@ class Sale extends Model
         'grand_total',
         'currency',
         'note',
+        'loyalty_points_earned',
+        'loyalty_points_redeemed',
+        'loyalty_amount_redeemed',
         'ordered_at',
     ];
 
@@ -31,6 +34,7 @@ class Sale extends Model
         'discount_total' => 'decimal:2',
         'tax_total' => 'decimal:2',
         'grand_total' => 'decimal:2',
+        'loyalty_amount_redeemed' => 'decimal:2',
         'ordered_at' => 'datetime',
     ];
 

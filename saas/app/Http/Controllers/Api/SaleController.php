@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Payment;
 use App\Models\PaymentMethod;
+use App\Models\PrintingService;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Customer;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\StockMovement;
@@ -81,17 +83,31 @@ class SaleController extends BaseApiController
             'payments.*.amount' => ['required_with:payments', 'numeric', 'min:0'],
             'payments.*.reference' => ['nullable', 'string', 'max:255'],
             'payments.*.paid_at' => ['nullable', 'date'],
+            'loyalty_redeem_points' => ['nullable', 'integer', 'min:0'],
+            'loyalty_redeem_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $store = Store::with('currency')
             ->where('manager_id', $manager->id)
             ->findOrFail($data['store_id']);
 
-        return DB::transaction(function () use ($manager, $data, $store) {
+        $user = $request->user();
+        $allowLoyaltyRedeem = $user?->allow_loyalty_redeem
+            ?? $store->allow_loyalty_redeem
+            ?? true;
+
+        return DB::transaction(function () use ($manager, $data, $store, $allowLoyaltyRedeem) {
             $saleItems = [];
             $subtotal = 0.0;
             $discountTotal = 0.0;
             $taxTotal = 0.0;
+            $totalQuantity = 0.0;
+            $customer = null;
+            if (!empty($data['customer_id'])) {
+                $customer = Customer::where('manager_id', $manager->id)
+                    ->lockForUpdate()
+                    ->find($data['customer_id']);
+            }
 
             foreach ($data['items'] as $item) {
                 $product = null;
@@ -135,6 +151,7 @@ class SaleController extends BaseApiController
                 $subtotal += $lineSubtotal;
                 $discountTotal += $discountAmount;
                 $taxTotal += $taxAmount;
+                $totalQuantity += $quantity;
 
                 $saleItems[] = [
                     'product_id' => $product?->id,
@@ -221,9 +238,82 @@ class SaleController extends BaseApiController
                 $sale->status = 'unpaid';
             }
 
+            $loyaltyPointsEarned = 0;
+            $loyaltyPointsRedeemed = 0;
+            $loyaltyAmountRedeemed = 0.0;
+            $loyaltyEnabled = (bool) ($manager->loyalty_enabled ?? false);
+            $pointsPerOrder = (int) ($manager->loyalty_points_per_order ?? 0);
+            $pointsPerItem = (int) ($manager->loyalty_points_per_item ?? 0);
+            $amountPerPoint = (float) ($manager->loyalty_amount_per_point ?? 0);
+            $pointValue = (float) ($manager->loyalty_point_value ?? 0);
+
+            if ($loyaltyEnabled && $customer && $allowLoyaltyRedeem) {
+                if ($sale->status !== 'unpaid') {
+                    $requestedRedeemAmount = (float) ($data['loyalty_redeem_amount'] ?? 0);
+                    $requestedRedeemPoints = (int) ($data['loyalty_redeem_points'] ?? 0);
+                    if ($pointValue > 0) {
+                        $maxByBalance = $customer->loyalty_points_balance * $pointValue;
+                        $requestedAmount = $requestedRedeemAmount > 0
+                            ? $requestedRedeemAmount
+                            : ($requestedRedeemPoints * $pointValue);
+                        $allowedAmount = min($requestedAmount, $maxByBalance, $discountTotal, $grandTotal);
+                        if ($allowedAmount > 0) {
+                            $loyaltyPointsRedeemed = (int) floor($allowedAmount / $pointValue);
+                            $loyaltyAmountRedeemed = $loyaltyPointsRedeemed * $pointValue;
+                        }
+                    }
+                }
+
+                if ($sale->status === 'paid') {
+                    if ($pointsPerOrder > 0) {
+                        $loyaltyPointsEarned += $pointsPerOrder;
+                    }
+                    if ($pointsPerItem > 0 && $totalQuantity > 0) {
+                        $loyaltyPointsEarned += (int) floor($totalQuantity * $pointsPerItem);
+                    }
+                    if ($amountPerPoint > 0) {
+                        $loyaltyPointsEarned += (int) floor($grandTotal / $amountPerPoint);
+                    }
+                }
+            }
+
+            $sale->loyalty_points_earned = $loyaltyPointsEarned;
+            $sale->loyalty_points_redeemed = $loyaltyPointsRedeemed;
+            $sale->loyalty_amount_redeemed = $loyaltyAmountRedeemed;
             $sale->save();
 
-            return response()->json($sale->load(['items', 'payments']), 201);
+            if ($customer && ($loyaltyPointsEarned > 0 || $loyaltyPointsRedeemed > 0)) {
+                $balance = (int) ($customer->loyalty_points_balance ?? 0);
+                $earnedTotal = (int) ($customer->loyalty_points_earned_total ?? 0);
+                $redeemedTotal = (int) ($customer->loyalty_points_redeemed_total ?? 0);
+
+                if ($loyaltyPointsEarned > 0) {
+                    $balance += $loyaltyPointsEarned;
+                    $earnedTotal += $loyaltyPointsEarned;
+                }
+                if ($loyaltyPointsRedeemed > 0) {
+                    $balance -= $loyaltyPointsRedeemed;
+                    $redeemedTotal += $loyaltyPointsRedeemed;
+                }
+                if ($balance < 0) {
+                    $balance = 0;
+                }
+                $customer->loyalty_points_balance = $balance;
+                $customer->loyalty_points_earned_total = $earnedTotal;
+                $customer->loyalty_points_redeemed_total = $redeemedTotal;
+                $customer->save();
+            }
+
+            $sale->load(['items', 'payments']);
+            $services = PrintingService::where('manager_id', $manager->id)
+                ->where('store_id', $store->id)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get();
+            $sale->setAttribute('printing_services', $services);
+
+            return response()->json($sale, 201);
         });
     }
 }

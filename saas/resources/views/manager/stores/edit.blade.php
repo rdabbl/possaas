@@ -55,6 +55,13 @@
                 </select>
             </div>
             <div class="field">
+                <label>{{ t("Allow Loyalty Redemption") }}</label>
+                <select name="allow_loyalty_redeem">
+                    <option value="1" {{ old('allow_loyalty_redeem', $store->allow_loyalty_redeem ? 1 : 0) == 1 ? 'selected' : '' }}>Yes</option>
+                    <option value="0" {{ old('allow_loyalty_redeem', $store->allow_loyalty_redeem ? 1 : 0) == 0 ? 'selected' : '' }}>No</option>
+                </select>
+            </div>
+            <div class="field">
                 <label>{{ t("Active") }}</label>
                 <select name="is_active">
                     <option value="1" {{ old('is_active', $store->is_active ? 1 : 0) == 1 ? 'selected' : '' }}>Yes</option>

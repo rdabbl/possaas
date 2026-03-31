@@ -27,6 +27,7 @@ class AppearanceController extends ChangeNotifier {
   bool _showResetButton = !_isAndroid;
   bool _showHoldButton = !_isAndroid;
   bool _showHistoryPanel = !_isAndroid;
+  bool _showPrintPreview = true;
   double _uiScale = 1.0;
   bool _resetHistoryAt4Am = false;
   int _historyResetHour = 4;
@@ -50,6 +51,7 @@ class AppearanceController extends ChangeNotifier {
   bool get showCashButton => _showCashButton;
   bool get showResetButton => _showResetButton;
   bool get showHoldButton => _showHoldButton;
+  bool get showPrintPreview => _showPrintPreview;
   double get uiScale => _uiScale;
   bool get showHistoryPanel => _showHistoryPanel;
   bool get resetHistoryAt4Am => _resetHistoryAt4Am;
@@ -68,12 +70,13 @@ class AppearanceController extends ChangeNotifier {
       useMaterial3: true,
       inputDecorationTheme: inputTheme,
       dialogTheme: DialogThemeData(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: const Color(0xFFFDFDFB),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: Color(0xFFEFEFEF)),
         ),
-        titleTextStyle: TextStyle(
-          color: colorScheme.onSurface,
+        titleTextStyle: const TextStyle(
+          color: Color(0xFF111827),
           fontWeight: FontWeight.w700,
           fontSize: 18,
         ),
@@ -83,14 +86,14 @@ class AppearanceController extends ChangeNotifier {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: colorScheme.surface,
-        contentTextStyle: TextStyle(
-          color: colorScheme.onSurface,
+        backgroundColor: const Color(0xFFFDFDFB),
+        contentTextStyle: const TextStyle(
+          color: Color(0xFF111827),
           fontWeight: FontWeight.w600,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFEFEFEF)),
         ),
         elevation: 8,
       ),
@@ -266,6 +269,13 @@ class AppearanceController extends ChangeNotifier {
     _persist();
   }
 
+  void updatePrintPreviewVisibility(bool value) {
+    if (_showPrintPreview == value) return;
+    _showPrintPreview = value;
+    notifyListeners();
+    _persist();
+  }
+
   void updateHistoryPanelVisibility(bool value) {
     if (_showHistoryPanel == value) return;
     _showHistoryPanel = value;
@@ -340,6 +350,8 @@ class AppearanceController extends ChangeNotifier {
       _showCashButton = _boolFrom(stored['showCashButton']) ?? _showCashButton;
       _showResetButton = _boolFrom(stored['showResetButton']) ?? _showResetButton;
       _showHoldButton = _boolFrom(stored['showHoldButton']) ?? _showHoldButton;
+      _showPrintPreview =
+          _boolFrom(stored['showPrintPreview']) ?? _showPrintPreview;
       _showHistoryPanel = _boolFrom(stored['showHistoryPanel']) ?? _showHistoryPanel;
       _uiScale = _doubleFrom(stored['uiScale'])?.clamp(0.6, 1.2) ?? _uiScale;
       _resetHistoryAt4Am =
@@ -369,6 +381,7 @@ class AppearanceController extends ChangeNotifier {
         'showCashButton': _showCashButton,
         'showResetButton': _showResetButton,
         'showHoldButton': _showHoldButton,
+        'showPrintPreview': _showPrintPreview,
         'uiScale': _uiScale,
         'showHistoryPanel': _showHistoryPanel,
         'resetHistoryAt4Am': _resetHistoryAt4Am,

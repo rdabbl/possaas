@@ -4,6 +4,56 @@ This repo contains two projects:
 - `saas/` Laravel 12 backend + admin panel
 - `pos/` Flutter POS app
 
+## Local Development
+
+### Run the SaaS (Laravel)
+
+Prerequisites: PHP + Composer, Node + npm, and a database (MySQL/SQLite).
+
+```bash
+cd saas
+cp .env.example .env
+composer install
+php artisan key:generate
+php artisan migrate
+npm install
+```
+
+Start the backend and frontend dev server in separate terminals:
+
+```bash
+cd saas
+php artisan serve
+```
+
+```bash
+cd saas
+npm run dev
+```
+
+If needed, update `saas/.env` (DB credentials, `APP_URL`, etc.).
+
+### Run the POS (Flutter)
+
+Prerequisites: Flutter SDK + Android SDK.
+
+```bash
+cd pos
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://localhost:8000/api
+```
+
+If running on Android emulator, use `http://10.0.2.2:8000/api` instead of `localhost`.
+
+### Build Android APK
+
+```bash
+cd pos
+flutter build apk --release --dart-define=API_BASE_URL=https://your-domain.com/api
+```
+
+The APK will be at `pos/build/app/outputs/flutter-apk/app-release.apk`.
+
 **Shared Hosting Install (No Terminal on Server)**
 
 These steps assume you can use FTP/cPanel File Manager and phpMyAdmin, but you cannot run commands on the server.
@@ -66,5 +116,3 @@ If you cannot run `php artisan migrate` on the server, run migrations locally ag
 
 8. Verify
 Open the site URL. If you change `.env` values later, delete cached files in `saas/bootstrap/cache` (except `.gitignore`) so Laravel reloads config.
-
-If you want a separate README for the Flutter `pos/` app, tell me and I will add it.
