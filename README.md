@@ -52,6 +52,19 @@ cd pos
 flutter build apk --release --dart-define=API_BASE_URL=https://your-domain.com/api
 ```
 
+To build using the production server API, use:
+
+```bash
+cd pos
+flutter build apk --release --dart-define=API_BASE_URL=https://pos.nimirik.com/api
+```
+
+Default API value in code:
+
+```text
+defaultValue: 'https://pos.nimirik.com/api',
+```
+
 The APK will be at `pos/build/app/outputs/flutter-apk/app-release.apk`.
 
 **Shared Hosting Install (No Terminal on Server)**
