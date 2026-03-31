@@ -205,6 +205,12 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isCompact = screenSize.width < 720;
+    final outerPadding = isCompact ? 12.0 : 24.0;
+    final containerPadding = isCompact ? 12.0 : 20.0;
+    final containerRadius = isCompact ? 20.0 : 32.0;
+    final containerShadowBlur = isCompact ? 18.0 : 24.0;
     final auth = context.watch<AuthController>();
     return Consumer<PosController>(
       builder: (context, controller, _) {
@@ -236,112 +242,120 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final isNarrow = constraints.maxWidth < 1100;
+                        final panelSpacing = constraints.maxWidth < 1100 ? 16.0 : 24.0;
+                        final cartWidth = (constraints.maxWidth * 0.3)
+                            .clamp(300.0, 420.0)
+                            .toDouble();
+                        const minCatalogWidth = 740.0;
+                        final contentMinWidth =
+                            minCatalogWidth + cartWidth + panelSpacing;
+                        final useHorizontalScroll =
+                            constraints.maxWidth < contentMinWidth;
+                        final rowContent = SizedBox(
+                          width: useHorizontalScroll
+                              ? contentMinWidth
+                              : constraints.maxWidth,
+                          height: constraints.maxHeight,
+                          child: Row(
+                            children: [
+                              if (useHorizontalScroll)
+                                SizedBox(
+                                  width: minCatalogWidth,
+                                  child: _CatalogPanel(
+                                    controller: controller,
+                                    searchController: _searchController,
+                                    onOpenMenu: _openQuickMenu,
+                                    onOpenHistory: _openOrderHistory,
+                                    onOpenCalculator: _openCalculator,
+                                    onOpenKiosk: _openKioskPage,
+                                    onRefresh: () =>
+                                        controller.refreshProducts(
+                                      skipSyncOffline: true,
+                                    ),
+                                    onCashInHand: () =>
+                                        _promptCashInHandIfNeeded(force: true),
+                                    onSync: controller.refreshProducts,
+                                    onReconnect: _attemptReconnect,
+                                    offlineMode: controller.offlineMode,
+                                    lastSyncAt: controller.lastSyncAt,
+                                    onLogout: () async {
+                                      await context
+                                          .read<AuthController>()
+                                          .logout();
+                                    },
+                                    onSelectProduct: (product) =>
+                                        _handleProductSelection(
+                                      controller,
+                                      product,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Expanded(
+                                  child: _CatalogPanel(
+                                    controller: controller,
+                                    searchController: _searchController,
+                                    onOpenMenu: _openQuickMenu,
+                                    onOpenHistory: _openOrderHistory,
+                                    onOpenCalculator: _openCalculator,
+                                    onOpenKiosk: _openKioskPage,
+                                    onRefresh: () =>
+                                        controller.refreshProducts(
+                                      skipSyncOffline: true,
+                                    ),
+                                    onCashInHand: () =>
+                                        _promptCashInHandIfNeeded(force: true),
+                                    onSync: controller.refreshProducts,
+                                    onReconnect: _attemptReconnect,
+                                    offlineMode: controller.offlineMode,
+                                    lastSyncAt: controller.lastSyncAt,
+                                    onLogout: () async {
+                                      await context
+                                          .read<AuthController>()
+                                          .logout();
+                                    },
+                                    onSelectProduct: (product) =>
+                                        _handleProductSelection(
+                                      controller,
+                                      product,
+                                    ),
+                                  ),
+                                ),
+                              SizedBox(width: panelSpacing),
+                              SizedBox(
+                                width: cartWidth,
+                                child: _CartPanel(
+                                  controller: controller,
+                                  discountController: _discountController,
+                                  shippingController: _shippingController,
+                                  taxController: _taxController,
+                                  loyaltyController: _loyaltyController,
+                                  notesController: _notesController,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
                         return Container(
-                          padding: const EdgeInsets.all(20),
+                          padding: EdgeInsets.all(containerPadding),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFDFDFB),
-                            borderRadius: BorderRadius.circular(32),
-                            boxShadow: const [
+                            borderRadius:
+                                BorderRadius.circular(containerRadius),
+                            boxShadow: [
                               BoxShadow(
                                 color: Color(0x1A000000),
-                                blurRadius: 24,
+                                blurRadius: containerShadowBlur,
                                 offset: Offset(0, 12),
                               ),
                             ],
                           ),
-                          child: isNarrow
-                              ? Column(
-                                  children: [
-                                    Expanded(
-                                      child: _CatalogPanel(
-                                        controller: controller,
-                                        searchController: _searchController,
-                                        onOpenMenu: _openQuickMenu,
-                                        onOpenHistory: _openOrderHistory,
-                                        onOpenCalculator: _openCalculator,
-                                        onOpenKiosk: _openKioskPage,
-                                        onRefresh: () => controller.refreshProducts(
-                                          skipSyncOffline: true,
-                                        ),
-                                        onCashInHand: () =>
-                                            _promptCashInHandIfNeeded(force: true),
-                                        onSync: controller.refreshProducts,
-                                        onReconnect: _attemptReconnect,
-                                        offlineMode: controller.offlineMode,
-                                        lastSyncAt: controller.lastSyncAt,
-                                        onLogout: () async {
-                                          await context.read<AuthController>().logout();
-                                        },
-                                        onSelectProduct: (product) =>
-                                            _handleProductSelection(
-                                              controller,
-                                              product,
-                                            ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    SizedBox(
-                                      height: 520,
-                                      child: _CartPanel(
-                                        controller: controller,
-                                        discountController:
-                                            _discountController,
-                                        shippingController:
-                                            _shippingController,
-                                        taxController: _taxController,
-                                        loyaltyController: _loyaltyController,
-                                        notesController: _notesController,
-                                      ),
-                                    ),
-                                  ],
+                          child: useHorizontalScroll
+                              ? SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: rowContent,
                                 )
-                              : Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 7,
-                                      child: _CatalogPanel(
-                                        controller: controller,
-                                        searchController: _searchController,
-                                        onOpenMenu: _openQuickMenu,
-                                        onOpenHistory: _openOrderHistory,
-                                        onOpenCalculator: _openCalculator,
-                                        onOpenKiosk: _openKioskPage,
-                                        onRefresh: () => controller.refreshProducts(
-                                          skipSyncOffline: true,
-                                        ),
-                                        onCashInHand: () =>
-                                            _promptCashInHandIfNeeded(force: true),
-                                        onSync: controller.refreshProducts,
-                                        onReconnect: _attemptReconnect,
-                                        offlineMode: controller.offlineMode,
-                                        lastSyncAt: controller.lastSyncAt,
-                                        onLogout: () async {
-                                          await context.read<AuthController>().logout();
-                                        },
-                                        onSelectProduct: (product) =>
-                                            _handleProductSelection(
-                                              controller,
-                                              product,
-                                            ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 24),
-                                    SizedBox(
-                                      width: 360,
-                                      child: _CartPanel(
-                                        controller: controller,
-                                        discountController:
-                                            _discountController,
-                                        shippingController:
-                                            _shippingController,
-                                        taxController: _taxController,
-                                        loyaltyController: _loyaltyController,
-                                        notesController: _notesController,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              : rowContent,
                         );
                       },
                     ),
@@ -353,7 +367,7 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
           backgroundColor: const Color(0xFFF8F1D7),
           body: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(outerPadding),
               child: body,
             ),
           ),

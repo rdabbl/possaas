@@ -66,22 +66,17 @@ class ProductGrid extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        int crossAxisCount;
-        if (customColumns != null && customColumns! > 0) {
-          crossAxisCount = customColumns!;
-        } else {
-          final desiredColumns = (constraints.maxWidth / 230).floor();
-          crossAxisCount = desiredColumns <= 0
-              ? 1
-              : desiredColumns > 4
-                  ? 4
-                  : desiredColumns;
-        }
-        if (crossAxisCount < 1) {
-          crossAxisCount = 1;
-        } else if (crossAxisCount > 5) {
-          crossAxisCount = 5;
-        }
+        final desiredColumns = (constraints.maxWidth / 230).floor();
+        final maxColumns = desiredColumns <= 0
+            ? 1
+            : desiredColumns > 4
+                ? 4
+                : desiredColumns;
+        final preferred = (customColumns != null && customColumns! > 0)
+            ? customColumns!.clamp(1, 5).toInt()
+            : maxColumns;
+        int crossAxisCount = preferred > maxColumns ? maxColumns : preferred;
+        if (crossAxisCount < 1) crossAxisCount = 1;
         return GridView.builder(
           padding: EdgeInsets.zero,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
