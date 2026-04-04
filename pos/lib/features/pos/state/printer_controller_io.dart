@@ -7,6 +7,8 @@ import 'package:pos_printer_manager/models/pos_printer.dart';
 
 import '../../../core/models/cart_item.dart';
 import '../../../core/models/order_summary.dart';
+import '../../../core/models/product.dart';
+import '../../../core/models/product_option.dart';
 import '../../../core/models/register_details.dart';
 import '../data/printer_settings_storage.dart';
 import '../models/printing_service.dart';
@@ -68,7 +70,7 @@ class PrinterSettingsController extends ChangeNotifier {
   final List<PrinterDeviceInfo> _devices = [];
   PrinterDeviceInfo? _selectedDevice;
   bool _isScanning = false;
-  final bool _isTesting = false;
+  bool _isTesting = false;
   double _paperWidth = 80;
   double _paperHeight = 200;
   bool _autoCut = true;
@@ -312,8 +314,79 @@ class PrinterSettingsController extends ChangeNotifier {
     }
   }
 
-  Future<void> testPrint() async {
-    _setStatus('Test impression desactive.', true);
+  Future<void> testPrint({int? serviceId}) async {
+    _isTesting = true;
+    notifyListeners();
+    try {
+      await _runTestPrintService(serviceId);
+    } finally {
+      _isTesting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> testPrintAllServices() async {
+    if (_services.isEmpty) {
+      await testPrint(serviceId: _activeServiceId);
+      return;
+    }
+    _isTesting = true;
+    notifyListeners();
+    try {
+      for (final service in _services) {
+        await _runTestPrintService(service.id);
+      }
+      _setStatus('Tous les tickets exemple ont ete imprimes.', false);
+    } finally {
+      _isTesting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> printKioskQueueTicket({
+    required int queueNumber,
+    required String? companyName,
+    int? serviceId,
+  }) async {
+    final snapshot = await _resolveSnapshot(serviceId);
+    final service = _resolveService(serviceId);
+    const effectiveAutoCut = true;
+    final selected = snapshot.selectedDevice;
+    if (selected == null) {
+      _setStatus('Selectionnez une imprimante.', true);
+      return;
+    }
+    if (!_supportsType(selected.type) || selected.type == PrinterConnectionType.system) {
+      _setStatus('Impression non supportee pour ce type.', true);
+      return;
+    }
+
+    try {
+      final profile = await CapabilityProfile.load();
+      final paperSize = _mapPaperSize(snapshot.paperWidth);
+      final payload = _buildKioskQueueTicket(
+        paperSize,
+        profile,
+        queueNumber: queueNumber,
+        companyName: companyName,
+        serviceLabel: _serviceLabel(service),
+        autoCut: effectiveAutoCut,
+      );
+      final response = await _sendToPrinter(
+        selected,
+        paperSize,
+        profile,
+        payload,
+        port: snapshot.manualPortValue,
+      );
+      if (response == ConnectionResponse.success) {
+        _setStatus('Ticket borne imprime.', false);
+      } else {
+        _setStatus(_describeResponse(response), true);
+      }
+    } catch (error) {
+      _setStatus('Erreur impression: $error', true);
+    }
   }
 
   Future<void> printSaleReceipt({
@@ -341,6 +414,8 @@ class PrinterSettingsController extends ChangeNotifier {
     String? template,
   }) async {
     final snapshot = await _resolveSnapshot(serviceId);
+    final service = _resolveService(serviceId);
+    const effectiveAutoCut = true;
     final selected = snapshot.selectedDevice;
     if (selected == null) {
       _setStatus('Selectionnez une imprimante.', true);
@@ -364,8 +439,9 @@ class PrinterSettingsController extends ChangeNotifier {
               customerName: customerName,
               userLabel: userLabel,
               companyName: companyName,
+              serviceLabel: _serviceLabel(service),
               warehouseName: warehouseName,
-              autoCut: snapshot.autoCut,
+              autoCut: effectiveAutoCut,
             )
           : _buildCombinedTicket(
               paperSize,
@@ -381,10 +457,16 @@ class PrinterSettingsController extends ChangeNotifier {
               customerName: customerName,
               userLabel: userLabel,
               companyName: companyName,
+              companyAddress: companyAddress,
+              companyEmail: companyEmail,
+              companyPhone: companyPhone,
               warehouseName: warehouseName,
+              serviceLabel: _serviceLabel(service),
               paymentType: paymentType,
               paymentStatus: paymentStatus,
-              autoCut: snapshot.autoCut,
+              receivedAmount: receivedAmount,
+              changeAmount: change,
+              autoCut: effectiveAutoCut,
               wifiSsid: snapshot.wifiSsid,
               wifiPassword: snapshot.wifiPassword,
             );
@@ -415,6 +497,8 @@ class PrinterSettingsController extends ChangeNotifier {
     int? serviceId,
   }) async {
     final snapshot = await _resolveSnapshot(serviceId);
+    final service = _resolveService(serviceId);
+    const effectiveAutoCut = true;
     final selected = snapshot.selectedDevice;
     if (selected == null) {
       _setStatus('Selectionnez une imprimante.', true);
@@ -436,7 +520,8 @@ class PrinterSettingsController extends ChangeNotifier {
         currencySymbol: currencySymbol,
         currencyOnRight: currencyOnRight,
         userLabel: userLabel,
-        autoCut: snapshot.autoCut,
+        serviceLabel: _serviceLabel(service),
+        autoCut: effectiveAutoCut,
       );
       final response = await _sendToPrinter(
         selected,
@@ -524,9 +609,15 @@ class PrinterSettingsController extends ChangeNotifier {
     required String? customerName,
     required String? userLabel,
     required String? companyName,
+    required String? companyAddress,
+    required String? companyEmail,
+    required String? companyPhone,
     required String? warehouseName,
+    required String serviceLabel,
     required String paymentType,
     required String paymentStatus,
+    required double? receivedAmount,
+    required double? changeAmount,
     required bool autoCut,
     required String wifiSsid,
     required String wifiPassword,
@@ -536,9 +627,14 @@ class PrinterSettingsController extends ChangeNotifier {
     final now = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
     final bytes = <int>[];
     final serverName = (userLabel ?? '').trim();
+    final companyTitle = (companyName ?? '').trim();
+    final companyAddressLine = (companyAddress ?? '').trim();
+    final companyEmailLine = (companyEmail ?? '').trim();
+    final companyPhoneLine = (companyPhone ?? '').trim();
+    final warehouseLine = (warehouseName ?? '').trim();
+    final customerLine = (customerName ?? '').trim();
 
-    // Ticket principal
-    final title = (companyName ?? '').isNotEmpty ? (companyName ?? '') : 'Ticket';
+    final title = companyTitle.isNotEmpty ? companyTitle : 'Ticket';
     bytes.addAll(
       g.text(
         title,
@@ -551,28 +647,48 @@ class PrinterSettingsController extends ChangeNotifier {
       ),
     );
     bytes.addAll(g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
+    if (companyAddressLine.isNotEmpty) {
+      bytes.addAll(g.text(companyAddressLine, styles: const PosStyles(align: PosAlign.center)));
+    }
+    if (companyEmailLine.isNotEmpty) {
+      bytes.addAll(g.text('Email : $companyEmailLine', styles: const PosStyles(align: PosAlign.center)));
+    }
+    if (companyPhoneLine.isNotEmpty) {
+      bytes.addAll(g.text('Tel : $companyPhoneLine', styles: const PosStyles(align: PosAlign.center)));
+    }
+    if (warehouseLine.isNotEmpty) {
+      bytes.addAll(g.text('Magasin : $warehouseLine', styles: const PosStyles(align: PosAlign.center)));
+    }
+    if (customerLine.isNotEmpty) {
+      bytes.addAll(g.text('Client : $customerLine'));
+    }
     if (serverName.isNotEmpty) {
       bytes.addAll(g.text('Serveur : $serverName'));
+    }
+    if (serviceLabel.isNotEmpty) {
+      bytes.addAll(g.text('Service : $serviceLabel'));
     }
     bytes.addAll(g.hr());
 
     for (final item in items) {
+      final unitPrice = item.quantity == 0 ? 0.0 : item.subTotal / item.quantity;
+      bytes.addAll(
+        g.text(
+          item.product.name,
+          styles: const PosStyles(align: PosAlign.left, bold: true),
+        ),
+      );
       bytes.addAll(
         g.row([
           PosColumn(
-            text: '${item.quantity.toStringAsFixed(0)}x',
-            width: 2,
-            styles: const PosStyles(bold: true),
-          ),
-          PosColumn(
-            text: item.product.name,
-            width: 6,
-            styles: const PosStyles(align: PosAlign.right, bold: true),
+            text: '${item.quantity} x ${fmt(unitPrice)}',
+            width: 8,
+            styles: const PosStyles(align: PosAlign.left),
           ),
           PosColumn(
             text: fmt(item.subTotal),
             width: 4,
-            styles: const PosStyles(align: PosAlign.right),
+            styles: const PosStyles(align: PosAlign.right, bold: true),
           ),
         ]),
       );
@@ -594,15 +710,27 @@ class PrinterSettingsController extends ChangeNotifier {
     }
 
     bytes.addAll(g.hr());
-   
+    bytes.addAll(g.row([
+      PosColumn(text: 'Sous-total', width: 8),
+      PosColumn(text: fmt(subTotal), width: 4, styles: const PosStyles(align: PosAlign.right)),
+    ]));
     if (discount != 0) {
       bytes.addAll(g.row([
         PosColumn(text: 'Remise', width: 8),
         PosColumn(text: fmt(discount), width: 4, styles: const PosStyles(align: PosAlign.right)),
       ]));
     }
-   
-    bytes.addAll(g.hr());
+    bytes.addAll(g.row([
+      PosColumn(text: 'Taxe', width: 8),
+      PosColumn(text: fmt(tax), width: 4, styles: const PosStyles(align: PosAlign.right)),
+    ]));
+    if (shipping != 0) {
+      bytes.addAll(g.row([
+        PosColumn(text: 'Livraison', width: 8),
+        PosColumn(text: fmt(shipping), width: 4, styles: const PosStyles(align: PosAlign.right)),
+      ]));
+    }
+    bytes.addAll(g.hr(ch: '-'));
     bytes.addAll(
       g.row([
         PosColumn(
@@ -617,10 +745,44 @@ class PrinterSettingsController extends ChangeNotifier {
         ),
       ]),
     );
-   // bytes.addAll(g.text('Paiement : $paymentType'));
-   // bytes.addAll(g.text('Statut : $paymentStatus'));
-
-    bytes.addAll(g.feed(2));
+    bytes.addAll(g.hr());
+    bytes.addAll(g.row([
+      PosColumn(text: 'Paiement', width: 6),
+      PosColumn(
+        text: paymentType,
+        width: 6,
+        styles: const PosStyles(align: PosAlign.right),
+      ),
+    ]));
+    bytes.addAll(g.row([
+      PosColumn(text: 'Statut', width: 6),
+      PosColumn(
+        text: paymentStatus,
+        width: 6,
+        styles: const PosStyles(align: PosAlign.right),
+      ),
+    ]));
+    if (receivedAmount != null) {
+      bytes.addAll(g.row([
+        PosColumn(text: 'Recu', width: 6),
+        PosColumn(
+          text: fmt(receivedAmount),
+          width: 6,
+          styles: const PosStyles(align: PosAlign.right),
+        ),
+      ]));
+    }
+    if (changeAmount != null) {
+      bytes.addAll(g.row([
+        PosColumn(text: 'Rendu', width: 6),
+        PosColumn(
+          text: fmt(changeAmount),
+          width: 6,
+          styles: const PosStyles(align: PosAlign.right),
+        ),
+      ]));
+    }
+    bytes.addAll(g.feed(1));
     if (wifiSsid.trim().isNotEmpty) {
       bytes.addAll(g.text('Wi-fi : ${wifiSsid.trim()}'));
     }
@@ -633,68 +795,71 @@ class PrinterSettingsController extends ChangeNotifier {
         styles: const PosStyles(align: PosAlign.center, fontType: PosFontType.fontB),
       ),
     );
-    bytes.addAll(g.feed(1));
-    if (autoCut) {
-      bytes.addAll(g.cut());
-    } else {
-      bytes.addAll(g.feed(3));
-    }
+    _appendCut(bytes, g, autoCut: autoCut);
 
     // Mini ticket apres coupe
     bytes.addAll(
       g.text(
-        'ticket',
+        title,
         styles: const PosStyles(align: PosAlign.center, bold: true),
       ),
     );
+    if (serviceLabel.isNotEmpty) {
+      bytes.addAll(g.text('Service : $serviceLabel', styles: const PosStyles(align: PosAlign.center)));
+    }
     bytes.addAll(g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
-    if (serverName.isNotEmpty) {
-      bytes.addAll(g.text('Serveur : $serverName'));
-    }
+    bytes.addAll(g.text('Total : ${fmt(grandTotal)}', styles: const PosStyles(align: PosAlign.center, bold: true)));
+    _appendCut(bytes, g, autoCut: autoCut);
 
-     for (final item in items) {
-      bytes.addAll(
-        g.row([
-          PosColumn(
-            text: '${item.quantity.toStringAsFixed(0)}x',
-            width: 2,
-            styles: const PosStyles(bold: true),
-          ),
-          PosColumn(
-            text: item.product.name,
-            width: 6,
-            styles: const PosStyles(align: PosAlign.right, bold: true),
-          ),
-          PosColumn(
-            text: fmt(item.subTotal),
-            width: 4,
-            styles: const PosStyles(align: PosAlign.right),
-          ),
-        ]),
-      );
-      if (item.options.isNotEmpty) {
-        final optionsLabel = item.options.map((option) {
-          final qty = option.quantity;
-          final qtyText = qty == qty.roundToDouble()
-              ? qty.toStringAsFixed(0)
-              : qty.toString();
-          return qty <= 1 ? option.name : '${option.name} x$qtyText';
-        }).join(', ');
-        bytes.addAll(
-          g.text(
-            '  + $optionsLabel',
-            styles: const PosStyles(align: PosAlign.left),
-          ),
-        );
-      }
-    }
+    return bytes;
+  }
+
+  List<int> _buildKioskQueueTicket(
+    PaperSize paperSize,
+    CapabilityProfile profile, {
+    required int queueNumber,
+    required String? companyName,
+    required String serviceLabel,
+    required bool autoCut,
+  }) {
+    final g = Generator(paperSize, profile);
+    final now = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
+    final title = (companyName ?? '').trim().isNotEmpty
+        ? companyName!.trim()
+        : 'Commande borne';
+    final bytes = <int>[];
+
+    bytes.addAll(
+      g.text(
+        title,
+        styles: const PosStyles(
+          align: PosAlign.center,
+          bold: true,
+          height: PosTextSize.size2,
+          width: PosTextSize.size2,
+        ),
+      ),
+    );
     bytes.addAll(g.feed(1));
-    if (autoCut) {
-      bytes.addAll(g.cut());
-    } else {
-      bytes.addAll(g.feed(3));
+    if (serviceLabel.isNotEmpty) {
+      bytes.addAll(g.text('Service : $serviceLabel', styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.feed(1));
     }
-
+    bytes.addAll(
+      g.text(
+        'Numero $queueNumber',
+        styles: const PosStyles(
+          align: PosAlign.center,
+          bold: true,
+          height: PosTextSize.size2,
+          width: PosTextSize.size2,
+        ),
+      ),
+    );
+    bytes.addAll(g.feed(1));
+    bytes.addAll(g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
+    bytes.addAll(g.feed(2));
+    _appendCut(bytes, g, autoCut: autoCut);
     return bytes;
   }
 
@@ -706,6 +871,7 @@ class PrinterSettingsController extends ChangeNotifier {
     required String? userLabel,
     required String? companyName,
     required String? warehouseName,
+    required String serviceLabel,
     required bool autoCut,
   }) {
     final g = Generator(paperSize, profile);
@@ -713,9 +879,9 @@ class PrinterSettingsController extends ChangeNotifier {
     final bytes = <int>[];
 
     bytes.addAll(
-      g.text(
-        companyName != null && companyName.trim().isNotEmpty
-            ? companyName!.trim()
+        g.text(
+          companyName != null && companyName.trim().isNotEmpty
+            ? companyName.trim()
             : 'Commande cuisine',
         styles: const PosStyles(
           align: PosAlign.center,
@@ -734,6 +900,9 @@ class PrinterSettingsController extends ChangeNotifier {
     }
     if (userLabel != null && userLabel.trim().isNotEmpty) {
       bytes.addAll(g.text('Serveur : ${userLabel.trim()}'));
+    }
+    if (serviceLabel.isNotEmpty) {
+      bytes.addAll(g.text('Service : $serviceLabel'));
     }
     bytes.addAll(g.hr());
 
@@ -769,12 +938,7 @@ class PrinterSettingsController extends ChangeNotifier {
       }
     }
 
-    bytes.addAll(g.feed(1));
-    if (autoCut) {
-      bytes.addAll(g.cut());
-    } else {
-      bytes.addAll(g.feed(3));
-    }
+    _appendCut(bytes, g, autoCut: autoCut);
 
     return bytes;
   }
@@ -787,6 +951,7 @@ class PrinterSettingsController extends ChangeNotifier {
     required String currencySymbol,
     required bool currencyOnRight,
     required String? userLabel,
+    required String serviceLabel,
     required bool autoCut,
   }) {
     final g = Generator(paperSize, profile);
@@ -809,6 +974,9 @@ class PrinterSettingsController extends ChangeNotifier {
     bytes.addAll(g.text('Imprime le : $now', styles: const PosStyles(align: PosAlign.center)));
     if (serverName.isNotEmpty) {
       bytes.addAll(g.text('Serveur : $serverName', styles: const PosStyles(align: PosAlign.center)));
+    }
+    if (serviceLabel.isNotEmpty) {
+      bytes.addAll(g.text('Service : $serviceLabel', styles: const PosStyles(align: PosAlign.center)));
     }
     bytes.addAll(g.hr());
     bytes.addAll(g.text('Ventes : ${orders.length}', styles: const PosStyles(align: PosAlign.left)));
@@ -880,12 +1048,7 @@ class PrinterSettingsController extends ChangeNotifier {
       );
     }
 
-    bytes.addAll(g.feed(1));
-    if (autoCut) {
-      bytes.addAll(g.cut());
-    } else {
-      bytes.addAll(g.feed(3));
-    }
+    _appendCut(bytes, g, autoCut: autoCut);
 
     return bytes;
   }
@@ -909,12 +1072,16 @@ class PrinterSettingsController extends ChangeNotifier {
         );
         final connected = await manager.connect();
         if (connected != ConnectionResponse.success) return connected;
-        return manager.writeBytes(bytes);
+        final written = await manager.writeBytes(bytes, isDisconnect: false);
+        await manager.disconnect(timeout: const Duration(milliseconds: 300));
+        return written;
       case PrinterConnectionType.usb:
         final manager = USBPrinterManager(device.printer, paperSize, profile);
         final connected = await manager.connect();
         if (connected != ConnectionResponse.success) return connected;
-        return manager.writeBytes(bytes);
+        final written = await manager.writeBytes(bytes, isDisconnect: false);
+        await manager.disconnect(timeout: const Duration(milliseconds: 300));
+        return written;
       case PrinterConnectionType.bluetooth:
         final manager = BluetoothPrinterManager(
           device.printer,
@@ -923,7 +1090,9 @@ class PrinterSettingsController extends ChangeNotifier {
         );
         final connected = await manager.connect();
         if (connected != ConnectionResponse.success) return connected;
-        return manager.writeBytes(bytes);
+        final written = await manager.writeBytes(bytes, isDisconnect: false);
+        await manager.disconnect(timeout: const Duration(milliseconds: 300));
+        return written;
       case PrinterConnectionType.system:
         return ConnectionResponse.unsupport;
     }
@@ -978,6 +1147,116 @@ class PrinterSettingsController extends ChangeNotifier {
     _statusMessage = message;
     _statusIsError = isError;
     notifyListeners();
+  }
+
+  Future<void> _runTestPrintService(int? serviceId) async {
+    final service = _resolveService(serviceId);
+    if (service?.isKiosk == true) {
+      await printKioskQueueTicket(
+        queueNumber: 152,
+        companyName: 'POS SAAS',
+        serviceId: service?.id ?? _activeServiceId,
+      );
+      return;
+    }
+    await printSaleReceipt(
+      items: _buildExampleItems(),
+      subTotal: 95,
+      discount: 5,
+      tax: 9.5,
+      shipping: 0,
+      grandTotal: 99.5,
+      currencySymbol: 'DH',
+      currencyOnRight: true,
+      customerName: 'Client exemple',
+      userLabel: 'Caissier',
+      companyName: 'POS SAAS',
+      companyAddress: 'Centre-ville',
+      companyEmail: 'contact@example.com',
+      companyPhone: '0600000000',
+      warehouseName: 'Boutique principale',
+      companyLogoUrl: null,
+      paymentType: 'Espece',
+      paymentStatus: 'Paye',
+      receivedAmount: 100,
+      change: 0.5,
+      serviceId: service?.id ?? _activeServiceId,
+      template: service?.isKitchen == true ? 'kitchen' : (service?.template ?? 'receipt'),
+    );
+  }
+
+  void _appendCut(
+    List<int> bytes,
+    Generator generator, {
+    required bool autoCut,
+  }) {
+    bytes.addAll(generator.feed(6));
+    if (autoCut) {
+      // Some printers ignore one cut variant but accept another.
+      // Send the library cut first, then common raw ESC/POS fallbacks.
+      bytes.addAll(generator.cut(mode: PosCutMode.full));
+      bytes.addAll(<int>[0x1D, 0x56, 0x00]); // GS V 0 full cut
+      bytes.addAll(<int>[0x1D, 0x56, 0x01]); // GS V 1 partial cut
+      bytes.addAll(<int>[0x1D, 0x56, 0x41, 0x00]); // GS V A 0
+      bytes.addAll(<int>[0x1D, 0x56, 0x41, 0x01]); // GS V A 1
+      bytes.addAll(<int>[0x1B, 0x69]); // ESC i
+      bytes.addAll(<int>[0x1B, 0x6D]); // ESC m
+    } else {
+      bytes.addAll(generator.feed(2));
+    }
+  }
+
+  String _serviceLabel(PrintingService? service) {
+    if (service == null) return '';
+    if (service.isKitchen) return 'Cuisine';
+    if (service.isKiosk) return 'Borne';
+    if (service.isReceipt) return 'POS';
+    final name = service.name.trim();
+    return name.isEmpty ? '' : name;
+  }
+
+  PrintingService? _resolveService(int? serviceId) {
+    final resolvedId = serviceId ?? _activeServiceId;
+    if (resolvedId == null) return _services.isNotEmpty ? _services.first : null;
+    for (final service in _services) {
+      if (service.id == resolvedId) return service;
+    }
+    return _services.isNotEmpty ? _services.first : null;
+  }
+
+  List<CartItem> _buildExampleItems() {
+    return [
+      CartItem(
+        product: Product(
+          id: 1,
+          name: 'Burger maison',
+          code: 'BG-01',
+          price: 45,
+          cost: 0,
+          stockQuantity: 0,
+          taxValue: 0,
+          options: const [],
+        ),
+        quantity: 2,
+        options: const [
+          ProductOption(id: 1, name: 'Fromage', quantity: 1),
+          ProductOption(id: 2, name: 'Sauce maison', quantity: 1),
+        ],
+      ),
+      CartItem(
+        product: Product(
+          id: 2,
+          name: 'Boisson',
+          code: 'DR-01',
+          price: 5,
+          cost: 0,
+          stockQuantity: 0,
+          taxValue: 0,
+          options: const [],
+        ),
+        quantity: 1,
+      ),
+    ];
   }
 
   Future<void> _loadSettings() async {

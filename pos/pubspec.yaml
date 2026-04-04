@@ -31,6 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.2
+  crypto: ^3.0.6
   provider: ^6.1.2
   intl: ^0.19.0
   shared_preferences: ^2.2.3
@@ -55,6 +56,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+dependency_overrides:
+  blue_thermal_printer:
+    path: packages/blue_thermal_printer
+  flutter_usb_printer:
+    path: packages/flutter_usb_printer
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

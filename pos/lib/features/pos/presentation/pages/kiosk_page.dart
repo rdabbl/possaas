@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -110,9 +108,7 @@ class _KioskPageState extends State<KioskPage> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 1000;
-                final isCompact = constraints.maxWidth < 720;
                 final panelSpacing = isWide ? 28.0 : 20.0;
-                final outerPadding = isCompact ? 12.0 : 20.0;
                 final content = isWide
                     ? Row(
                         children: [
@@ -204,7 +200,7 @@ class _KioskPageState extends State<KioskPage> {
                       );
 
                 return Padding(
-                  padding: EdgeInsets.all(outerPadding),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
                       Row(
@@ -304,8 +300,18 @@ class _KioskPageState extends State<KioskPage> {
     final resolved = services.isNotEmpty
         ? services
         : [PrintingService.fallback(storeId: pos.selectedWarehouse?.id ?? 0)];
+    final kioskTargets = resolved
+        .where((service) => service.template.trim().toLowerCase() == 'kiosk')
+        .toList();
     printer.syncServices(resolved);
-    for (final service in resolved) {
+    for (final service in kioskTargets) {
+      await printer.printKioskQueueTicket(
+        queueNumber: queueNumber,
+        companyName: pos.companyName,
+        serviceId: service.id,
+      );
+    }
+    for (final service in const <PrintingService>[]) {
       await printer.printSaleReceipt(
         items: List<CartItem>.from(_cart),
         subTotal: _cartTotal,
@@ -434,98 +440,78 @@ class _KioskMenuPanel extends StatelessWidget {
       const Color(0xFFDDF7E3),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 600;
-        final padding = isCompact ? 16.0 : 24.0;
-        final spacing = 14.0;
-        final minCardWidth = isCompact ? 150.0 : 180.0;
-        int columns =
-            (constraints.maxWidth / (minCardWidth + spacing)).floor();
-        if (columns < 1) columns = 1;
-        if (columns > 3) columns = 3;
-        final cardWidth = ((constraints.maxWidth -
-                    (columns - 1) * spacing) /
-                columns)
-            .clamp(minCardWidth, 220.0)
-            .toDouble();
-
-        return _KioskPanelShell(
-          child: Padding(
-            padding: EdgeInsets.all(padding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return _KioskPanelShell(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF4D6),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Center(
-                        child: Text(
-                          tr('M'),
-                          style: TextStyle(
-                            color: Color(0xFFE8A700),
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF4D6),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: Text(
+                      tr('M'),
+                      style: TextStyle(
+                        color: Color(0xFFE8A700),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _CategoryChip(
-                      label: strings.all,
-                      selected: selectedCategoryId == null,
-                      onTap: () => onCategorySelected(null),
-                    ),
-                    for (final category in categories)
-                      _CategoryChip(
-                        label: category.name,
-                        selected: selectedCategoryId == category.id,
-                        onTap: () => onCategorySelected(category.id),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Expanded(
-                  child: isLoading && products.isEmpty
-                      ? const Center(child: CircularProgressIndicator())
-                      : products.isEmpty
-                          ? Center(child: Text(strings.noProducts))
-                          : SingleChildScrollView(
-                              child: Wrap(
-                                spacing: spacing,
-                                runSpacing: spacing,
-                                children: [
-                                  for (var i = 0; i < products.length; i++)
-                                    _MenuCard(
-                                      width: cardWidth,
-                                      title: products[i].name,
-                                      price: products[i].price,
-                                      imageUrl: products[i].imageUrl,
-                                      accent: palette[i % palette.length],
-                                      onTap: () =>
-                                          onProductSelected(products[i]),
-                                    ),
-                                ],
-                              ),
-                            ),
+                  ),
                 ),
               ],
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _CategoryChip(
+                  label: strings.all,
+                  selected: selectedCategoryId == null,
+                  onTap: () => onCategorySelected(null),
+                ),
+                for (final category in categories)
+                  _CategoryChip(
+                    label: category.name,
+                    selected: selectedCategoryId == category.id,
+                    onTap: () => onCategorySelected(category.id),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Expanded(
+              child: isLoading && products.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : products.isEmpty
+                      ? Center(child: Text(strings.noProducts))
+                      : SingleChildScrollView(
+                          child: Wrap(
+                            spacing: 14,
+                            runSpacing: 14,
+                            children: [
+                              for (var i = 0; i < products.length; i++)
+                                _MenuCard(
+                                  title: products[i].name,
+                                  price: products[i].price,
+                                  imageUrl: products[i].imageUrl,
+                                  accent: palette[i % palette.length],
+                                  onTap: () => onProductSelected(products[i]),
+                                ),
+                            ],
+                          ),
+                        ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -563,161 +549,137 @@ class _KioskDetailPanel extends StatelessWidget {
     final canSubmit = cartCount > 0 || hasProduct;
 
     return _KioskPanelShell(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final shortestSide =
-              math.min(constraints.maxWidth, constraints.maxHeight);
-          final imageSize =
-              (shortestSide * 0.4).clamp(160.0, 220.0).toDouble();
-          final iconSize = (imageSize * 0.5).clamp(80.0, 110.0).toDouble();
-          final isCompact = constraints.maxWidth < 520;
-          final verticalPadding = isCompact ? 14.0 : 16.0;
-          final chipPadding = isCompact ? 14.0 : 18.0;
-          final panelPadding = EdgeInsets.fromLTRB(
-            isCompact ? 18.0 : 24.0,
-            isCompact ? 14.0 : 18.0,
-            isCompact ? 18.0 : 24.0,
-            isCompact ? 18.0 : 24.0,
-          );
-
-          return Padding(
-            padding: panelPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                AppNetworkImage(
-                  url: product?.imageUrl,
-                  width: imageSize,
-                  height: imageSize,
-                  isCircle: true,
-                  backgroundColor: const Color(0xFFFFE0D6),
-                  fallbackIcon: Icons.lunch_dining,
-                  iconSize: iconSize,
-                  iconColor: Colors.black54,
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  product?.name ?? strings.selectProduct,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: chipPadding,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Text(
-                    priceLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                const Spacer(),
-                if (cartCount > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(strings.cartSummary(cartCount),
-                                  style: theme.textTheme.bodyMedium),
-                              Text(
-                                _formatCurrency(
-                                  cartTotal,
-                                  currencySymbol,
-                                  symbolOnRight,
-                                ),
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF4C62F),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.shopping_cart_outlined,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFF4C62F),
-                      foregroundColor: Colors.black,
-                      padding: EdgeInsets.symmetric(vertical: verticalPadding),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    onPressed: hasProduct ? onAdd : null,
-                    icon: const Icon(Icons.shopping_cart_outlined),
-                    label: Text(
-                      strings.addToCart,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            AppNetworkImage(
+              url: product?.imageUrl,
+              width: 220,
+              height: 220,
+              isCircle: true,
+              backgroundColor: const Color(0xFFFFE0D6),
+              fallbackIcon: Icons.lunch_dining,
+              iconSize: 110,
+              iconColor: Colors.black54,
+            ),
+            const SizedBox(height: 18),
+            Text(
+              product?.name ?? strings.selectProduct,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Text(
+                priceLabel,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            const Spacer(),
+            if (cartCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: canSubmit ? onOrder : null,
-                        icon: const Icon(Icons.receipt_long),
-                        label: Text(strings.order),
-                        style: OutlinedButton.styleFrom(
-                          padding:
-                              EdgeInsets.symmetric(vertical: verticalPadding),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(strings.cartSummary(cartCount),
+                              style: theme.textTheme.bodyMedium),
+                          Text(
+                            _formatCurrency(
+                              cartTotal,
+                              currencySymbol,
+                              symbolOnRight,
+                            ),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: canSubmit ? onCheckout : null,
-                        icon: const Icon(Icons.payments_outlined),
-                        label: Text(strings.checkout),
-                        style: FilledButton.styleFrom(
-                          padding:
-                              EdgeInsets.symmetric(vertical: verticalPadding),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          backgroundColor: const Color(0xFF16A34A),
-                          foregroundColor: Colors.white,
-                        ),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4C62F),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.shopping_cart_outlined,
+                        color: Colors.black,
                       ),
                     ),
                   ],
                 ),
+              ),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFF4C62F),
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: hasProduct ? onAdd : null,
+                icon: const Icon(Icons.shopping_cart_outlined),
+                label: Text(
+                  strings.addToCart,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: canSubmit ? onOrder : null,
+                    icon: const Icon(Icons.receipt_long),
+                    label: Text(strings.order),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: canSubmit ? onCheckout : null,
+                    icon: const Icon(Icons.payments_outlined),
+                    label: Text(strings.checkout),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
               ],
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
@@ -762,7 +724,6 @@ class _CategoryChip extends StatelessWidget {
 
 class _MenuCard extends StatelessWidget {
   const _MenuCard({
-    required this.width,
     required this.title,
     required this.price,
     required this.accent,
@@ -770,7 +731,6 @@ class _MenuCard extends StatelessWidget {
     this.imageUrl,
   });
 
-  final double width;
   final String title;
   final double price;
   final Color accent;
@@ -780,13 +740,11 @@ class _MenuCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final imageHeight =
-        (width * 0.55).clamp(90.0, 130.0).toDouble();
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
       child: Container(
-        width: width,
+        width: 200,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: accent,
@@ -798,7 +756,7 @@ class _MenuCard extends StatelessWidget {
             AppNetworkImage(
               url: imageUrl,
               width: double.infinity,
-              height: imageHeight,
+              height: 110,
               borderRadius: BorderRadius.circular(16),
               backgroundColor: Colors.white,
               fallbackIcon: Icons.fastfood,

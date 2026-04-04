@@ -1,28 +1,32 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/appearance_settings_storage.dart';
 
 class AppearanceController extends ChangeNotifier {
+  static final bool _isAndroid =
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
   AppearanceController({AppearanceSettingsStorage? storage})
       : _storage = storage ?? const AppearanceSettingsStorage();
 
   Color _accentColor = const Color(0xFF0F9A8A);
   int _productGridColumns = 3;
   bool _useDarkMode = false;
-  bool _showClientField = true;
-  bool _showWarehouseField = true;
-  bool _showSearchInput = true;
-  bool _showCategoryFilter = true;
-  bool _showAddToCartButton = true;
-  bool _showProductCode = true;
-  bool _showStockInfo = true;
-  bool _showCartSummary = true;
-  bool _showTotalsInCart = true;
-  bool _showProductList = true;
-  bool _showCashButton = true;
-  bool _showResetButton = true;
-  bool _showHoldButton = true;
-  bool _showHistoryPanel = true;
+  bool _showClientField = !_isAndroid;
+  bool _showWarehouseField = !_isAndroid;
+  bool _showSearchInput = !_isAndroid;
+  bool _showCategoryFilter = !_isAndroid;
+  bool _showAddToCartButton = !_isAndroid;
+  bool _showProductCode = !_isAndroid;
+  bool _showStockInfo = !_isAndroid;
+  bool _showCartSummary = !_isAndroid;
+  bool _showTotalsInCart = !_isAndroid;
+  bool _showProductList = !_isAndroid;
+  bool _showCashButton = !_isAndroid;
+  bool _showResetButton = !_isAndroid;
+  bool _showHoldButton = !_isAndroid;
+  bool _showHistoryPanel = !_isAndroid;
   bool _showPrintPreview = true;
   double _uiScale = 1.0;
   bool _resetHistoryAt4Am = false;

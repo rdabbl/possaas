@@ -1,31 +1,40 @@
 import 'dart:io';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:pos_printer_manager/helpers/network_analyzer.dart';
 import 'package:pos_printer_manager/pos_printer_manager.dart';
 
 class NetworkService {}
 
-Future<List<String>> findNetworkPrinter({int port: 9100}) async {
-  final _info = NetworkInfo();
-  String? ip = await (_info.getWifiIP());
-  if (ip?.isEmpty == true) {
-    ip = (await getAddresses()).first;
+Future<List<String>> findNetworkPrinter({int port = 9100}) async {
+  String? ip = await _getPreferredLocalIp();
+  if (ip == null || ip.isEmpty) {
+    return <String>[];
   }
   PosPrinterManager.logger.info("ip: $ip");
-  final String subnet = ip!.substring(0, ip.lastIndexOf('.'));
+  final String subnet = ip.substring(0, ip.lastIndexOf('.'));
   PosPrinterManager.logger.info("subnet: $subnet");
 
   final stream = NetworkAnalyzer.discover2(subnet, port);
   var results = await stream.toList();
-  return [
-    ...results.where((entry) => entry.exists).toList().map((e) => e.ip).toList()
-  ];
+  return [...results.where((entry) => entry.exists).map((e) => e.ip)];
 }
 
 Future<List<String>> getAddresses() async {
-  var interfaces = await NetworkInterface.list();
-  List<String> results = [];
-  interfaces.fold(results,
-      (dynamic pre, e) => results.addAll(e.addresses.map((e) => e.address).toList()));
+  final interfaces = await NetworkInterface.list();
+  final results = <String>[];
+  for (final interface in interfaces) {
+    results.addAll(interface.addresses.map((address) => address.address));
+  }
   return results;
+}
+
+Future<String?> _getPreferredLocalIp() async {
+  final addresses = await getAddresses();
+  for (final address in addresses) {
+    if (address.contains('.') &&
+        !address.startsWith('127.') &&
+        !address.startsWith('169.254.')) {
+      return address;
+    }
+  }
+  return addresses.isNotEmpty ? addresses.first : null;
 }

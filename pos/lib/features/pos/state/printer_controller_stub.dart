@@ -184,7 +184,19 @@ class PrinterSettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> testPrint() async {
+  Future<void> testPrint({int? serviceId}) async {
+    _setStatus('Impression non disponible sur Web.', true);
+  }
+
+  Future<void> testPrintAllServices() async {
+    _setStatus('Impression non disponible sur Web.', true);
+  }
+
+  Future<void> printKioskQueueTicket({
+    required int queueNumber,
+    required String? companyName,
+    int? serviceId,
+  }) async {
     _setStatus('Impression non disponible sur Web.', true);
   }
 

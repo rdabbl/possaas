@@ -314,10 +314,15 @@ class _LoginPageState extends State<LoginPage> {
   void _handleLogin() {
     final auth = context.read<AuthController>();
     if (_formKey.currentState?.validate() ?? false) {
+      debugPrint(
+        '[LoginPage] Login tapped. identifier="${_identifierController.text.trim()}" offlineMode=${auth.offlineMode}',
+      );
       auth.login(
         _identifierController.text.trim(),
         _passwordController.text,
       );
+    } else {
+      debugPrint('[LoginPage] Login validation failed.');
     }
   }
 

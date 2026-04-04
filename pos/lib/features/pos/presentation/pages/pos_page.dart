@@ -49,6 +49,22 @@ List<PrintingService> _resolvePrintingServices(PosController controller) {
   return [PrintingService.fallback(storeId: storeId)];
 }
 
+List<PrintingService> _servicesForTemplate(
+  List<PrintingService> services,
+  String template, {
+  int storeId = 0,
+}) {
+  final normalized = template.trim().toLowerCase();
+  final filtered = services
+      .where((service) => service.template.trim().toLowerCase() == normalized)
+      .toList();
+  if (filtered.isNotEmpty) return filtered;
+  if (normalized == 'receipt' && services.isEmpty) {
+    return [PrintingService.fallback(storeId: storeId)];
+  }
+  return <PrintingService>[];
+}
+
 OutlineInputBorder _outlineInputBorder(
   BuildContext context, {
   double radius = 12,
@@ -88,6 +104,9 @@ String _historyLabelForHours(int hours) {
       return '$hours${tr('h')}';
   }
 }
+
+const double _posDesignWidth = 1440;
+const double _posDesignHeight = 860;
 
 class PosPage extends StatefulWidget {
   const PosPage({super.key});
@@ -205,12 +224,6 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final isCompact = screenSize.width < 720;
-    final outerPadding = isCompact ? 12.0 : 24.0;
-    final containerPadding = isCompact ? 12.0 : 20.0;
-    final containerRadius = isCompact ? 20.0 : 32.0;
-    final containerShadowBlur = isCompact ? 18.0 : 24.0;
     final auth = context.watch<AuthController>();
     return Consumer<PosController>(
       builder: (context, controller, _) {
@@ -223,7 +236,7 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
             }
           });
         }
-        final body = controller.isLoading && controller.products.isEmpty
+        final content = controller.isLoading && controller.products.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
@@ -240,124 +253,65 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
                       onDismiss: controller.clearMessages,
                     ),
                   Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final panelSpacing = constraints.maxWidth < 1100 ? 16.0 : 24.0;
-                        final cartWidth = (constraints.maxWidth * 0.3)
-                            .clamp(300.0, 420.0)
-                            .toDouble();
-                        const minCatalogWidth = 740.0;
-                        final contentMinWidth =
-                            minCatalogWidth + cartWidth + panelSpacing;
-                        final useHorizontalScroll =
-                            constraints.maxWidth < contentMinWidth;
-                        final rowContent = SizedBox(
-                          width: useHorizontalScroll
-                              ? contentMinWidth
-                              : constraints.maxWidth,
-                          height: constraints.maxHeight,
-                          child: Row(
-                            children: [
-                              if (useHorizontalScroll)
-                                SizedBox(
-                                  width: minCatalogWidth,
-                                  child: _CatalogPanel(
-                                    controller: controller,
-                                    searchController: _searchController,
-                                    onOpenMenu: _openQuickMenu,
-                                    onOpenHistory: _openOrderHistory,
-                                    onOpenCalculator: _openCalculator,
-                                    onOpenKiosk: _openKioskPage,
-                                    onRefresh: () =>
-                                        controller.refreshProducts(
-                                      skipSyncOffline: true,
-                                    ),
-                                    onCashInHand: () =>
-                                        _promptCashInHandIfNeeded(force: true),
-                                    onSync: controller.refreshProducts,
-                                    onReconnect: _attemptReconnect,
-                                    offlineMode: controller.offlineMode,
-                                    lastSyncAt: controller.lastSyncAt,
-                                    onLogout: () async {
-                                      await context
-                                          .read<AuthController>()
-                                          .logout();
-                                    },
-                                    onSelectProduct: (product) =>
-                                        _handleProductSelection(
-                                      controller,
-                                      product,
-                                    ),
-                                  ),
-                                )
-                              else
-                                Expanded(
-                                  child: _CatalogPanel(
-                                    controller: controller,
-                                    searchController: _searchController,
-                                    onOpenMenu: _openQuickMenu,
-                                    onOpenHistory: _openOrderHistory,
-                                    onOpenCalculator: _openCalculator,
-                                    onOpenKiosk: _openKioskPage,
-                                    onRefresh: () =>
-                                        controller.refreshProducts(
-                                      skipSyncOffline: true,
-                                    ),
-                                    onCashInHand: () =>
-                                        _promptCashInHandIfNeeded(force: true),
-                                    onSync: controller.refreshProducts,
-                                    onReconnect: _attemptReconnect,
-                                    offlineMode: controller.offlineMode,
-                                    lastSyncAt: controller.lastSyncAt,
-                                    onLogout: () async {
-                                      await context
-                                          .read<AuthController>()
-                                          .logout();
-                                    },
-                                    onSelectProduct: (product) =>
-                                        _handleProductSelection(
-                                      controller,
-                                      product,
-                                    ),
-                                  ),
-                                ),
-                              SizedBox(width: panelSpacing),
-                              SizedBox(
-                                width: cartWidth,
-                                child: _CartPanel(
-                                  controller: controller,
-                                  discountController: _discountController,
-                                  shippingController: _shippingController,
-                                  taxController: _taxController,
-                                  loyaltyController: _loyaltyController,
-                                  notesController: _notesController,
-                                ),
-                              ),
-                            ],
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDFDFB),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 24,
+                            offset: Offset(0, 12),
                           ),
-                        );
-                        return Container(
-                          padding: EdgeInsets.all(containerPadding),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFDFDFB),
-                            borderRadius:
-                                BorderRadius.circular(containerRadius),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0x1A000000),
-                                blurRadius: containerShadowBlur,
-                                offset: Offset(0, 12),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 7,
+                            child: _CatalogPanel(
+                              controller: controller,
+                              searchController: _searchController,
+                              onOpenMenu: _openQuickMenu,
+                              onOpenHistory: _openOrderHistory,
+                              onOpenCalculator: _openCalculator,
+                              onOpenKiosk: _openKioskPage,
+                              onRefresh: () => controller.refreshProducts(
+                                skipSyncOffline: true,
                               ),
-                            ],
+                              onCashInHand: () =>
+                                  _promptCashInHandIfNeeded(force: true),
+                              onSync: controller.refreshProducts,
+                              onReconnect: _attemptReconnect,
+                              offlineMode: controller.offlineMode,
+                              lastSyncAt: controller.lastSyncAt,
+                              onLogout: () async {
+                                await context.read<AuthController>().logout();
+                              },
+                              onSelectProduct: (product) =>
+                                  _handleProductSelection(
+                                controller,
+                                product,
+                              ),
+                            ),
                           ),
-                          child: useHorizontalScroll
-                              ? SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: rowContent,
-                                )
-                              : rowContent,
-                        );
-                      },
+                          const SizedBox(width: 16),
+                          SizedBox(
+                            width: 332,
+                            child: _CartPanel(
+                              controller: controller,
+                              discountController:
+                              _discountController,
+                              shippingController:
+                              _shippingController,
+                              taxController: _taxController,
+                              loyaltyController: _loyaltyController,
+                              notesController: _notesController,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -366,9 +320,29 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
         return Scaffold(
           backgroundColor: const Color(0xFFF8F1D7),
           body: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.all(outerPadding),
-              child: body,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Center(
+                    child: ClipRect(
+                      child: SizedBox(
+                        width: constraints.maxWidth - 24,
+                        height: constraints.maxHeight - 24,
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          alignment: Alignment.topCenter,
+                          child: SizedBox(
+                            width: _posDesignWidth,
+                            height: _posDesignHeight,
+                            child: content,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         );
@@ -1687,98 +1661,127 @@ Future<void> _showActionMenu(
       const accent = Color(0xFFF7C045);
       return SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFDFDFB),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFFEFEFEF)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x1A000000),
-                  blurRadius: 24,
-                  offset: Offset(0, 12),
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 14),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final height = constraints.maxHeight;
+              const crossAxisCount = 5;
+              final compactHeight = height < 700;
+              final iconSize = compactHeight ? 30.0 : 34.0;
+              final iconGlyphSize = compactHeight
+                  ? 20.0
+                  : 22.0;
+              final spacing = compactHeight ? 6.0 : 8.0;
+              final childAspectRatio = compactHeight
+                  ? 0.98
+                  : 0.92;
+
+              return Container(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFDFDFB),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFEFEFEF)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x1A000000),
+                      blurRadius: 24,
+                      offset: Offset(0, 12),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  tr('Actions'),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF111827),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: items.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 0.9,
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final enabled = item.onTap != null;
-                    final labelStyle = theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: enabled
-                          ? const Color(0xFF111827)
-                          : const Color(0xFF9CA3AF),
-                    );
-                    return InkWell(
-                      onTap: enabled
-                          ? () {
-                              Navigator.of(context).pop();
-                              item.onTap?.call();
-                            }
-                          : null,
-                      borderRadius: BorderRadius.circular(18),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: item.background ?? const Color(0xFFFFFBF1),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: const Color(0xFFF6D58F),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      tr('Actions'),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: const Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: height * 0.72,
+                      ),
+                      child: SingleChildScrollView(
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: items.length,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            mainAxisSpacing: spacing,
+                            crossAxisSpacing: spacing,
+                            childAspectRatio: childAspectRatio,
                           ),
-                        ),
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 54,
-                              height: 54,
-                              decoration: BoxDecoration(
-                                color: item.background ?? accent,
-                                shape: BoxShape.circle,
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+                            final enabled = item.onTap != null;
+                            final labelStyle = theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: enabled
+                                  ? const Color(0xFF111827)
+                                  : const Color(0xFF9CA3AF),
+                            );
+                            return InkWell(
+                              onTap: enabled
+                                  ? () {
+                                      Navigator.of(context).pop();
+                                      item.onTap?.call();
+                                    }
+                                  : null,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: item.background ?? const Color(0xFFFFFBF1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFFF6D58F),
+                                  ),
+                                ),
+                                padding: EdgeInsets.all(compactHeight ? 4 : 5),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: iconSize,
+                                      height: iconSize,
+                                      decoration: BoxDecoration(
+                                        color: item.background ?? accent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        item.icon,
+                                        size: iconGlyphSize,
+                                        color: item.color ?? Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.label,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: labelStyle?.copyWith(
+                                        fontSize: compactHeight ? 9 : 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              child: Icon(
-                                item.icon,
-                                size: 30,
-                                color: item.color ?? Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              item.label,
-                              textAlign: TextAlign.center,
-                              style: labelStyle,
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       );
@@ -1889,17 +1892,13 @@ class _CartPanel extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: 12),
-          Expanded(
-            child: SingleChildScrollView(
-              child: _CartSummaryCard(
-                controller: controller,
-                discountController: discountController,
-                shippingController: shippingController,
-                taxController: taxController,
-                loyaltyController: loyaltyController,
-                notesController: notesController,
-              ),
-            ),
+          _CartSummaryCard(
+            controller: controller,
+            discountController: discountController,
+            shippingController: shippingController,
+            taxController: taxController,
+            loyaltyController: loyaltyController,
+            notesController: notesController,
           ),
           const SizedBox(height: 12),
           _CartActions(
@@ -2318,19 +2317,14 @@ class _CartSummaryCardState extends State<_CartSummaryCard> {
           final caption = shippingMethodCaption(method);
           return DropdownMenuItem(
             value: method,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(method.name, style: const TextStyle(fontSize: 12)),
-                if (caption.isNotEmpty)
-                  Text(
-                    caption,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-              ],
+            child: Text(
+              caption.isNotEmpty ? '${method.name} • $caption' : method.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF111827),
+              ),
             ),
           );
         }).toList(),
@@ -2340,6 +2334,156 @@ class _CartSummaryCardState extends State<_CartSummaryCard> {
 
     final showManualShipping =
         !hasShippingMethods || (selectedMethod?.isManual ?? false);
+
+    final expandedContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        summaryRow(
+          tr('Subtotal'),
+          formatAmount(controller.subTotal),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Text(
+              discountLabel,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+            ),
+            const Spacer(),
+            ToggleButtons(
+              isSelected: [!isPercent, isPercent],
+              onPressed: (index) {
+                final nextMode =
+                    index == 1 ? DiscountMode.percentage : DiscountMode.fixed;
+                controller.updateDiscountMode(nextMode);
+              },
+              borderRadius: BorderRadius.circular(10),
+              constraints: const BoxConstraints(minHeight: 30, minWidth: 36),
+              selectedColor: Colors.white,
+              color: const Color(0xFF6B7280),
+              fillColor: const Color(0xFFF7C045),
+              children: [
+                Text(tr('Amt'), style: TextStyle(fontSize: 11)),
+                Text(tr('%'), style: TextStyle(fontSize: 12)),
+              ],
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 90,
+              child: TextField(
+                controller: widget.discountController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                textAlign: TextAlign.right,
+                onChanged: (value) =>
+                    controller.updateDiscount(parseInput(value)),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFF7C045)),
+                  ),
+                  suffixText: isPercent ? '%' : symbol,
+                ),
+              ),
+            ),
+          ],
+        ),
+        buildDiscountPresets(),
+        if (controller.loyaltyEnabled &&
+            (controller.selectedCustomer?.id ?? 0) > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Column(
+              children: [
+                summaryRow(
+                  tr('Loyalty balance'),
+                  '${controller.selectedCustomerPoints} ${tr('pts')} '
+                      '(${formatAmount(controller.loyaltyAvailableAmount)})',
+                ),
+                if (allowLoyaltyRedeem) ...[
+                  const SizedBox(height: 6),
+                  editableRow(
+                    label: tr('Use loyalty'),
+                    controller: widget.loyaltyController,
+                    onChanged: (value) =>
+                        controller.updateLoyaltyRedeemAmount(
+                              parseInput(value),
+                            ),
+                    suffixText: symbol,
+                  ),
+                ],
+                if (controller.loyaltyEstimatedPoints > 0) ...[
+                  const SizedBox(height: 6),
+                  summaryRow(
+                    tr('Points earned'),
+                    '${controller.loyaltyEstimatedPoints} ${tr('pts')}',
+                  ),
+                ],
+              ],
+            ),
+          ),
+        const SizedBox(height: 6),
+        editableRow(
+          label: tr('Tax (%)'),
+          controller: widget.taxController,
+          onChanged: (value) =>
+              controller.updateTaxRate(parseInput(value)),
+          suffixText: tr('%'),
+        ),
+        const SizedBox(height: 6),
+        if (hasShippingMethods) buildShippingSelector(),
+        if (hasShippingMethods) const SizedBox(height: 6),
+        if (showManualShipping)
+          editableRow(
+            label: tr('Shipping'),
+            controller: widget.shippingController,
+            onChanged: (value) =>
+                controller.updateShipping(parseInput(value)),
+            suffixText: symbol,
+          )
+        else
+          summaryRow(
+            tr('Shipping'),
+            formatAmount(controller.shipping),
+          ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: widget.notesController,
+          minLines: 2,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: tr('Notes'),
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFF7C045)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -2381,150 +2525,12 @@ class _CartSummaryCardState extends State<_CartSummaryCard> {
             ],
           ),
           if (_expanded) ...[
-            summaryRow(
-              tr('Subtotal'),
-              formatAmount(controller.subTotal),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Text(
-                  discountLabel,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-                ),
-                const Spacer(),
-                ToggleButtons(
-                  isSelected: [!isPercent, isPercent],
-                  onPressed: (index) {
-                    final nextMode =
-                        index == 1 ? DiscountMode.percentage : DiscountMode.fixed;
-                    controller.updateDiscountMode(nextMode);
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  constraints: const BoxConstraints(minHeight: 30, minWidth: 36),
-                  selectedColor: Colors.white,
-                  color: const Color(0xFF6B7280),
-                  fillColor: const Color(0xFFF7C045),
-                  children: [
-                    Text(tr('Amt'), style: TextStyle(fontSize: 11)),
-                    Text(tr('%'), style: TextStyle(fontSize: 12)),
-                  ],
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 90,
-                  child: TextField(
-                    controller: widget.discountController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    textAlign: TextAlign.right,
-                    onChanged: (value) =>
-                        controller.updateDiscount(parseInput(value)),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFF7C045)),
-                      ),
-                      suffixText: isPercent ? '%' : symbol,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            buildDiscountPresets(),
-            if (controller.loyaltyEnabled &&
-                (controller.selectedCustomer?.id ?? 0) > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Column(
-                  children: [
-                    summaryRow(
-                      tr('Loyalty balance'),
-                      '${controller.selectedCustomerPoints} ${tr('pts')} '
-                          '(${formatAmount(controller.loyaltyAvailableAmount)})',
-                    ),
-                    if (allowLoyaltyRedeem) ...[
-                      const SizedBox(height: 6),
-                      editableRow(
-                        label: tr('Use loyalty'),
-                        controller: widget.loyaltyController,
-                        onChanged: (value) =>
-                            controller.updateLoyaltyRedeemAmount(
-                                  parseInput(value),
-                                ),
-                        suffixText: symbol,
-                      ),
-                    ],
-                    if (controller.loyaltyEstimatedPoints > 0) ...[
-                      const SizedBox(height: 6),
-                      summaryRow(
-                        tr('Points earned'),
-                        '${controller.loyaltyEstimatedPoints} ${tr('pts')}',
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            const SizedBox(height: 6),
-            editableRow(
-              label: tr('Tax (%)'),
-              controller: widget.taxController,
-              onChanged: (value) =>
-                  controller.updateTaxRate(parseInput(value)),
-              suffixText: tr('%'),
-            ),
-            const SizedBox(height: 6),
-            if (hasShippingMethods) buildShippingSelector(),
-            if (hasShippingMethods) const SizedBox(height: 6),
-            if (showManualShipping)
-              editableRow(
-                label: tr('Shipping'),
-                controller: widget.shippingController,
-                onChanged: (value) =>
-                    controller.updateShipping(parseInput(value)),
-                suffixText: symbol,
-              )
-            else
-              summaryRow(
-                tr('Shipping'),
-                formatAmount(controller.shipping),
-              ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: widget.notesController,
-              minLines: 2,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: tr('Notes'),
-                isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFF7C045)),
-                ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 260),
+              child: SingleChildScrollView(
+                child: expandedContent,
               ),
             ),
-            const SizedBox(height: 8),
           ],
           summaryRow(
             tr('Final'),
@@ -2913,8 +2919,10 @@ class _CartActions extends StatelessWidget {
         foregroundColor: color,
         side: BorderSide(color: color, width: 1.2),
         shape: shape,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
         backgroundColor: Colors.white,
+        visualDensity: VisualDensity.compact,
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
       );
     }
 
@@ -2923,7 +2931,9 @@ class _CartActions extends StatelessWidget {
         backgroundColor: color,
         foregroundColor: Colors.white,
         shape: shape,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
+        visualDensity: VisualDensity.compact,
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
       );
     }
 
@@ -2983,11 +2993,17 @@ class _CartActions extends StatelessWidget {
               final shipping = controller.shipping;
               final grandTotal = controller.grandTotal;
               final services = _resolvePrintingServices(controller);
-              printerController.syncServices(services);
-              final receiptService = services.firstWhere(
-                (service) => service.isReceipt,
-                orElse: () => services.isNotEmpty ? services.first : PrintingService.fallback(),
+              final receiptTargets = _servicesForTemplate(
+                services,
+                'receipt',
+                storeId: controller.selectedWarehouse?.id ?? 0,
               );
+              printerController.syncServices(services);
+              final receiptService = receiptTargets.isNotEmpty
+                  ? receiptTargets.first
+                  : PrintingService.fallback(
+                      storeId: controller.selectedWarehouse?.id ?? 0,
+                    );
 
               if (shouldPrint && appearance.showPrintPreview && receiptService.isReceipt) {
                 final previewOk = await showDialog<bool>(
@@ -3002,7 +3018,9 @@ class _CartActions extends StatelessWidget {
                     companyPhone: controller.companyPhone,
                     warehouseName: controller.selectedWarehouse?.name,
                     subTotal: subTotal,
+                    discount: discount,
                     tax: tax,
+                    shipping: shipping,
                     total: grandTotal,
                     paymentType: selectedMethod.name,
                     paymentStatus: paymentStatusLabel,
@@ -3026,10 +3044,7 @@ class _CartActions extends StatelessWidget {
               if (!context.mounted || controller.errorMessage != null) return;
 
               if (shouldPrint) {
-                final targets = services.isNotEmpty
-                    ? services
-                    : [PrintingService.fallback(storeId: controller.selectedWarehouse?.id ?? 0)];
-                for (final service in targets) {
+                for (final service in receiptTargets) {
                   await printerController.printSaleReceipt(
                     items: cartSnapshot,
                     subTotal: subTotal,
@@ -3059,28 +3074,28 @@ class _CartActions extends StatelessWidget {
             },
       icon: controller.isProcessingSale
           ? const SizedBox(
-              width: 16,
-              height: 16,
+              width: 14,
+              height: 14,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 color: Colors.white,
               ),
             )
-          : const Icon(Icons.payments_outlined),
+          : const Icon(Icons.payments_outlined, size: 18),
       label: Text(tr('PAYER')),
     );
 
     final resetButton = OutlinedButton.icon(
       style: outlineStyle(resetColor),
       onPressed: controller.resetCart,
-      icon: const Icon(Icons.restart_alt),
+      icon: const Icon(Icons.restart_alt, size: 18),
       label: Text(tr('Reset')),
     );
 
     final holdButton = OutlinedButton.icon(
       style: outlineStyle(holdColor),
       onPressed: () => showError(tr('Hold non disponible pour le moment.')),
-      icon: const Icon(Icons.pause_circle_outline),
+      icon: const Icon(Icons.pause_circle_outline, size: 18),
       label: Text(tr('Hold')),
     );
 
@@ -3117,13 +3132,32 @@ class _CartActions extends StatelessWidget {
           const SizedBox(height: 8),
         ],
         if (buttonsList.isNotEmpty)
-          Row(
-            children: [
-              for (var i = 0; i < buttonsList.length; i++) ...[
-                Expanded(child: buttonsList[i]),
-                if (i < buttonsList.length - 1) const SizedBox(width: 12),
-              ],
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 320;
+              if (compact) {
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: buttonsList
+                      .map(
+                        (button) => SizedBox(
+                          width: constraints.maxWidth,
+                          child: button,
+                        ),
+                      )
+                      .toList(),
+                );
+              }
+              return Row(
+                children: [
+                  for (var i = 0; i < buttonsList.length; i++) ...[
+                    Expanded(child: buttonsList[i]),
+                    if (i < buttonsList.length - 1) const SizedBox(width: 8),
+                  ],
+                ],
+              );
+            },
           ),
       ],
     );
@@ -4890,6 +4924,37 @@ class _PrinterSettingsDialog extends StatelessWidget {
                   }).toList(),
                 ),
                 const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: controller.selectedDevice == null || controller.isTesting
+                        ? null
+                        : controller.testPrintAllServices,
+                    icon: controller.isTesting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.print_outlined),
+                    label: Text(tr('Impression globale')),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...controller.services.map(
+                  (service) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ServiceExamplePrintTile(
+                      service: service,
+                      isActive: controller.activeServiceId == service.id,
+                      isBusy: controller.isTesting,
+                      onPressed: controller.selectedDevice == null || controller.isTesting
+                          ? null
+                          : () => controller.testPrint(serviceId: service.id),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
               ],
               _PrinterTypeSelector(controller: controller),
               if (!controller.currentTypeSupported)
@@ -5027,7 +5092,7 @@ class _PrinterSettingsDialog extends StatelessWidget {
         ),
         FilledButton.icon(
           onPressed: controller.isTestEnabled
-              ? () => controller.testPrint()
+              ? () => controller.testPrint(serviceId: controller.activeServiceId)
               : null,
           icon: controller.isTesting
               ? const SizedBox(
@@ -5039,9 +5104,74 @@ class _PrinterSettingsDialog extends StatelessWidget {
                   ),
                 )
               : const Icon(Icons.print),
-          label: Text(tr('Test print')),
+          label: Text(tr('Ticket exemple')),
         ),
       ],
+    );
+  }
+}
+
+class _ServiceExamplePrintTile extends StatelessWidget {
+  const _ServiceExamplePrintTile({
+    required this.service,
+    required this.isActive,
+    required this.isBusy,
+    required this.onPressed,
+  });
+
+  final PrintingService service;
+  final bool isActive;
+  final bool isBusy;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: isActive
+            ? scheme.primaryContainer.withOpacity(0.35)
+            : scheme.surfaceVariant.withOpacity(0.25),
+        border: Border.all(
+          color: isActive ? scheme.primary.withOpacity(0.35) : scheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  service.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Template: ${service.template}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton.icon(
+            onPressed: onPressed,
+            icon: isBusy
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.print_outlined),
+            label: Text(tr('Imprimer exemple')),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -5171,6 +5301,20 @@ class _PaperOptions extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(tr('Taille du papier'), style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: controller.paperWidthOptions
+              .map(
+                (size) => ChoiceChip(
+                  label: Text('${size.toStringAsFixed(0)} mm'),
+                  selected: controller.paperWidth == size,
+                  onSelected: (_) => controller.updatePaperWidth(size),
+                ),
+              )
+              .toList(),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -6264,7 +6408,9 @@ class _ReceiptPreviewDialog extends StatelessWidget {
     required this.companyPhone,
     required this.warehouseName,
     required this.subTotal,
+    required this.discount,
     required this.tax,
+    required this.shipping,
     required this.total,
     required this.paymentType,
     required this.paymentStatus,
@@ -6282,7 +6428,9 @@ class _ReceiptPreviewDialog extends StatelessWidget {
   final String companyPhone;
   final String? warehouseName;
   final double subTotal;
+  final double discount;
   final double tax;
+  final double shipping;
   final double total;
   final String paymentType;
   final String paymentStatus;
@@ -6387,7 +6535,9 @@ class _ReceiptPreviewDialog extends StatelessWidget {
               ),
               const Divider(),
               _previewLine(tr('Sous-total'), format(subTotal)),
+              if (discount != 0) _previewLine(tr('Remise'), format(discount)),
               _previewLine(tr('Taxe'), format(tax)),
+              if (shipping != 0) _previewLine(tr('Livraison'), format(shipping)),
               const SizedBox(height: 4),
               _previewLine(tr('Total'), format(total), isBold: true),
               const Divider(),
