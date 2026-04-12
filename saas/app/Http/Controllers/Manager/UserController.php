@@ -36,6 +36,7 @@ class UserController extends Controller
     {
         return [
             'name' => $user->name,
+            'username' => $user->username,
             'email' => $user->email,
             'store_id' => $user->store_id,
             'is_active' => $user->is_active,
@@ -121,6 +122,7 @@ class UserController extends Controller
                 Rule::exists('stores', 'id')->where('manager_id', $managerId),
             ],
             'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
             'is_active' => ['nullable', 'boolean'],
@@ -133,6 +135,7 @@ class UserController extends Controller
             'manager_id' => $managerId,
             'store_id' => $data['store_id'],
             'name' => $data['name'],
+            'username' => $data['username'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'is_active' => $data['is_active'] ?? true,
@@ -193,6 +196,7 @@ class UserController extends Controller
                 Rule::exists('stores', 'id')->where('manager_id', $managerId),
             ],
             'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255', 'unique:users,username,' . $user->id],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'password' => ['nullable', 'string', 'min:6'],
             'is_active' => ['nullable', 'boolean'],
@@ -203,6 +207,7 @@ class UserController extends Controller
 
         $before = $this->snapshotUser($user);
         $user->name = $data['name'];
+        $user->username = $data['username'];
         $user->email = $data['email'];
         $user->store_id = $data['store_id'];
         $user->is_active = $data['is_active'] ?? $user->is_active;
@@ -255,10 +260,12 @@ class UserController extends Controller
         }
 
         $newEmail = $this->uniqueEmail($user->email);
+        $newUsername = $this->uniqueUsername($user->username ?: $user->name);
         $newUser = User::create([
             'manager_id' => $managerId,
             'store_id' => $user->store_id,
             'name' => trim($user->name) . ' (Copy)',
+            'username' => $newUsername,
             'email' => $newEmail,
             'password' => Hash::make(Str::random(12)),
             'is_active' => false,
@@ -274,7 +281,7 @@ class UserController extends Controller
         $this->logAudit($request, $newUser, 'duplicate', null, $this->snapshotUser($newUser));
 
         return redirect()->route('manager.users.edit', $newUser)
-            ->with('success', 'User duplicated. Update email/password.');
+            ->with('success', 'User duplicated. Update username/email/password.');
     }
 
     private function uniqueEmail(string $email): string
@@ -291,6 +298,21 @@ class UserController extends Controller
         while (User::where('email', $candidate)->exists()) {
             $candidate = $local . '+copy' . Str::random(6) . '@' . $domain;
         }
+        return $candidate;
+    }
+
+    private function uniqueUsername(string $username): string
+    {
+        $base = Str::of($username)->trim()->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+        if ($base === '') {
+            $base = 'user';
+        }
+
+        $candidate = $base . '_copy';
+        while (User::where('username', $candidate)->exists()) {
+            $candidate = $base . '_' . Str::lower(Str::random(6));
+        }
+
         return $candidate;
     }
 }

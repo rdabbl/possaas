@@ -140,6 +140,12 @@ class OrderSummary {
 
     final rawItems = source['items'] ?? source['sale_items'];
 
+    final String computedPaymentStatus =
+        (source['payment_status'] ?? source['paymentStatus'])?.toString() ??
+        (computedPaid >= grandTotal && grandTotal > 0
+            ? 'paid'
+            : (computedPaid > 0 ? 'partial' : 'unpaid'));
+
     return OrderSummary(
       id: _parseInt(json['id'] ?? source['id']),
       referenceCode:
@@ -154,8 +160,7 @@ class OrderSummary {
           ? null
           : (source['note']).toString(),
       status: status,
-      paymentStatus:
-          (source['payment_status'] ?? source['paymentStatus'] ?? status).toString(),
+      paymentStatus: computedPaymentStatus,
       grandTotal: grandTotal,
       paidAmount: computedPaid,
       itemCount: _parseInt(

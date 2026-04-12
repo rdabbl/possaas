@@ -33,6 +33,7 @@
             <thead>
                 <tr>
                     <th>{{ t("Name") }}</th>
+                    <th>{{ t("Username") }}</th>
                     <th>{{ t("Email") }}</th>
                     <th>{{ t("Store") }}</th>
                     <th>{{ t("Active") }}</th>
@@ -43,6 +44,7 @@
                 @forelse ($users as $user)
                     <tr>
                         <td>{{ $user->name }}</td>
+                        <td>{{ $user->username }}</td>
                         <td>{{ $user->email }}</td>
                         <td>{{ $user->store?->name }}</td>
                         <td>{{ $user->is_active ? t("Yes") : t("No") }}</td>

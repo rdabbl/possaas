@@ -148,8 +148,10 @@ class PosRepository {
     if (response.isEmpty) return [];
     final id = response['id'];
     final name = response['name']?.toString().trim();
-    final email = response['email']?.toString().trim();
-    final label = (name != null && name.isNotEmpty) ? name : (email ?? '');
+    final username = response['username']?.toString().trim();
+    final label = (username != null && username.isNotEmpty)
+        ? username
+        : ((name != null && name.isNotEmpty) ? name : '');
     final parsedId = int.tryParse('$id');
     if (parsedId == null || label.isEmpty) return [];
     return [UserSummary(id: parsedId, label: label)];
@@ -177,6 +179,7 @@ class PosRepository {
     int paymentTypeId = 1,
     int paymentStatusId = 1,
     String? notes,
+    String? saleStatus,
     double receivedAmount = 0,
     double loyaltyRedeemAmount = 0,
     int loyaltyRedeemPoints = 0,
@@ -190,6 +193,7 @@ class PosRepository {
     final payload = <String, dynamic>{
       'store_id': warehouseId,
       'note': notes,
+      if (saleStatus != null && saleStatus.isNotEmpty) 'status': saleStatus,
       'items': cartItems.map((item) {
         final lineSubtotal = item.subTotal;
         final lineDiscount = lineSubtotal * discountShare;
@@ -234,6 +238,7 @@ class PosRepository {
     int paymentTypeId = 1,
     int paymentStatusId = 1,
     String? notes,
+    String? saleStatus,
     double receivedAmount = 0,
     double loyaltyRedeemAmount = 0,
     int loyaltyRedeemPoints = 0,
@@ -244,6 +249,7 @@ class PosRepository {
     final payload = <String, dynamic>{
       'store_id': warehouseId,
       'note': notes,
+      if (saleStatus != null && saleStatus.isNotEmpty) 'status': saleStatus,
       'items': saleItems,
     };
     if (customerId > 0) {
@@ -285,6 +291,20 @@ class PosRepository {
     return RegisterDetails.empty();
   }
 
+  Future<void> paySale({
+    required int saleId,
+    required int paymentTypeId,
+    required double receivedAmount,
+  }) async {
+    await apiClient.post(
+      '${ApiEndpoints.sales}/$saleId/pay',
+      body: {
+        'payment_method_id': paymentTypeId,
+        'received_amount': receivedAmount,
+      },
+    );
+  }
+
   Future<List<String>> fetchSaleProductNames(int saleId) async {
     final result = await apiClient.get('${ApiEndpoints.sales}/$saleId');
     final sale = result['data'] ?? result;
@@ -314,8 +334,12 @@ class PosRepository {
     return null;
   }
 
+  Future<Map<String, dynamic>> fetchSalePayload(int saleId) async {
+    return apiClient.get('${ApiEndpoints.sales}/$saleId');
+  }
+
   Future<Map<String, dynamic>> fetchConfig() async {
-    return <String, dynamic>{};
+    return apiClient.get(ApiEndpoints.config);
   }
 
   Future<void> openRegister({required double cashInHand}) async {

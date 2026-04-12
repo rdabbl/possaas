@@ -22,7 +22,7 @@ extension PrinterConnectionTypeX on PrinterConnectionType {
       case PrinterConnectionType.bluetooth:
         return 'Bluetooth';
       case PrinterConnectionType.system:
-        return 'Système';
+        return 'Systeme';
     }
   }
 }
@@ -31,7 +31,7 @@ class PrinterDeviceInfo {
   PrinterDeviceInfo({
     required this.name,
     required this.type,
-    this.details = 'Non supporté',
+    this.details = 'Non supporte',
   });
 
   final String name;
@@ -58,10 +58,10 @@ class PrinterSettingsController extends ChangeNotifier {
   bool _statusIsError = false;
   String _manualAddress = '';
   String _manualPort = '9100';
-  String _wifiSsid = '';
-  String _wifiPassword = '';
+  String _ticketHeader = '';
+  String _ticketFooter = 'Merci pour votre achat.';
   bool _hasLoadedInitialSettings = false;
-  String? _activeUserLabel;
+  bool _showDiscoveredPrinters = true;
   List<PrintingService> _services = [];
   int? _activeServiceId;
 
@@ -79,23 +79,27 @@ class PrinterSettingsController extends ChangeNotifier {
   bool get statusIsError => _statusIsError;
   String get manualAddress => _manualAddress;
   String get manualPort => _manualPort;
-  String get wifiSsid => _wifiSsid;
-  String get wifiPassword => _wifiPassword;
+  String get ticketHeader => _ticketHeader;
+  String get ticketFooter => _ticketFooter;
+  bool get showDiscoveredPrinters => _showDiscoveredPrinters;
   List<PrintingService> get services => List.unmodifiable(_services);
   int? get activeServiceId => _activeServiceId;
 
   bool get isTestEnabled => false;
   bool get canDiscover => false;
-  bool get canUseManualEntry => false;
+  bool get canUseManualEntry =>
+      connectionType == PrinterConnectionType.lan ||
+      connectionType == PrinterConnectionType.wifi;
   bool get currentTypeSupported => false;
   List<PrinterConnectionType> get availableTypes =>
       PrinterConnectionType.values;
 
   void syncServices(List<PrintingService> services, {int? preferredServiceId}) {
-    final normalized = services.isNotEmpty ? services : [PrintingService.fallback()];
+    final normalized =
+        services.isNotEmpty ? services : [PrintingService.fallback()];
     _services = List<PrintingService>.from(normalized);
-    _activeServiceId = preferredServiceId ??
-        (_services.isNotEmpty ? _services.first.id : null);
+    _activeServiceId =
+        preferredServiceId ?? (_services.isNotEmpty ? _services.first.id : null);
     notifyListeners();
   }
 
@@ -106,14 +110,18 @@ class PrinterSettingsController extends ChangeNotifier {
   }
 
   Future<void> attachToUser(String? userLabel) async {
-    if (_hasLoadedInitialSettings && _activeUserLabel == userLabel) return;
-    _activeUserLabel = userLabel;
+    if (_hasLoadedInitialSettings) return;
     await _loadSettings();
   }
 
   Future<void> persistSettings() async {
     await _persistSettings();
-    _setStatus('Paramètres enregistrés (impression indisponible sur Web).', false);
+    _showDiscoveredPrinters = false;
+    notifyListeners();
+    _setStatus(
+      'Configuration imprimante enregistree sur cette caisse pour tous les utilisateurs.',
+      false,
+    );
   }
 
   void selectType(PrinterConnectionType type) {
@@ -164,12 +172,18 @@ class PrinterSettingsController extends ChangeNotifier {
     _manualPort = value;
   }
 
-  void updateWifiSsid(String value) {
-    _wifiSsid = value;
+  void updateTicketHeader(String value) {
+    _ticketHeader = value;
   }
 
-  void updateWifiPassword(String value) {
-    _wifiPassword = value;
+  void updateTicketFooter(String value) {
+    _ticketFooter = value;
+  }
+
+  void showPrinterDiscovery() {
+    if (_showDiscoveredPrinters) return;
+    _showDiscoveredPrinters = true;
+    notifyListeners();
   }
 
   Future<void> addManualNetworkPrinter() async {
@@ -179,7 +193,7 @@ class PrinterSettingsController extends ChangeNotifier {
   Future<void> discoverPrinters() async {
     _isScanning = true;
     notifyListeners();
-    _setStatus('La recherche d\'imprimantes n\'est pas supportée sur Web.', true);
+    _setStatus('La recherche d\'imprimantes n\'est pas supportee sur Web.', true);
     _isScanning = false;
     notifyListeners();
   }
@@ -239,27 +253,33 @@ class PrinterSettingsController extends ChangeNotifier {
   }
 
   Future<void> _loadSettings() async {
-    final stored = await _storage.read(_activeUserLabel);
+    final stored = await _storage.read(null);
     final serviceKey = _serviceKey(_activeServiceId);
     final settings = _extractServiceSettings(stored, serviceKey);
     if (settings != null) {
+      final storedType = _printerTypeFromString(settings['connectionType']);
+      _connectionType = storedType ?? PrinterConnectionType.lan;
       _paperWidth = _doubleFrom(settings['paperWidth']) ?? _paperWidth;
       _paperHeight = _doubleFrom(settings['paperHeight']) ?? _paperHeight;
       _autoCut = _boolFrom(settings['autoCut']) ?? _autoCut;
       _fontScale = _doubleFrom(settings['fontScale']) ?? _fontScale;
       _manualAddress = _stringFrom(settings['manualAddress']) ?? '';
       _manualPort = _stringFrom(settings['manualPort']) ?? '9100';
-      _wifiSsid = _stringFrom(settings['wifiSsid']) ?? '';
-      _wifiPassword = _stringFrom(settings['wifiPassword']) ?? '';
+      _ticketHeader = _stringFrom(settings['ticketHeader']) ?? '';
+      _ticketFooter =
+          _stringFrom(settings['ticketFooter']) ?? 'Merci pour votre achat.';
+      _showDiscoveredPrinters = false;
     } else {
+      _connectionType = PrinterConnectionType.lan;
       _paperWidth = 80;
       _paperHeight = 200;
       _autoCut = true;
       _fontScale = 0.8;
       _manualAddress = '';
       _manualPort = '9100';
-      _wifiSsid = '';
-      _wifiPassword = '';
+      _ticketHeader = '';
+      _ticketFooter = 'Merci pour votre achat.';
+      _showDiscoveredPrinters = true;
     }
     _hasLoadedInitialSettings = true;
     notifyListeners();
@@ -267,20 +287,21 @@ class PrinterSettingsController extends ChangeNotifier {
 
   Future<void> _persistSettings() async {
     final payload = <String, dynamic>{
+      'connectionType': _connectionType.name,
       'paperWidth': _paperWidth,
       'paperHeight': _paperHeight,
       'autoCut': _autoCut,
       'fontScale': _fontScale,
       'manualAddress': _manualAddress,
       'manualPort': _manualPort,
-      'wifiSsid': _wifiSsid,
-      'wifiPassword': _wifiPassword,
+      'ticketHeader': _ticketHeader,
+      'ticketFooter': _ticketFooter,
     };
-    final stored = await _storage.read(_activeUserLabel) ?? <String, dynamic>{};
+    final stored = await _storage.read(null) ?? <String, dynamic>{};
     final services = _asStringKeyMap(stored['services']) ?? <String, dynamic>{};
     services[_serviceKey(_activeServiceId)] = payload;
     stored['services'] = services;
-    await _storage.write(_activeUserLabel, stored);
+    await _storage.write(null, stored);
   }
 
   void _setStatus(String message, bool isError) {
@@ -337,4 +358,13 @@ class PrinterSettingsController extends ChangeNotifier {
     if (serviceId == null) return 'default';
     return serviceId.toString();
   }
+
+  PrinterConnectionType? _printerTypeFromString(dynamic raw) {
+    if (raw is! String) return null;
+    for (final type in PrinterConnectionType.values) {
+      if (type.name == raw) return type;
+    }
+    return null;
+  }
+
 }

@@ -182,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
                             TextFormField(
                               controller: _identifierController,
                               decoration: InputDecoration(
-                                labelText: tr('Email ou nom d\'utilisateur'),
+                                labelText: tr('Nom d\'utilisateur'),
                                 prefixIcon: const Icon(Icons.person_outline),
                                 filled: true,
                                 fillColor: const Color(0xFFF9FAFB),

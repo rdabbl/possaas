@@ -86,7 +86,7 @@ class ProductGrid extends StatelessWidget {
           padding: EdgeInsets.zero,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.72,
+            childAspectRatio: 0.9,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
@@ -156,7 +156,10 @@ class _ProductCardState extends State<_ProductCard> {
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: borderRadius,
-          side: const BorderSide(color: Color(0xFFE5E7EB)),
+          side: const BorderSide(
+            color: Color(0xFFF7C045),
+            width: 2.2,
+          ),
         ),
         shadowColor: Colors.black12,
         child: InkWell(
@@ -167,6 +170,7 @@ class _ProductCardState extends State<_ProductCard> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 AppNetworkImage(

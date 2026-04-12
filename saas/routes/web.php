@@ -43,6 +43,7 @@ use App\Http\Controllers\Manager\DiscountController as ManagerDiscountController
 use App\Http\Controllers\Manager\LoyaltyController as ManagerLoyaltyController;
 use App\Http\Controllers\Manager\ShippingController as ManagerShippingController;
 use App\Http\Controllers\Manager\PrintingServiceController as ManagerPrintingServiceController;
+use App\Http\Controllers\Manager\PaymentMethodController as ManagerPaymentMethodController;
 
 Route::get('/', function () {
     return redirect()->route('admin.dashboard');
@@ -230,6 +231,9 @@ Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])
         Route::get('/printing-services/{printingService}/edit', [ManagerPrintingServiceController::class, 'edit'])->name('printing_services.edit');
         Route::put('/printing-services/{printingService}', [ManagerPrintingServiceController::class, 'update'])->name('printing_services.update');
         Route::delete('/printing-services/{printingService}', [ManagerPrintingServiceController::class, 'destroy'])->name('printing_services.destroy');
+
+        Route::get('/payment-methods', [ManagerPaymentMethodController::class, 'index'])->name('payment_methods.index');
+        Route::put('/payment-methods/{paymentMethod}', [ManagerPaymentMethodController::class, 'update'])->name('payment_methods.update');
 
         Route::get('/categories', [ManagerCategoryController::class, 'index'])->name('categories.index');
         Route::get('/categories/create', [ManagerCategoryController::class, 'create'])->name('categories.create');

@@ -15,6 +15,14 @@
                 <input name="username" value="{{ old('username') }}" required>
             </div>
             <div class="field">
+                <label>{{ t("Email") }}</label>
+                <input name="email" type="email" value="{{ old('email') }}" required>
+            </div>
+            <div class="field">
+                <label>{{ t("Password") }}</label>
+                <input name="password" type="password" required>
+            </div>
+            <div class="field">
                 <label>{{ t("Active") }}</label>
                 <select name="is_active">
                     <option value="1" selected>{{ t("Yes") }}</option>
@@ -51,20 +59,6 @@
                         </option>
                     @endforeach
                 </select>
-            </div>
-            <hr style="border:0;border-top:1px solid #e5e7eb;margin:16px 0;">
-            <h3>{{ t("Manager Admin User (Optional)") }}</h3>
-            <div class="field">
-                <label>{{ t("Admin Name") }}</label>
-                <input name="admin_name" value="{{ old('admin_name') }}">
-            </div>
-            <div class="field">
-                <label>{{ t("Admin Email") }}</label>
-                <input name="admin_email" type="email" value="{{ old('admin_email') }}">
-            </div>
-            <div class="field">
-                <label>{{ t("Admin Password") }}</label>
-                <input name="admin_password" type="password">
             </div>
             <button class="btn" type="submit">{{ t("Create Manager") }}</button>
             <a class="btn secondary" href="{{ route('admin.managers.index') }}">{{ t("Cancel") }}</a>

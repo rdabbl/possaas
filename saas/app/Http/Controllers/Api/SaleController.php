@@ -44,6 +44,58 @@ class SaleController extends BaseApiController
         return response()->json($sale);
     }
 
+    public function pay(Request $request, int $id)
+    {
+        $manager = $this->managerOrFail($request);
+
+        $data = $request->validate([
+            'payment_method_id' => ['required', 'integer'],
+            'received_amount' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        return DB::transaction(function () use ($manager, $id, $data) {
+            $sale = Sale::where('manager_id', $manager->id)
+                ->with(['payments', 'items'])
+                ->lockForUpdate()
+                ->findOrFail($id);
+
+            $method = PaymentMethod::where(function ($query) use ($manager) {
+                $query->whereNull('manager_id')
+                    ->orWhere('manager_id', $manager->id);
+            })->findOrFail($data['payment_method_id']);
+
+            $alreadyPaid = (float) $sale->payments->sum('amount');
+            $grandTotal = (float) $sale->grand_total;
+            $remaining = max($grandTotal - $alreadyPaid, 0);
+            if ($remaining <= 0) {
+                return response()->json($sale);
+            }
+
+            $receivedAmount = (float) ($data['received_amount'] ?? $remaining);
+            $amount = $receivedAmount > 0 ? min($receivedAmount, $remaining) : $remaining;
+
+            Payment::create([
+                'sale_id' => $sale->id,
+                'payment_method_id' => $method->id,
+                'amount' => $amount,
+                'paid_at' => now(),
+            ]);
+
+            $newPaidTotal = $alreadyPaid + $amount;
+            if ($newPaidTotal >= $grandTotal && $grandTotal > 0) {
+                $sale->status = 'paid';
+            } elseif ($newPaidTotal > 0) {
+                $sale->status = 'partial';
+            } else {
+                $sale->status = 'unpaid';
+            }
+            $sale->save();
+            $sale->load(['items', 'payments']);
+
+            return response()->json($sale);
+        });
+    }
+
     public function store(Request $request)
     {
         $manager = $this->managerOrFail($request);
@@ -63,6 +115,7 @@ class SaleController extends BaseApiController
                 Rule::exists('customers', 'id')->where('manager_id', $manager->id),
             ],
             'currency' => ['nullable', 'string', 'size:3'],
+            'status' => ['nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string'],
             'ordered_at' => ['nullable', 'date'],
             'items' => ['required', 'array', 'min:1'],
@@ -178,7 +231,7 @@ class SaleController extends BaseApiController
                 'user_id' => $data['user_id'] ?? null,
                 'customer_id' => $data['customer_id'] ?? null,
                 'number' => $data['number'] ?? ('S' . date('YmdHis') . Str::upper(Str::random(4))),
-                'status' => 'unpaid',
+                'status' => $data['status'] ?? 'unpaid',
                 'subtotal' => $subtotal,
                 'discount_total' => $discountTotal,
                 'tax_total' => $taxTotal,
@@ -230,7 +283,12 @@ class SaleController extends BaseApiController
                 }
             }
 
-            if ($paidTotal >= $grandTotal && $grandTotal > 0) {
+            $requestedStatus = strtolower((string) ($data['status'] ?? ''));
+            if ($requestedStatus === 'onhold') {
+                $sale->status = 'onhold';
+            } elseif ($requestedStatus === 'pos' && $paidTotal <= 0) {
+                $sale->status = 'pos';
+            } elseif ($paidTotal >= $grandTotal && $grandTotal > 0) {
                 $sale->status = 'paid';
             } elseif ($paidTotal > 0) {
                 $sale->status = 'partial';

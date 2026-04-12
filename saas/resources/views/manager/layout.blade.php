@@ -128,6 +128,7 @@
         <nav>
             <a href="{{ route('manager.dashboard') }}" class="{{ request()->routeIs('manager.dashboard') ? 'active' : '' }}">Dashboard</a>
             <a href="{{ route('manager.stores.index') }}" class="{{ request()->routeIs('manager.stores.*') ? 'active' : '' }}">Stores</a>
+            <a href="{{ route('manager.payment_methods.index') }}" class="{{ request()->routeIs('manager.payment_methods.*') ? 'active' : '' }}">Payment Methods</a>
             <a href="{{ route('manager.printing_services.index') }}" class="{{ request()->routeIs('manager.printing_services.*') ? 'active' : '' }}">Printing</a>
             <a href="{{ route('manager.categories.index') }}" class="{{ request()->routeIs('manager.categories.*') ? 'active' : '' }}">Categories</a>
             <a href="{{ route('manager.product_option_categories.index') }}" class="{{ request()->routeIs('manager.product_option_categories.*') ? 'active' : '' }}">Product Option Categories</a>

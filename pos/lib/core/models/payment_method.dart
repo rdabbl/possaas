@@ -32,7 +32,7 @@ class PaymentMethod {
 
   static PaymentMethod fallback() {
     return PaymentMethod(
-      id: 1,
+      id: 0,
       name: 'Cash',
       type: 'cash',
       isDefault: true,

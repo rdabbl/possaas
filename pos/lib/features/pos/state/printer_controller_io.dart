@@ -79,10 +79,10 @@ class PrinterSettingsController extends ChangeNotifier {
   bool _statusIsError = false;
   String _manualAddress = '';
   String _manualPort = '9100';
-  String _wifiSsid = '';
-  String _wifiPassword = '';
-  String? _activeUserLabel;
+  String _ticketHeader = '';
+  String _ticketFooter = 'Merci pour votre achat.';
   bool _hasLoadedInitialSettings = false;
+  bool _showDiscoveredPrinters = true;
   List<PrintingService> _services = [];
   int? _activeServiceId;
 
@@ -99,8 +99,9 @@ class PrinterSettingsController extends ChangeNotifier {
   bool get statusIsError => _statusIsError;
   String get manualAddress => _manualAddress;
   String get manualPort => _manualPort;
-  String get wifiSsid => _wifiSsid;
-  String get wifiPassword => _wifiPassword;
+  String get ticketHeader => _ticketHeader;
+  String get ticketFooter => _ticketFooter;
+  bool get showDiscoveredPrinters => _showDiscoveredPrinters;
   List<PrintingService> get services => List.unmodifiable(_services);
   int? get activeServiceId => _activeServiceId;
   PrintingService? get activeService =>
@@ -112,7 +113,8 @@ class PrinterSettingsController extends ChangeNotifier {
   bool get isTestEnabled => _selectedDevice != null && !_isTesting;
   bool get canDiscover => !_isScanning && _supportsType(connectionType);
   bool get canUseManualEntry =>
-      connectionType == PrinterConnectionType.lan || connectionType == PrinterConnectionType.wifi;
+      connectionType == PrinterConnectionType.lan ||
+      connectionType == PrinterConnectionType.wifi;
   bool get currentTypeSupported => _supportsType(_connectionType);
   List<PrinterConnectionType> get availableTypes =>
       PrinterConnectionType.values.where(_supportsType).toList();
@@ -158,17 +160,20 @@ class PrinterSettingsController extends ChangeNotifier {
   }
 
   Future<void> attachToUser(String? userLabel) async {
-    final normalized = userLabel?.trim();
-    if (_activeUserLabel == normalized && _hasLoadedInitialSettings) {
+    if (_hasLoadedInitialSettings) {
       return;
     }
-    _activeUserLabel = normalized;
     await _loadSettings();
   }
 
   Future<void> persistSettings() async {
     await _persistSettings();
-    _setStatus('Parametres imprimante enregistres.', false);
+    _showDiscoveredPrinters = false;
+    notifyListeners();
+    _setStatus(
+      'Configuration imprimante enregistree sur cette caisse pour tous les utilisateurs.',
+      false,
+    );
   }
 
   PrinterConnectionType _defaultType() {
@@ -185,11 +190,13 @@ class PrinterSettingsController extends ChangeNotifier {
   }
 
   void selectType(PrinterConnectionType type) {
-    if (_connectionType == type || !_supportsType(type)) return;
+    if (!_supportsType(type)) return;
+    if (_connectionType == type) return;
     _connectionType = type;
     _statusMessage = null;
     _selectedDevice = null;
     _devices.clear();
+    _showDiscoveredPrinters = true;
     notifyListeners();
   }
 
@@ -242,12 +249,18 @@ class PrinterSettingsController extends ChangeNotifier {
     _manualPort = value;
   }
 
-  void updateWifiSsid(String value) {
-    _wifiSsid = value;
+  void updateTicketHeader(String value) {
+    _ticketHeader = value;
   }
 
-  void updateWifiPassword(String value) {
-    _wifiPassword = value;
+  void updateTicketFooter(String value) {
+    _ticketFooter = value;
+  }
+
+  void showPrinterDiscovery() {
+    if (_showDiscoveredPrinters) return;
+    _showDiscoveredPrinters = true;
+    notifyListeners();
   }
 
   Future<void> addManualNetworkPrinter() async {
@@ -265,6 +278,7 @@ class PrinterSettingsController extends ChangeNotifier {
     _devices.add(device);
     _selectedDevice = device;
     _manualAddress = '';
+    _showDiscoveredPrinters = true;
     notifyListeners();
     _setStatus('Imprimante $address ajoutee manuellement.', false);
   }
@@ -279,6 +293,7 @@ class PrinterSettingsController extends ChangeNotifier {
     _isScanning = true;
     _statusMessage = null;
     _devices.clear();
+    _showDiscoveredPrinters = true;
     notifyListeners();
     try {
       List<PrinterDeviceInfo> found = [];
@@ -350,7 +365,6 @@ class PrinterSettingsController extends ChangeNotifier {
   }) async {
     final snapshot = await _resolveSnapshot(serviceId);
     final service = _resolveService(serviceId);
-    const effectiveAutoCut = true;
     final selected = snapshot.selectedDevice;
     if (selected == null) {
       _setStatus('Selectionnez une imprimante.', true);
@@ -370,7 +384,9 @@ class PrinterSettingsController extends ChangeNotifier {
         queueNumber: queueNumber,
         companyName: companyName,
         serviceLabel: _serviceLabel(service),
-        autoCut: effectiveAutoCut,
+        autoCut: snapshot.autoCut,
+        ticketHeader: snapshot.ticketHeader,
+        ticketFooter: snapshot.ticketFooter,
       );
       final response = await _sendToPrinter(
         selected,
@@ -415,7 +431,6 @@ class PrinterSettingsController extends ChangeNotifier {
   }) async {
     final snapshot = await _resolveSnapshot(serviceId);
     final service = _resolveService(serviceId);
-    const effectiveAutoCut = true;
     final selected = snapshot.selectedDevice;
     if (selected == null) {
       _setStatus('Selectionnez une imprimante.', true);
@@ -441,7 +456,9 @@ class PrinterSettingsController extends ChangeNotifier {
               companyName: companyName,
               serviceLabel: _serviceLabel(service),
               warehouseName: warehouseName,
-              autoCut: effectiveAutoCut,
+              autoCut: snapshot.autoCut,
+              ticketHeader: snapshot.ticketHeader,
+              ticketFooter: snapshot.ticketFooter,
             )
           : _buildCombinedTicket(
               paperSize,
@@ -466,9 +483,9 @@ class PrinterSettingsController extends ChangeNotifier {
               paymentStatus: paymentStatus,
               receivedAmount: receivedAmount,
               changeAmount: change,
-              autoCut: effectiveAutoCut,
-              wifiSsid: snapshot.wifiSsid,
-              wifiPassword: snapshot.wifiPassword,
+              autoCut: snapshot.autoCut,
+              ticketHeader: snapshot.ticketHeader,
+              ticketFooter: snapshot.ticketFooter,
             );
 
       final response = await _sendToPrinter(
@@ -498,7 +515,6 @@ class PrinterSettingsController extends ChangeNotifier {
   }) async {
     final snapshot = await _resolveSnapshot(serviceId);
     final service = _resolveService(serviceId);
-    const effectiveAutoCut = true;
     final selected = snapshot.selectedDevice;
     if (selected == null) {
       _setStatus('Selectionnez une imprimante.', true);
@@ -521,7 +537,9 @@ class PrinterSettingsController extends ChangeNotifier {
         currencyOnRight: currencyOnRight,
         userLabel: userLabel,
         serviceLabel: _serviceLabel(service),
-        autoCut: effectiveAutoCut,
+        autoCut: snapshot.autoCut,
+        ticketHeader: snapshot.ticketHeader,
+        ticketFooter: snapshot.ticketFooter,
       );
       final response = await _sendToPrinter(
         selected,
@@ -552,8 +570,8 @@ class PrinterSettingsController extends ChangeNotifier {
       fontScale: _fontScale,
       manualAddress: _manualAddress,
       manualPort: _manualPort,
-      wifiSsid: _wifiSsid,
-      wifiPassword: _wifiPassword,
+      ticketHeader: _ticketHeader,
+      ticketFooter: _ticketFooter,
     );
   }
 
@@ -571,8 +589,8 @@ class PrinterSettingsController extends ChangeNotifier {
       fontScale: _doubleFrom(settings['fontScale']) ?? _fontScale,
       manualAddress: _stringFrom(settings['manualAddress']) ?? '',
       manualPort: _stringFrom(settings['manualPort']) ?? '9100',
-      wifiSsid: _stringFrom(settings['wifiSsid']) ?? '',
-      wifiPassword: _stringFrom(settings['wifiPassword']) ?? '',
+      ticketHeader: _stringFrom(settings['ticketHeader']) ?? '',
+      ticketFooter: _stringFrom(settings['ticketFooter']) ?? 'Merci pour votre achat.',
     );
   }
 
@@ -580,7 +598,7 @@ class PrinterSettingsController extends ChangeNotifier {
     if (serviceId == null || serviceId == _activeServiceId) {
       return _currentSnapshot();
     }
-    final stored = await _storage.read(_activeUserLabel);
+    final stored = await _storage.read(null);
     final settings = _extractServiceSettings(stored, _serviceKey(serviceId));
     if (settings == null) {
       return _currentSnapshot();
@@ -619,8 +637,8 @@ class PrinterSettingsController extends ChangeNotifier {
     required double? receivedAmount,
     required double? changeAmount,
     required bool autoCut,
-    required String wifiSsid,
-    required String wifiPassword,
+    required String ticketHeader,
+    required String ticketFooter,
   }) {
     final g = Generator(paperSize, profile);
     String fmt(double v) => _formatReceiptAmount(v, currencySymbol, currencyOnRight);
@@ -633,6 +651,8 @@ class PrinterSettingsController extends ChangeNotifier {
     final companyPhoneLine = (companyPhone ?? '').trim();
     final warehouseLine = (warehouseName ?? '').trim();
     final customerLine = (customerName ?? '').trim();
+    final ticketHeaderLine = ticketHeader.trim();
+    final ticketFooterLine = ticketFooter.trim();
 
     final title = companyTitle.isNotEmpty ? companyTitle : 'Ticket';
     bytes.addAll(
@@ -667,6 +687,10 @@ class PrinterSettingsController extends ChangeNotifier {
     }
     if (serviceLabel.isNotEmpty) {
       bytes.addAll(g.text('Service : $serviceLabel'));
+    }
+    if (ticketHeaderLine.isNotEmpty) {
+      bytes.addAll(g.feed(1));
+      bytes.addAll(g.text(ticketHeaderLine, styles: const PosStyles(align: PosAlign.center)));
     }
     bytes.addAll(g.hr());
 
@@ -783,18 +807,14 @@ class PrinterSettingsController extends ChangeNotifier {
       ]));
     }
     bytes.addAll(g.feed(1));
-    if (wifiSsid.trim().isNotEmpty) {
-      bytes.addAll(g.text('Wi-fi : ${wifiSsid.trim()}'));
+    if (ticketFooterLine.isNotEmpty) {
+      bytes.addAll(
+        g.text(
+          ticketFooterLine,
+          styles: const PosStyles(align: PosAlign.center, fontType: PosFontType.fontB),
+        ),
+      );
     }
-    if (wifiPassword.trim().isNotEmpty) {
-      bytes.addAll(g.text('Code : ${wifiPassword.trim()}'));
-    }
-    bytes.addAll(
-      g.text(
-        'Merci pour votre achat.',
-        styles: const PosStyles(align: PosAlign.center, fontType: PosFontType.fontB),
-      ),
-    );
     _appendCut(bytes, g, autoCut: autoCut);
 
     // Mini ticket apres coupe
@@ -821,12 +841,16 @@ class PrinterSettingsController extends ChangeNotifier {
     required String? companyName,
     required String serviceLabel,
     required bool autoCut,
+    required String ticketHeader,
+    required String ticketFooter,
   }) {
     final g = Generator(paperSize, profile);
     final now = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
     final title = (companyName ?? '').trim().isNotEmpty
         ? companyName!.trim()
         : 'Commande borne';
+    final ticketHeaderLine = ticketHeader.trim();
+    final ticketFooterLine = ticketFooter.trim();
     final bytes = <int>[];
 
     bytes.addAll(
@@ -845,6 +869,10 @@ class PrinterSettingsController extends ChangeNotifier {
       bytes.addAll(g.text('Service : $serviceLabel', styles: const PosStyles(align: PosAlign.center)));
       bytes.addAll(g.feed(1));
     }
+    if (ticketHeaderLine.isNotEmpty) {
+      bytes.addAll(g.text(ticketHeaderLine, styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.feed(1));
+    }
     bytes.addAll(
       g.text(
         'Numero $queueNumber',
@@ -858,6 +886,10 @@ class PrinterSettingsController extends ChangeNotifier {
     );
     bytes.addAll(g.feed(1));
     bytes.addAll(g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
+    if (ticketFooterLine.isNotEmpty) {
+      bytes.addAll(g.feed(1));
+      bytes.addAll(g.text(ticketFooterLine, styles: const PosStyles(align: PosAlign.center)));
+    }
     bytes.addAll(g.feed(2));
     _appendCut(bytes, g, autoCut: autoCut);
     return bytes;
@@ -873,9 +905,13 @@ class PrinterSettingsController extends ChangeNotifier {
     required String? warehouseName,
     required String serviceLabel,
     required bool autoCut,
+    required String ticketHeader,
+    required String ticketFooter,
   }) {
     final g = Generator(paperSize, profile);
     final now = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
+    final ticketHeaderLine = ticketHeader.trim();
+    final ticketFooterLine = ticketFooter.trim();
     final bytes = <int>[];
 
     bytes.addAll(
@@ -903,6 +939,9 @@ class PrinterSettingsController extends ChangeNotifier {
     }
     if (serviceLabel.isNotEmpty) {
       bytes.addAll(g.text('Service : $serviceLabel'));
+    }
+    if (ticketHeaderLine.isNotEmpty) {
+      bytes.addAll(g.text(ticketHeaderLine, styles: const PosStyles(align: PosAlign.center)));
     }
     bytes.addAll(g.hr());
 
@@ -938,6 +977,10 @@ class PrinterSettingsController extends ChangeNotifier {
       }
     }
 
+    if (ticketFooterLine.isNotEmpty) {
+      bytes.addAll(g.hr(ch: '-'));
+      bytes.addAll(g.text(ticketFooterLine, styles: const PosStyles(align: PosAlign.center)));
+    }
     _appendCut(bytes, g, autoCut: autoCut);
 
     return bytes;
@@ -953,11 +996,15 @@ class PrinterSettingsController extends ChangeNotifier {
     required String? userLabel,
     required String serviceLabel,
     required bool autoCut,
+    required String ticketHeader,
+    required String ticketFooter,
   }) {
     final g = Generator(paperSize, profile);
     String fmt(double v) => _formatReceiptAmount(v, currencySymbol, currencyOnRight);
     final now = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
     final serverName = (userLabel ?? '').trim();
+    final ticketHeaderLine = ticketHeader.trim();
+    final ticketFooterLine = ticketFooter.trim();
     final bytes = <int>[];
 
     bytes.addAll(
@@ -977,6 +1024,9 @@ class PrinterSettingsController extends ChangeNotifier {
     }
     if (serviceLabel.isNotEmpty) {
       bytes.addAll(g.text('Service : $serviceLabel', styles: const PosStyles(align: PosAlign.center)));
+    }
+    if (ticketHeaderLine.isNotEmpty) {
+      bytes.addAll(g.text(ticketHeaderLine, styles: const PosStyles(align: PosAlign.center)));
     }
     bytes.addAll(g.hr());
     bytes.addAll(g.text('Ventes : ${orders.length}', styles: const PosStyles(align: PosAlign.left)));
@@ -1048,6 +1098,10 @@ class PrinterSettingsController extends ChangeNotifier {
       );
     }
 
+    if (ticketFooterLine.isNotEmpty) {
+      bytes.addAll(g.hr(ch: '-'));
+      bytes.addAll(g.text(ticketFooterLine, styles: const PosStyles(align: PosAlign.center)));
+    }
     _appendCut(bytes, g, autoCut: autoCut);
 
     return bytes;
@@ -1260,7 +1314,7 @@ class PrinterSettingsController extends ChangeNotifier {
   }
 
   Future<void> _loadSettings() async {
-    final stored = await _storage.read(_activeUserLabel);
+    final stored = await _storage.read(null);
     final serviceKey = _serviceKey(_activeServiceId);
     final settings = _extractServiceSettings(stored, serviceKey);
     if (settings != null) {
@@ -1276,9 +1330,11 @@ class PrinterSettingsController extends ChangeNotifier {
       _fontScale = _doubleFrom(settings['fontScale']) ?? _fontScale;
       _manualAddress = _stringFrom(settings['manualAddress']) ?? '';
       _manualPort = _stringFrom(settings['manualPort']) ?? '9100';
-      _wifiSsid = _stringFrom(settings['wifiSsid']) ?? '';
-      _wifiPassword = _stringFrom(settings['wifiPassword']) ?? '';
+      _ticketHeader = _stringFrom(settings['ticketHeader']) ?? '';
+      _ticketFooter =
+          _stringFrom(settings['ticketFooter']) ?? 'Merci pour votre achat.';
       _selectedDevice = _deserializeDevice(settings['selectedDevice']);
+      _showDiscoveredPrinters = _selectedDevice == null;
     } else {
       _resetToDefaults();
     }
@@ -1295,15 +1351,15 @@ class PrinterSettingsController extends ChangeNotifier {
       'fontScale': _fontScale,
       'manualAddress': _manualAddress,
       'manualPort': _manualPort,
-      'wifiSsid': _wifiSsid,
-      'wifiPassword': _wifiPassword,
+      'ticketHeader': _ticketHeader,
+      'ticketFooter': _ticketFooter,
       'selectedDevice': _serializeDevice(_selectedDevice),
     };
-    final stored = await _storage.read(_activeUserLabel) ?? <String, dynamic>{};
+    final stored = await _storage.read(null) ?? <String, dynamic>{};
     final services = _asStringKeyMap(stored['services']) ?? <String, dynamic>{};
     services[_serviceKey(_activeServiceId)] = payload;
     stored['services'] = services;
-    await _storage.write(_activeUserLabel, stored);
+    await _storage.write(null, stored);
   }
 
   void _resetToDefaults() {
@@ -1314,9 +1370,10 @@ class PrinterSettingsController extends ChangeNotifier {
     _fontScale = 0.8;
     _manualAddress = '';
     _manualPort = '9100';
-    _wifiSsid = '';
-    _wifiPassword = '';
+    _ticketHeader = '';
+    _ticketFooter = 'Merci pour votre achat.';
     _selectedDevice = null;
+    _showDiscoveredPrinters = true;
   }
 
   Map<String, dynamic>? _serializeDevice(PrinterDeviceInfo? device) {
@@ -1467,8 +1524,8 @@ class _PrinterSnapshot {
     required this.fontScale,
     required this.manualAddress,
     required this.manualPort,
-    required this.wifiSsid,
-    required this.wifiPassword,
+    required this.ticketHeader,
+    required this.ticketFooter,
   });
 
   final PrinterConnectionType connectionType;
@@ -1479,8 +1536,8 @@ class _PrinterSnapshot {
   final double fontScale;
   final String manualAddress;
   final String manualPort;
-  final String wifiSsid;
-  final String wifiPassword;
+  final String ticketHeader;
+  final String ticketFooter;
 
   int get manualPortValue => int.tryParse(manualPort) ?? 9100;
 }

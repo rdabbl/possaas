@@ -19,6 +19,7 @@ class OfflineSale {
     this.loyaltyRedeemAmount = 0,
     this.loyaltyRedeemPoints = 0,
     this.notes,
+    this.saleStatus,
     this.status = OfflineSaleStatus.pending,
     this.errorMessage,
   });
@@ -36,6 +37,7 @@ class OfflineSale {
   final double loyaltyRedeemAmount;
   final int loyaltyRedeemPoints;
   final String? notes;
+  final String? saleStatus;
   final List<Map<String, dynamic>> saleItems;
   final DateTime createdAt;
   final OfflineSaleStatus status;
@@ -59,6 +61,7 @@ class OfflineSale {
       loyaltyRedeemAmount: loyaltyRedeemAmount,
       loyaltyRedeemPoints: loyaltyRedeemPoints,
       notes: notes,
+      saleStatus: saleStatus,
       saleItems: saleItems,
       createdAt: createdAt,
       status: status ?? this.status,
@@ -81,6 +84,7 @@ class OfflineSale {
       'loyaltyRedeemAmount': loyaltyRedeemAmount,
       'loyaltyRedeemPoints': loyaltyRedeemPoints,
       'notes': notes,
+      'saleStatus': saleStatus,
       'saleItems': saleItems,
       'createdAt': createdAt.toIso8601String(),
       'status': status.name,
@@ -104,6 +108,7 @@ class OfflineSale {
       loyaltyRedeemAmount: (json['loyaltyRedeemAmount'] as num?)?.toDouble() ?? 0,
       loyaltyRedeemPoints: json['loyaltyRedeemPoints'] as int? ?? 0,
       notes: json['notes'] as String?,
+      saleStatus: json['saleStatus'] as String?,
       saleItems: (json['saleItems'] as List<dynamic>)
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList(),

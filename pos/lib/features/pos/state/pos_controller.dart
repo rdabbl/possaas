@@ -36,6 +36,11 @@ class PosController extends ChangeNotifier {
   static const _cachedHistoryKeyPrefix = 'pos_cached_history_';
   static const _cachedCustomersKey = 'pos_cached_customers';
   static const _cachedWarehousesKey = 'pos_cached_warehouses';
+  static const _cachedCategoriesKey = 'pos_cached_categories';
+  static const _cachedPaymentMethodsKey = 'pos_cached_payment_methods';
+  static const _cachedShippingMethodsKey = 'pos_cached_shipping_methods';
+  static const _cachedDiscountsKey = 'pos_cached_discounts';
+  static const _cachedConfigKey = 'pos_cached_config';
   static const _cachedFrontSettingsKey = 'pos_cached_front_settings';
   static const _cachedPrintingServicesKey = 'pos_cached_printing_services';
   static const _selectedCustomerKey = 'pos_selected_customer';
@@ -82,6 +87,8 @@ class PosController extends ChangeNotifier {
   List<OrderSummary> _recentOrders = [];
   int _historyHours = 24;
   int? _historyUserFilter;
+  String? _historySourceFilter;
+  String? _historyStatusFilter;
   List<OfflineSale> _offlineSales = [];
   RegisterDetails _registerDetails = RegisterDetails.empty();
   bool _isHistoryLoading = false;
@@ -167,16 +174,36 @@ class PosController extends ChangeNotifier {
   double get cashInHand => _cashInHand;
   List<OrderSummary> get recentOrders => List.unmodifiable(_recentOrders);
   List<OrderSummary> get filteredRecentOrders {
-    if (_historyUserFilter == null) {
-      return List.unmodifiable(_recentOrders);
-    }
-    final needle = _historyUserFilter!;
     return List.unmodifiable(_recentOrders.where((order) {
-      return order.userId == needle;
+      if (_historyUserFilter != null && order.userId != _historyUserFilter) {
+        return false;
+      }
+      if (_historySourceFilter == 'pos' && order.isKioskOrder) {
+        return false;
+      }
+      if (_historySourceFilter == 'kiosk' && !order.isKioskOrder) {
+        return false;
+      }
+      if (_historyStatusFilter != null &&
+          order.status.toLowerCase() != _historyStatusFilter!.toLowerCase()) {
+        return false;
+      }
+      return true;
     }).toList());
   }
   int? get historyUserIdFilter => _historyUserFilter;
   int get historyHours => _historyHours;
+  String? get historySourceFilter => _historySourceFilter;
+  String? get historyStatusFilter => _historyStatusFilter;
+  List<String> get availableHistoryStatuses {
+    final values = _recentOrders
+        .map((order) => order.status.trim())
+        .where((status) => status.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return List.unmodifiable(values);
+  }
   List<UserSummary> get historyUsers => List.unmodifiable(_historyUsers);
   List<OfflineSale> get offlineSales => List.unmodifiable(_offlineSales);
   bool get offlineMode => _offlineMode;
@@ -195,6 +222,11 @@ class PosController extends ChangeNotifier {
   bool get isHistoryLoading => _isHistoryLoading;
   bool get isCurrencySymbolRight => _isCurrencySymbolRight;
   List<Currency> get currencies => List.unmodifiable(_currencies);
+  int get pendingOfflineSalesCount =>
+      _offlineSales.where((sale) => sale.status == OfflineSaleStatus.pending).length;
+  int get failedOfflineSalesCount =>
+      _offlineSales.where((sale) => sale.status == OfflineSaleStatus.failed).length;
+  bool get isSyncingOfflineSales => _isSyncingOfflineSales;
   int get ordersCount =>
       _registerDetails.salesCount > 0 ? _registerDetails.salesCount : _recentOrders.length;
   int get itemsSold => _registerDetails.itemsCount > 0
@@ -207,15 +239,19 @@ class PosController extends ChangeNotifier {
   }
 
   List<Product> get products {
-    if (_searchQuery.isEmpty) {
-      return _products;
+    Iterable<Product> filtered = _products;
+    if (_selectedCategoryId != null && _selectedCategoryId! > 0) {
+      filtered = filtered.where(
+        (product) => product.categoryId == _selectedCategoryId,
+      );
     }
-    final query = _searchQuery.toLowerCase();
-    return _products
-        .where((product) =>
-            product.name.toLowerCase().contains(query) ||
-            product.code.toLowerCase().contains(query))
-        .toList();
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      filtered = filtered.where((product) =>
+          product.name.toLowerCase().contains(query) ||
+          product.code.toLowerCase().contains(query));
+    }
+    return filtered.toList();
   }
 
   List<CartItem> get cartItems => List.unmodifiable(_cart);
@@ -356,6 +392,11 @@ class PosController extends ChangeNotifier {
       await _loadCachedHistory();
       await _loadCachedCustomers();
       await _loadCachedWarehouses();
+      await _loadCachedCategories();
+      await _loadCachedPaymentMethods();
+      await _loadCachedDiscounts();
+      await _loadCachedShippingMethods();
+      await _loadCachedConfig();
       await _loadCachedFrontSettings();
       await _loadCachedPrintingServices();
       if (_offlineMode) {
@@ -380,6 +421,7 @@ class PosController extends ChangeNotifier {
       await _cacheFrontSetting(frontSettings);
       _categories =
           List<ProductCategory>.from(results[2] as List<ProductCategory>);
+      await _cacheCategories(_categories);
       _warehouses = List<Warehouse>.from(results[3] as List<Warehouse>);
       _paymentMethods =
           List<PaymentMethod>.from(results[4] as List<PaymentMethod>);
@@ -387,14 +429,15 @@ class PosController extends ChangeNotifier {
         if (a.isDefault == b.isDefault) return a.name.compareTo(b.name);
         return a.isDefault ? -1 : 1;
       });
-      if (_paymentMethods.isEmpty) {
-        _paymentMethods = [PaymentMethod.fallback()];
-      }
+      await _cachePaymentMethods(_paymentMethods);
       _applyConfig(results[5] as Map<String, dynamic>);
+      await _cacheConfig(results[5] as Map<String, dynamic>);
       _discounts = List<Discount>.from(results[6] as List<Discount>);
+      await _cacheDiscounts(_discounts);
       final shippingMethods =
           List<ShippingMethod>.from(results[7] as List<ShippingMethod>);
       _applyShippingMethods(shippingMethods);
+      await _cacheShippingMethods(_shippingMethods);
       await _refreshPrintingServices();
       await _cacheCustomers(_customers);
       await _cacheWarehouses(_warehouses);
@@ -419,10 +462,11 @@ class PosController extends ChangeNotifier {
   }
 
   Future<void> refreshProducts({bool skipSyncOffline = true}) async {
-    // Tente de repasser en ligne si possible
     if (_offlineMode) {
-      _offlineMode = false;
+      _errorMessage = null;
+      _successMessage = null;
       notifyListeners();
+      return;
     }
     if (!skipSyncOffline) {
       try {
@@ -571,7 +615,6 @@ class PosController extends ChangeNotifier {
     final pendingBefore = _offlineSales.length;
     try {
       await _syncOfflineSales();
-      await loadOrderHistory();
       final remaining = _offlineSales.length;
       if (remaining == 0) {
         _successMessage = 'Toutes les commandes locales ont été envoyées.';
@@ -592,12 +635,14 @@ class PosController extends ChangeNotifier {
 
   void _forceOffline(String reason) {
     if (_offlineMode) {
-      _errorMessage ??= reason;
+      if (!_isConnectivityNoise(reason)) {
+        _errorMessage ??= reason;
+      }
       notifyListeners();
       return;
     }
     _offlineMode = true;
-    _errorMessage = reason;
+    _errorMessage = _isConnectivityNoise(reason) ? null : reason;
     notifyListeners();
   }
 
@@ -722,6 +767,18 @@ class PosController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateHistorySourceFilter(String? source) {
+    if (_historySourceFilter == source) return;
+    _historySourceFilter = source;
+    notifyListeners();
+  }
+
+  void updateHistoryStatusFilter(String? status) {
+    if (_historyStatusFilter == status) return;
+    _historyStatusFilter = status;
+    notifyListeners();
+  }
+
   Future<void> loadHistoryUsers() async {
     if (_historyUsers.isNotEmpty) return;
     await _loadHistoryUsers();
@@ -819,6 +876,10 @@ class PosController extends ChangeNotifier {
     _selectedWarehouseId = warehouse?.id;
     _applyWarehouseCurrency(warehouse);
     await _persistSelectedWarehouse();
+    if (_offlineMode) {
+      notifyListeners();
+      return;
+    }
     await _loadProducts();
   }
 
@@ -832,11 +893,19 @@ class PosController extends ChangeNotifier {
 
   Future<void> selectCategory(int? categoryId) async {
     _selectedCategoryId = categoryId == 0 ? null : categoryId;
+    if (_offlineMode) {
+      notifyListeners();
+      return;
+    }
     await _loadProducts();
   }
 
   Future<void> searchProducts(String query) async {
     _searchQuery = query;
+    if (_offlineMode) {
+      notifyListeners();
+      return;
+    }
     await _loadProducts(search: query);
   }
 
@@ -1012,8 +1081,15 @@ class PosController extends ChangeNotifier {
     int paymentStatusId = 1,
     double receivedAmount = 0,
     bool shouldPrint = false,
+    String? saleStatus,
+    List<CartItem>? cartItemsOverride,
+    double? discountAmountOverride,
+    double? shippingOverride,
+    double? taxRateOverride,
+    double? grandTotalOverride,
   }) async {
-    if (_cart.isEmpty) {
+    final cartItems = cartItemsOverride ?? _cart;
+    if (cartItems.isEmpty) {
       _errorMessage = 'Ajoutez au moins un produit au panier.';
       notifyListeners();
       return;
@@ -1030,128 +1106,43 @@ class PosController extends ChangeNotifier {
       return;
     }
 
-    // Offline path: enregistrer la vente localement et sortir sans erreur
-    if (_offlineMode) {
-      _isProcessingSale = true;
-      _errorMessage = null;
-      _successMessage = null;
-      notifyListeners();
-      await _addOfflineSaleFromCart(
-        status: OfflineSaleStatus.pending,
-        errorMessage: 'En attente de synchronisation',
-        notes: notes,
-        paymentTypeId: paymentTypeId,
-        paymentStatusId: paymentStatusId,
-        receivedAmount: receivedAmount,
-      );
-      final shouldApplyLoyalty = loyaltyEnabled && customerId > 0 && paymentStatusId != 2;
-      final canEarnPoints =
-          shouldApplyLoyalty && (paymentStatusId != 3 || receivedAmount >= grandTotal);
-      _applyLocalLoyaltyAdjustments(
-        earned: canEarnPoints ? loyaltyEstimatedPoints : 0,
-        redeemed: shouldApplyLoyalty ? loyaltyRedeemPoints : 0,
-      );
-      _cart.clear();
-      _resetAdjustments();
-      _isProcessingSale = false;
-      _successMessage = 'Vente enregistrée hors ligne. Elle sera synchronisée dès que possible.';
-      notifyListeners();
-      return;
-    }
-
     _isProcessingSale = true;
     _errorMessage = null;
     _successMessage = null;
     notifyListeners();
     try {
-      await repository.submitSale(
-        customerId: customerId,
-        cartItems: _cart,
-        grandTotal: grandTotal,
-        warehouseId: _selectedWarehouseId,
-        discount: discountAmount,
-        shipping: _shipping,
-        taxRate: _taxRate,
+      await _addOfflineSaleFromCart(
+        cartItems: cartItems,
+        grandTotalValue: grandTotalOverride,
+        discountAmountValue: discountAmountOverride,
+        shippingValue: shippingOverride,
+        taxRateValue: taxRateOverride,
+        status: OfflineSaleStatus.pending,
+        errorMessage: 'En attente de synchronisation',
+        notes: notes,
+        saleStatus: saleStatus,
         paymentTypeId: paymentTypeId,
         paymentStatusId: paymentStatusId,
-        notes: notes,
         receivedAmount: receivedAmount,
-        loyaltyRedeemAmount: loyaltyRedeemAmount,
-        loyaltyRedeemPoints: loyaltyRedeemPoints,
       );
       final shouldApplyLoyalty = loyaltyEnabled && customerId > 0 && paymentStatusId != 2;
+      final effectiveGrandTotal = grandTotalOverride ?? grandTotal;
       final canEarnPoints =
-          shouldApplyLoyalty && (paymentStatusId != 3 || receivedAmount >= grandTotal);
+          shouldApplyLoyalty && (paymentStatusId != 3 || receivedAmount >= effectiveGrandTotal);
       _applyLocalLoyaltyAdjustments(
         earned: canEarnPoints ? loyaltyEstimatedPoints : 0,
         redeemed: shouldApplyLoyalty ? loyaltyRedeemPoints : 0,
       );
       _cart.clear();
       _resetAdjustments();
-      await _loadProducts();
-      await loadOrderHistory();
       _successMessage = shouldPrint
-          ? 'Vente synchronisée. Impliquez votre flux d\'impression.'
-          : 'Vente synchronisée avec succès.';
-    } on ApiException catch (error) {
-      final message = error.message;
-      final lower = message.toLowerCase();
-      final isStockIssue =
-          lower.contains('stock') || lower.contains('insuffisant') || lower.contains('inventory');
-      if (isStockIssue && _selectedCustomer != null) {
-        await _addOfflineSaleFromCart(
-          status: OfflineSaleStatus.failed,
-          errorMessage: 'Stock insuffisant: $message. Contactez le support.',
-          notes: notes,
-          paymentTypeId: paymentTypeId,
-          paymentStatusId: paymentStatusId,
-          receivedAmount: receivedAmount,
-        );
-        _errorMessage = 'Stock insuffisant. Commande enregistrée en échec. Contactez le support.';
-      } else {
-        // Enregistrer hors ligne si échec réseau ou autre erreur
-        await _addOfflineSaleFromCart(
-          status: OfflineSaleStatus.pending,
-          errorMessage: message,
-          notes: notes,
-          paymentTypeId: paymentTypeId,
-          paymentStatusId: paymentStatusId,
-          receivedAmount: receivedAmount,
-        );
-        final shouldApplyLoyalty =
-            loyaltyEnabled && customerId > 0 && paymentStatusId != 2;
-        final canEarnPoints =
-            shouldApplyLoyalty && (paymentStatusId != 3 || receivedAmount >= grandTotal);
-        _applyLocalLoyaltyAdjustments(
-          earned: canEarnPoints ? loyaltyEstimatedPoints : 0,
-          redeemed: shouldApplyLoyalty ? loyaltyRedeemPoints : 0,
-        );
-        _cart.clear();
-        _resetAdjustments();
-        _errorMessage = null;
-        _successMessage = 'Vente enregistrée hors ligne. Elle sera synchronisée dès que possible.';
+          ? 'Commande enregistrée localement et impression lancée. La synchronisation partira en arrière-plan.'
+          : 'Commande enregistrée localement. La synchronisation partira en arrière-plan.';
+      if (!_offlineMode) {
+        unawaited(_syncLocalQueueInBackground());
       }
     } catch (error) {
-      await _addOfflineSaleFromCart(
-        status: OfflineSaleStatus.pending,
-        errorMessage: '$error',
-        notes: notes,
-        paymentTypeId: paymentTypeId,
-        paymentStatusId: paymentStatusId,
-        receivedAmount: receivedAmount,
-      );
-      final shouldApplyLoyalty =
-          loyaltyEnabled && customerId > 0 && paymentStatusId != 2;
-      final canEarnPoints =
-          shouldApplyLoyalty && (paymentStatusId != 3 || receivedAmount >= grandTotal);
-      _applyLocalLoyaltyAdjustments(
-        earned: canEarnPoints ? loyaltyEstimatedPoints : 0,
-        redeemed: shouldApplyLoyalty ? loyaltyRedeemPoints : 0,
-      );
-      _cart.clear();
-      _resetAdjustments();
-      _errorMessage = null;
-      _successMessage = 'Vente enregistrée hors ligne. Elle sera synchronisée dès que possible.';
+      _errorMessage = error.toString();
     } finally {
       _isProcessingSale = false;
       notifyListeners();
@@ -1160,10 +1151,11 @@ class PosController extends ChangeNotifier {
 
   Future<bool> submitKioskOrder({
     required List<CartItem> items,
-    required bool markUnpaid,
     required int queueNumber,
+    required String serviceMode,
     double receivedAmount = 0,
-    int paymentTypeId = 1,
+    int paymentTypeId = 0,
+    String? saleStatus,
   }) async {
     if (items.isEmpty) {
       _errorMessage = 'Ajoutez au moins un produit au panier.';
@@ -1194,9 +1186,10 @@ class PosController extends ChangeNotifier {
           items.fold<double>(0, (sum, item) => sum + item.subTotal);
       final taxTotal = itemsSubTotal * (_taxRate / 100);
       final grandTotal = itemsSubTotal + taxTotal;
-      final note = markUnpaid
-          ? 'BORNE #$queueNumber - CAISSE'
-          : 'BORNE #$queueNumber - PAYE';
+      final normalizedMode = serviceMode.trim().isEmpty
+          ? 'SUR PLACE'
+          : serviceMode.toUpperCase();
+      final note = 'BORNE #$queueNumber - $normalizedMode';
       await repository.submitSale(
         customerId: 0,
         cartItems: items,
@@ -1206,13 +1199,12 @@ class PosController extends ChangeNotifier {
         shipping: 0,
         taxRate: _taxRate,
         paymentTypeId: paymentTypeId,
-        paymentStatusId: markUnpaid ? 2 : 1,
+        paymentStatusId: 2,
         notes: note,
-        receivedAmount: receivedAmount,
+        saleStatus: saleStatus ?? 'pos',
+        receivedAmount: 0,
       );
-      _successMessage = markUnpaid
-          ? 'Commande borne enregistrée.'
-          : 'Paiement borne effectué.';
+      _successMessage = 'Commande borne enregistrée.';
       _lastSyncAt = DateTime.now();
       await loadOrderHistory(hours: _historyHours);
       notifyListeners();
@@ -1230,12 +1222,47 @@ class PosController extends ChangeNotifier {
     }
   }
 
+  Future<bool> payOrder({
+    required int saleId,
+    required int paymentTypeId,
+    required double receivedAmount,
+  }) async {
+    _isProcessingSale = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+    try {
+      await repository.paySale(
+        saleId: saleId,
+        paymentTypeId: paymentTypeId,
+        receivedAmount: receivedAmount,
+      );
+      _successMessage = 'Commande payée.';
+      await loadOrderHistory(hours: _historyHours);
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (error) {
+      _errorMessage = error.toString();
+      return false;
+    } finally {
+      _isProcessingSale = false;
+      notifyListeners();
+    }
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
 
   Future<void> _loadProducts({String? search}) async {
+    if (_offlineMode) {
+      _setLoading(false);
+      notifyListeners();
+      return;
+    }
     _setLoading(true);
     try {
       final items = await repository.fetchProducts(
@@ -1270,6 +1297,20 @@ class PosController extends ChangeNotifier {
     }
   }
 
+  bool _isConnectivityNoise(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('hors ligne') ||
+        lower.contains('connexion') ||
+        lower.contains('reseau') ||
+        lower.contains('réseau') ||
+        lower.contains('socket') ||
+        lower.contains('timeout') ||
+        lower.contains('authentification requise') ||
+        lower.contains('unauthenticated') ||
+        lower.contains('delai d\'attente') ||
+        lower.contains('rafraichir');
+  }
+
   Future<void> _loadOfflineSales() async {
     _offlineSales = await _offlineSalesStorage.read();
   }
@@ -1278,19 +1319,36 @@ class PosController extends ChangeNotifier {
     await _offlineSalesStorage.write(_offlineSales);
   }
 
+  Future<void> _syncLocalQueueInBackground() async {
+    try {
+      await _syncOfflineSales();
+      await _loadProducts();
+      await _refreshFrontSetting();
+      await _refreshPrintingServices();
+    } catch (_) {
+      // Keep the local queue for the next automatic/manual sync.
+    }
+  }
+
   Future<void> _addOfflineSaleFromCart({
+    required List<CartItem> cartItems,
     required OfflineSaleStatus status,
     required String errorMessage,
     String? notes,
+    String? saleStatus,
     required int paymentTypeId,
     required int paymentStatusId,
     required double receivedAmount,
+    double? grandTotalValue,
+    double? discountAmountValue,
+    double? shippingValue,
+    double? taxRateValue,
   }) async {
-    final itemsSubTotal = _cart.fold<double>(0, (sum, item) => sum + item.subTotal);
-    final discountTotal = discountAmount;
+    final itemsSubTotal = cartItems.fold<double>(0, (sum, item) => sum + item.subTotal);
+    final discountTotal = discountAmountValue ?? discountAmount;
     final discountShare = itemsSubTotal > 0 ? discountTotal / itemsSubTotal : 0;
-    final taxRate = _taxRate;
-    final saleItems = _cart.map((item) {
+    final taxRate = taxRateValue ?? _taxRate;
+    final saleItems = cartItems.map((item) {
       final lineSubtotal = item.subTotal;
       final lineDiscount = lineSubtotal * discountShare;
       final lineTax = (lineSubtotal - lineDiscount) * (taxRate / 100);
@@ -1304,16 +1362,17 @@ class PosController extends ChangeNotifier {
       id: id,
       customerId: _selectedCustomer?.id ?? 0,
       warehouseId: _selectedWarehouseId,
-      grandTotal: grandTotal,
-      discount: discountAmount,
-      shipping: _shipping,
-      taxRate: _taxRate,
+      grandTotal: grandTotalValue ?? grandTotal,
+      discount: discountTotal,
+      shipping: shippingValue ?? _shipping,
+      taxRate: taxRate,
       paymentTypeId: paymentTypeId,
       paymentStatusId: paymentStatusId,
       receivedAmount: receivedAmount,
       loyaltyRedeemAmount: loyaltyRedeemAmount,
       loyaltyRedeemPoints: loyaltyRedeemPoints,
       notes: notes,
+      saleStatus: saleStatus,
       saleItems: saleItems,
       createdAt: DateTime.now(),
       status: status,
@@ -1354,6 +1413,7 @@ class PosController extends ChangeNotifier {
             paymentTypeId: sale.paymentTypeId,
             paymentStatusId: sale.paymentStatusId,
             notes: sale.notes,
+            saleStatus: sale.saleStatus,
             receivedAmount: sale.receivedAmount,
             loyaltyRedeemAmount: sale.loyaltyRedeemAmount,
             loyaltyRedeemPoints: sale.loyaltyRedeemPoints,
@@ -1384,6 +1444,7 @@ class PosController extends ChangeNotifier {
       await _persistOfflineSales();
       if (syncedSomething) {
         _lastSyncAt = DateTime.now();
+        _errorMessage = null;
         notifyListeners();
       }
     } finally {
@@ -1787,6 +1848,67 @@ class PosController extends ChangeNotifier {
     await prefs.setString(_cachedCustomersKey, jsonEncode(payload));
   }
 
+  Future<void> _cacheCategories(List<ProductCategory> categories) async {
+    final prefs = await SharedPreferences.getInstance();
+    final payload = categories
+        .map((category) => {
+              'id': category.id,
+              'attributes': {
+                'name': category.name,
+              },
+            })
+        .toList();
+    await prefs.setString(_cachedCategoriesKey, jsonEncode(payload));
+  }
+
+  Future<void> _cachePaymentMethods(List<PaymentMethod> methods) async {
+    final prefs = await SharedPreferences.getInstance();
+    final payload = methods
+        .map((method) => {
+              'id': method.id,
+              'name': method.name,
+              'type': method.type,
+              'is_default': method.isDefault,
+              'is_active': method.isActive,
+            })
+        .toList();
+    await prefs.setString(_cachedPaymentMethodsKey, jsonEncode(payload));
+  }
+
+  Future<void> _cacheShippingMethods(List<ShippingMethod> methods) async {
+    final prefs = await SharedPreferences.getInstance();
+    final payload = methods
+        .map((method) => {
+              'id': method.id,
+              'name': method.name,
+              'type': method.type,
+              'value': method.value,
+              'is_active': method.isActive,
+            })
+        .toList();
+    await prefs.setString(_cachedShippingMethodsKey, jsonEncode(payload));
+  }
+
+  Future<void> _cacheDiscounts(List<Discount> discounts) async {
+    final prefs = await SharedPreferences.getInstance();
+    final payload = discounts
+        .map((discount) => {
+              'id': discount.id,
+              'name': discount.name,
+              'type': discount.type,
+              'value': discount.value,
+              'scope': discount.scope,
+              'is_active': discount.isActive,
+            })
+        .toList();
+    await prefs.setString(_cachedDiscountsKey, jsonEncode(payload));
+  }
+
+  Future<void> _cacheConfig(Map<String, dynamic> payload) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cachedConfigKey, jsonEncode(payload));
+  }
+
   Future<void> _cacheWarehouses(List<Warehouse> warehouses) async {
     final prefs = await SharedPreferences.getInstance();
     final payload = warehouses
@@ -1813,6 +1935,80 @@ class PosController extends ChangeNotifier {
             .toList();
       }
       _normalizeCustomers();
+    } catch (_) {}
+  }
+
+  Future<void> _loadCachedCategories() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_cachedCategoriesKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        _categories = decoded
+            .whereType<Map>()
+            .map((e) => ProductCategory.fromJson(e.cast<String, dynamic>()))
+            .toList();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadCachedPaymentMethods() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_cachedPaymentMethodsKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        _paymentMethods = decoded
+            .whereType<Map>()
+            .map((e) => PaymentMethod.fromJson(e.cast<String, dynamic>()))
+            .where((method) => method.isActive)
+            .toList();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadCachedShippingMethods() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_cachedShippingMethodsKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        final methods = decoded
+            .whereType<Map>()
+            .map((e) => ShippingMethod.fromJson(e.cast<String, dynamic>()))
+            .toList();
+        _applyShippingMethods(methods);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadCachedDiscounts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_cachedDiscountsKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        _discounts = decoded
+            .whereType<Map>()
+            .map((e) => Discount.fromJson(e.cast<String, dynamic>()))
+            .toList();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadCachedConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_cachedConfigKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        _applyConfig(decoded.cast<String, dynamic>());
+      }
     } catch (_) {}
   }
 

@@ -10,14 +10,34 @@ class PaymentMethodController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $this->managerOrFail($request);
+        $manager = $this->managerOrFail($request);
         $perPage = (int) $request->query('per_page', 50);
 
-        $methods = PaymentMethod::whereNull('manager_id')
+        $globalMethods = PaymentMethod::whereNull('manager_id')
             ->orderBy('id', 'desc')
-            ->paginate($perPage);
+            ->get();
+        $overrides = PaymentMethod::where('manager_id', $manager->id)
+            ->get()
+            ->keyBy(function (PaymentMethod $method) {
+                return mb_strtolower(trim($method->name)) . '|' . ($method->type ?? '');
+            });
 
-        return response()->json($methods);
+        $methods = $globalMethods
+            ->map(function (PaymentMethod $method) use ($overrides) {
+                $key = mb_strtolower(trim($method->name)) . '|' . ($method->type ?? '');
+                return $overrides[$key] ?? $method;
+            })
+            ->filter(fn (PaymentMethod $method) => $method->is_active)
+            ->values();
+
+        $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+            $methods->forPage(1, $perPage)->values(),
+            $methods->count(),
+            $perPage,
+            1
+        );
+
+        return response()->json($paginated);
     }
 
     public function show(Request $request, int $id)

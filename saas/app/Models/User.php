@@ -24,6 +24,7 @@ class User extends Authenticatable
         'manager_id',
         'store_id',
         'name',
+        'username',
         'email',
         'password',
         'is_super_admin',

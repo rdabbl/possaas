@@ -13,6 +13,7 @@ import '../../../../core/models/customer.dart';
 import '../../../../core/models/order_summary.dart';
 import '../../../../core/models/register_details.dart';
 import '../../../../core/models/currency.dart';
+import '../../../../core/models/offline_sale.dart';
 import '../../../../core/models/payment_method.dart';
 import '../../../../core/models/shipping_method.dart';
 import '../../../../core/models/warehouse.dart';
@@ -142,7 +143,7 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
       final auth = context.read<AuthController>();
       final printerController = context.read<PrinterSettingsController>();
       await posController.updateActiveUserLabel(auth.userLabel);
-      await printerController.attachToUser(auth.userLabel);
+      await printerController.attachToUser(null);
       printerController.syncServices(_resolvePrintingServices(posController));
       await posController.loadOrderHistory();
       await posController.loadHistoryUsers();
@@ -240,18 +241,13 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  if (controller.errorMessage != null)
-                    _StatusBanner(
-                      message: controller.errorMessage!,
-                      isError: true,
-                      onDismiss: controller.clearMessages,
-                    ),
-                  if (controller.successMessage != null)
-                    _StatusBanner(
-                      message: controller.successMessage!,
-                      isError: false,
-                      onDismiss: controller.clearMessages,
-                    ),
+                  _MainStatusBanner(
+                    errorMessage: controller.errorMessage,
+                    successMessage: controller.successMessage,
+                    offlineMode: controller.offlineMode,
+                    onDismiss: controller.clearMessages,
+                  ),
+                  const SizedBox(height: 10),
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.all(12),
@@ -318,17 +314,18 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
               );
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF8F1D7),
+          backgroundColor: const Color(0xFF050505),
           body: SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
+                const outerPadding = 6.0;
                 return Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(outerPadding),
                   child: Center(
                     child: ClipRect(
                       child: SizedBox(
-                        width: constraints.maxWidth - 24,
-                        height: constraints.maxHeight - 24,
+                        width: constraints.maxWidth - (outerPadding * 2),
+                        height: constraints.maxHeight - (outerPadding * 2),
                         child: FittedBox(
                           fit: BoxFit.contain,
                           alignment: Alignment.topCenter,
@@ -529,8 +526,8 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
         onTap: () => controller.refreshProducts(skipSyncOffline: true),
       ),
       _ActionMenuItem(
-        icon: Icons.history,
-        label: tr('Historique'),
+        icon: Icons.sync,
+        label: tr('Synchronisation'),
         onTap: _openOrderHistory,
       ),
       _ActionMenuItem(
@@ -697,37 +694,146 @@ class _DropdownField<T> extends StatelessWidget {
 class _StatusBanner extends StatelessWidget {
   const _StatusBanner({
     required this.message,
-    required this.isError,
+    required this.tone,
+    required this.modeLabel,
     required this.onDismiss,
   });
 
   final String message;
-  final bool isError;
+  final _BannerTone tone;
+  final String modeLabel;
   final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
-    final color = isError ? Colors.red : Colors.green;
+    final palette = switch (tone) {
+      _BannerTone.error => (
+          bg: const Color(0xFF341010),
+          border: const Color(0xFF7F1D1D),
+          text: const Color(0xFFFCA5A5),
+          icon: const Color(0xFFEF4444),
+          iconData: Icons.error_outline,
+        ),
+      _BannerTone.success => (
+          bg: const Color(0xFF0E2A17),
+          border: const Color(0xFF166534),
+          text: const Color(0xFF86EFAC),
+          icon: const Color(0xFF22C55E),
+          iconData: Icons.check_circle_outline,
+        ),
+      _BannerTone.warning => (
+          bg: const Color(0xFF35210A),
+          border: const Color(0xFF9A6700),
+          text: const Color(0xFFFCD34D),
+          icon: const Color(0xFFF59E0B),
+          iconData: Icons.info_outline,
+        ),
+    };
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      padding: const EdgeInsets.all(12),
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(14),
+        color: palette.bg,
+        border: Border.all(color: palette.border),
       ),
       child: Row(
         children: [
-          Icon(
-            isError ? Icons.error_outline : Icons.check_circle_outline,
-            color: color,
-          ),
+          Icon(palette.iconData, color: palette.icon),
           const SizedBox(width: 8),
-          Expanded(child: Text(message)),
-          IconButton(onPressed: onDismiss, icon: const Icon(Icons.close)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              modeLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: palette.text,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: onDismiss,
+            icon: Icon(Icons.close, color: palette.text),
+          ),
         ],
       ),
     );
+  }
+}
+
+enum _BannerTone { error, success, warning }
+
+class _MainStatusBanner extends StatelessWidget {
+  const _MainStatusBanner({
+    required this.errorMessage,
+    required this.successMessage,
+    required this.offlineMode,
+    required this.onDismiss,
+  });
+
+  final String? errorMessage;
+  final String? successMessage;
+  final bool offlineMode;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final modeLabel = offlineMode ? tr('Mode hors ligne') : tr('Mode en ligne');
+    final String message;
+    final _BannerTone tone;
+
+    if (errorMessage != null && errorMessage!.trim().isNotEmpty) {
+      message = errorMessage!;
+      tone = _resolveTone(errorMessage!, isError: true, offlineMode: offlineMode);
+    } else if (successMessage != null && successMessage!.trim().isNotEmpty) {
+      message = successMessage!;
+      tone = _resolveTone(successMessage!, isError: false, offlineMode: offlineMode);
+    } else {
+      message = offlineMode
+          ? tr('Les donnees locales sont utilisees. La synchronisation reprendra quand la connexion reviendra.')
+          : tr('Connexion active. Le POS utilise la synchronisation automatique.');
+      tone = offlineMode ? _BannerTone.warning : _BannerTone.success;
+    }
+
+    return _StatusBanner(
+      message: message,
+      tone: tone,
+      modeLabel: modeLabel,
+      onDismiss: onDismiss,
+    );
+  }
+
+  _BannerTone _resolveTone(
+    String message, {
+    required bool isError,
+    required bool offlineMode,
+  }) {
+    final lower = message.toLowerCase();
+    final isWarning = lower.contains('hors ligne') ||
+        lower.contains('local') ||
+        lower.contains('synchronis') ||
+        lower.contains('en attente') ||
+        lower.contains('connexion') ||
+        offlineMode;
+    if (isWarning) return _BannerTone.warning;
+    return isError ? _BannerTone.error : _BannerTone.success;
   }
 }
 
@@ -1515,8 +1621,8 @@ class _TopActionButtonsState extends State<_TopActionButtons> {
         onTap: widget.onRefresh,
       ),
       _ActionMenuItem(
-        icon: Icons.history,
-        label: tr('Historique'),
+        icon: Icons.sync,
+        label: tr('Synchronisation'),
         onTap: _openOrderHistory,
       ),
       _ActionMenuItem(
@@ -2120,10 +2226,61 @@ class _CartItemTile extends StatelessWidget {
               color: Color(0xFFF59E0B),
             ),
           ),
+          const SizedBox(width: 6),
+          _QuantityAdjuster(
+            quantity: item.quantity,
+            onDecrease: () => controller.updateQuantity(item.id, item.quantity - 1),
+            onIncrease: () => controller.updateQuantity(item.id, item.quantity + 1),
+          ),
           IconButton(
             tooltip: tr('Supprimer'),
             onPressed: () => controller.removeFromCart(item.id),
             icon: const Icon(Icons.delete_outline, size: 18),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuantityAdjuster extends StatelessWidget {
+  const _QuantityAdjuster({
+    required this.quantity,
+    required this.onDecrease,
+    required this.onIncrease,
+  });
+
+  final int quantity;
+  final VoidCallback onDecrease;
+  final VoidCallback onIncrease;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            onPressed: onDecrease,
+            icon: const Icon(Icons.remove, size: 16),
+          ),
+          Text(
+            '$quantity',
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            onPressed: onIncrease,
+            icon: const Icon(Icons.add, size: 16),
           ),
         ],
       ),
@@ -2953,9 +3110,13 @@ class _CartActions extends StatelessWidget {
 
               final printerController = context
                   .read<PrinterSettingsController>();
-              final methods = controller.paymentMethods.isNotEmpty
-                  ? controller.paymentMethods
-                  : [PaymentMethod.fallback()];
+              final methods = controller.paymentMethods;
+              if (methods.isEmpty) {
+                showError(
+                  tr('Aucune méthode de paiement configurée. Ajoutez-en une avant de payer.'),
+                );
+                return;
+              }
               final defaultMethod = methods.firstWhere(
                 (method) => method.isDefault,
                 orElse: () => methods.first,
@@ -2964,7 +3125,12 @@ class _CartActions extends StatelessWidget {
               final result = await showDialog<_PaymentDialogResult>(
                 context: context,
                 builder: (_) => _PaymentDialog(
+                  items: controller.cartItems,
                   grandTotal: controller.grandTotal,
+                  discountAmount: controller.discountAmount,
+                  shipping: controller.shipping,
+                  taxRate: controller.taxRate,
+                  loyaltyRedeemAmount: controller.loyaltyRedeemAmount,
                   currencySymbol: controller.currencySymbol,
                   currencyOnRight: controller.isCurrencySymbolRight,
                   paymentMethods: methods,
@@ -2973,6 +3139,7 @@ class _CartActions extends StatelessWidget {
               );
               if (result == null) return;
               final shouldPrint = result.shouldPrint;
+              final cartSnapshot = List<CartItem>.from(result.items);
               final selectedMethod = methods.firstWhere(
                 (method) => method.id == result.paymentTypeId,
                 orElse: () => defaultMethod,
@@ -2986,12 +3153,16 @@ class _CartActions extends StatelessWidget {
                     .label,
               );
 
-              final cartSnapshot = List<CartItem>.from(controller.cartItems);
-              final subTotal = controller.subTotal;
-              final discount = controller.discountAmount;
-              final tax = controller.taxTotal;
-              final shipping = controller.shipping;
-              final grandTotal = controller.grandTotal;
+              final itemsSubTotal = cartSnapshot.fold<double>(
+                0,
+                (sum, item) => sum + item.subTotal,
+              );
+              final discount = result.discountAmount;
+              final shipping = result.shipping;
+              final double subTotal =
+                  (itemsSubTotal - discount).clamp(0, double.infinity).toDouble();
+              final tax = subTotal * (result.taxRate / 100);
+              final grandTotal = subTotal + tax + shipping;
               final services = _resolvePrintingServices(controller);
               final receiptTargets = _servicesForTemplate(
                 services,
@@ -3005,41 +3176,17 @@ class _CartActions extends StatelessWidget {
                       storeId: controller.selectedWarehouse?.id ?? 0,
                     );
 
-              if (shouldPrint && appearance.showPrintPreview && receiptService.isReceipt) {
-                final previewOk = await showDialog<bool>(
-                  context: context,
-                  builder: (_) => _ReceiptPreviewDialog(
-                    items: cartSnapshot,
-                    currencySymbol: controller.currencySymbol,
-                    currencyOnRight: controller.isCurrencySymbolRight,
-                    companyName: controller.companyName,
-                    companyAddress: controller.companyAddress,
-                    companyEmail: controller.companyEmail,
-                    companyPhone: controller.companyPhone,
-                    warehouseName: controller.selectedWarehouse?.name,
-                    subTotal: subTotal,
-                    discount: discount,
-                    tax: tax,
-                    shipping: shipping,
-                    total: grandTotal,
-                    paymentType: selectedMethod.name,
-                    paymentStatus: paymentStatusLabel,
-                    received: result.receivedAmount,
-                    change: result.change,
-                    paperWidthMm: printerController.paperWidth,
-                  ),
-                );
-                if (previewOk != true) {
-                  return;
-                }
-              }
-
               await controller.checkout(
                 notes: notesController.text.trim(),
                 paymentTypeId: result.paymentTypeId,
                 paymentStatusId: result.paymentStatusId,
                 receivedAmount: result.receivedAmount,
                 shouldPrint: shouldPrint,
+                cartItemsOverride: cartSnapshot,
+                discountAmountOverride: discount,
+                shippingOverride: shipping,
+                taxRateOverride: result.taxRate,
+                grandTotalOverride: grandTotal,
               );
               if (!context.mounted || controller.errorMessage != null) return;
 
@@ -3094,7 +3241,22 @@ class _CartActions extends StatelessWidget {
 
     final holdButton = OutlinedButton.icon(
       style: outlineStyle(holdColor),
-      onPressed: () => showError(tr('Hold non disponible pour le moment.')),
+      onPressed: controller.isProcessingSale
+          ? null
+          : () async {
+              if (controller.cartItems.isEmpty) {
+                showError(tr('Ajoutez des articles avant de mettre en attente.'));
+                return;
+              }
+              await controller.checkout(
+                notes: notesController.text.trim(),
+                paymentTypeId: 0,
+                paymentStatusId: 2,
+                receivedAmount: 0,
+                shouldPrint: false,
+                saleStatus: 'onhold',
+              );
+            },
       icon: const Icon(Icons.pause_circle_outline, size: 18),
       label: Text(tr('Hold')),
     );
@@ -3176,74 +3338,170 @@ class _HistorySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<PosController>();
+    final printerController = context.read<PrinterSettingsController>();
+    final auth = context.read<AuthController>();
     final theme = Theme.of(context);
-    String formatAmount(double v) => _formatCurrency(
-          v,
-          controller.currencySymbol,
-          controller.isCurrencySymbolRight,
-        );
+    final pendingCount = controller.pendingOfflineSalesCount;
+    final failedCount = controller.failedOfflineSalesCount;
+    final totalCount = controller.offlineSales.length;
+    final lastSync = controller.lastSyncAt;
     final orders = controller.filteredRecentOrders;
-    final combinedUsers = controller.historyUsers;
-    final shouldShowUserFilter = combinedUsers.isNotEmpty;
+
+    Future<void> payAndPrintOrder(OrderSummary order) async {
+      final methods = controller.paymentMethods;
+      if (methods.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('Aucune méthode de paiement configurée.'))),
+        );
+        return;
+      }
+      final remaining = (order.grandTotal - order.paidAmount).clamp(0, double.infinity).toDouble();
+      if (remaining <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('Cette commande est déjà payée.'))),
+        );
+        return;
+      }
+      final defaultMethod = methods.firstWhere(
+        (method) => method.isDefault,
+        orElse: () => methods.first,
+      );
+      final result = await showDialog<_SimplePaymentDialogResult>(
+        context: context,
+        builder: (_) => _SimplePaymentDialog(
+          amountDue: remaining,
+          currencySymbol: controller.currencySymbol,
+          currencyOnRight: controller.isCurrencySymbolRight,
+          paymentMethods: methods,
+          defaultPaymentMethodId: defaultMethod.id,
+        ),
+      );
+      if (result == null) return;
+      final ok = await controller.payOrder(
+        saleId: order.id,
+        paymentTypeId: result.paymentTypeId,
+        receivedAmount: result.receivedAmount,
+      );
+      if (!context.mounted || !ok) return;
+
+      final selectedMethod = methods.firstWhere(
+        (method) => method.id == result.paymentTypeId,
+        orElse: () => defaultMethod,
+      );
+      final payload = await controller.repository.fetchSalePayload(order.id);
+      final source = payload['data'] is Map<String, dynamic>
+          ? payload['data'] as Map<String, dynamic>
+          : payload;
+      final itemsRaw = source['items'] is List ? source['items'] as List : const [];
+
+      double parseDouble(dynamic value) {
+        if (value is num) return value.toDouble();
+        return double.tryParse('$value') ?? 0;
+      }
+
+      final items = itemsRaw.whereType<Map>().map((raw) {
+        final map = raw.cast<String, dynamic>();
+        final product = Product(
+          id: int.tryParse('${map['product_id'] ?? 0}') ?? 0,
+          name: map['name']?.toString() ?? tr('Produit'),
+          code: map['sku']?.toString() ?? '',
+          price: parseDouble(map['unit_price']),
+          cost: 0,
+          stockQuantity: -1,
+          taxValue: 0,
+        );
+        final optionsRaw = map['options'] is List ? map['options'] as List : const [];
+        final options = optionsRaw.whereType<Map>().map((option) {
+          return ProductOption.fromJson(option.cast<String, dynamic>());
+        }).toList();
+        return CartItem(
+          product: product,
+          quantity: parseDouble(map['quantity']).round(),
+          options: options,
+        );
+      }).toList();
+
+      final services = _resolvePrintingServices(controller);
+      final receiptTargets = _servicesForTemplate(
+        services,
+        'receipt',
+        storeId: controller.selectedWarehouse?.id ?? 0,
+      );
+      printerController.syncServices(services);
+      for (final service in receiptTargets) {
+        await printerController.printSaleReceipt(
+          items: items,
+          subTotal: parseDouble(source['subtotal']),
+          discount: parseDouble(source['discount_total']),
+          tax: parseDouble(source['tax_total']),
+          shipping: 0,
+          grandTotal: parseDouble(source['grand_total']),
+          currencySymbol: controller.currencySymbol,
+          currencyOnRight: controller.isCurrencySymbolRight,
+          customerName: source['customer_name']?.toString(),
+          userLabel: auth.userLabel,
+          companyName: controller.companyName,
+          companyAddress: controller.companyAddress,
+          companyEmail: controller.companyEmail,
+          companyPhone: controller.companyPhone,
+          warehouseName: controller.selectedWarehouse?.name,
+          companyLogoUrl: controller.companyLogo,
+          paymentType: selectedMethod.name,
+          paymentStatus: tr('Payée'),
+          receivedAmount: result.receivedAmount,
+          change: (result.receivedAmount - remaining).clamp(0, double.infinity).toDouble(),
+          serviceId: service.id,
+          template: service.template,
+        );
+      }
+    }
 
     Widget content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(tr('Période:')),
-              ..._historyPresetHours.map((h) {
-                final selected = controller.historyHours == h;
-                return ChoiceChip(
-                  label: Text(_historyLabelForHours(h)),
-                  selected: selected,
-                  onSelected: (_) {
-                    controller.loadOrderHistory(hours: h);
-                  },
-                );
-              }),
+              Text(
+                tr('Etat de synchronisation'),
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text('${tr('Commandes locales')}: $totalCount'),
+              Text('${tr('En attente')}: $pendingCount'),
+              Text('${tr('En erreur')}: $failedCount'),
+              Text(
+                lastSync == null
+                    ? tr('Derniere synchronisation: jamais')
+                    : '${tr('Derniere synchronisation')}: ${DateFormat('dd/MM/yyyy HH:mm').format(lastSync.toLocal())}',
+              ),
+              if (controller.isSyncingOfflineSales) ...[
+                const SizedBox(height: 12),
+                const LinearProgressIndicator(),
+              ],
             ],
           ),
         ),
-        if (shouldShowUserFilter) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(tr('Utilisateur:')),
-              const SizedBox(width: 8),
-              DropdownButton<int?>(
-                value: controller.historyUserIdFilter,
-                hint: Text(tr('Tous')),
-                items: [
-                  DropdownMenuItem(
-                    value: null,
-                    child: Text(tr('Tous')),
-                  ),
-                  ...combinedUsers
-                      .map((u) => DropdownMenuItem(value: u.id, child: Text(u.label)))
-                      .toList(),
-                ],
-                onChanged: controller.updateHistoryUserFilter,
-              ),
-            ],
-          ),
-        ],
         const SizedBox(height: 12),
         Align(
           alignment: Alignment.centerLeft,
           child: FilledButton.icon(
             onPressed: controller.offlineSales.isEmpty ||
-                    controller.isProcessingSale
+                    controller.isProcessingSale ||
+                    controller.isSyncingOfflineSales
                 ? null
                 : () async {
                     await controller.syncOfflineQueue();
                   },
-            icon: controller.isProcessingSale
+            icon: controller.isProcessingSale || controller.isSyncingOfflineSales
                 ? const SizedBox(
                     width: 16,
                     height: 16,
@@ -3261,23 +3519,80 @@ class _HistorySection extends StatelessWidget {
         const SizedBox(height: 12),
         _HistoryHeader(
           register: controller.displayRegisterDetails,
-          formatAmount: formatAmount,
+          formatAmount: (value) => _formatCurrency(
+            value,
+            controller.currencySymbol,
+            controller.isCurrencySymbolRight,
+          ),
         ),
         const SizedBox(height: 12),
-        if (orders.isNotEmpty)
-          _ProductSummarySection(orders: orders),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              label: Text(tr('Toutes sources')),
+              selected: controller.historySourceFilter == null,
+              onSelected: (_) => controller.updateHistorySourceFilter(null),
+            ),
+            ChoiceChip(
+              label: Text(tr('POS')),
+              selected: controller.historySourceFilter == 'pos',
+              onSelected: (_) => controller.updateHistorySourceFilter('pos'),
+            ),
+            ChoiceChip(
+              label: Text(tr('Borne')),
+              selected: controller.historySourceFilter == 'kiosk',
+              onSelected: (_) => controller.updateHistorySourceFilter('kiosk'),
+            ),
+            ChoiceChip(
+              label: Text(tr('Tous statuts')),
+              selected: controller.historyStatusFilter == null,
+              onSelected: (_) => controller.updateHistoryStatusFilter(null),
+            ),
+            for (final status in controller.availableHistoryStatuses)
+              ChoiceChip(
+                label: Text(status),
+                selected:
+                    controller.historyStatusFilter?.toLowerCase() == status.toLowerCase(),
+                onSelected: (_) => controller.updateHistoryStatusFilter(status),
+              ),
+          ],
+        ),
         const SizedBox(height: 12),
-        if (controller.isHistoryLoading)
-          const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
+        if (orders.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(tr('Aucune commande trouvée pour ce filtre.')),
           )
-        else if (orders.isEmpty)
+        else
+          SizedBox(
+            height: listHeight,
+            child: ListView.separated(
+              itemCount: orders.length,
+              separatorBuilder: (_, __) => const Divider(height: 12),
+              itemBuilder: (_, index) => _OrderHistoryRow(
+                order: orders[index],
+                formatAmount: (value) => _formatCurrency(
+                  value,
+                  controller.currencySymbol,
+                  controller.isCurrencySymbolRight,
+                ),
+                onPayAndPrint: orders[index].isKioskOrder &&
+                        orders[index].status.toLowerCase() == 'pos'
+                    ? () => payAndPrintOrder(orders[index])
+                    : null,
+              ),
+            ),
+          ),
+        const SizedBox(height: 12),
+        _ProductSummarySection(orders: orders),
+        const SizedBox(height: 12),
+        if (controller.offlineSales.isEmpty)
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              '${tr('Aucune commande sur les')} '
-              '${_historyLabelForHours(controller.historyHours)}.',
+              tr('Aucune commande locale a synchroniser.'),
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -3287,12 +3602,41 @@ class _HistorySection extends StatelessWidget {
             height: listHeight,
             width: double.infinity,
             child: ListView.separated(
-              itemCount: orders.length,
+              itemCount: controller.offlineSales.length,
               separatorBuilder: (_, __) => const Divider(height: 12),
-              itemBuilder: (_, index) => _OrderHistoryRow(
-                order: orders[index],
-                formatAmount: formatAmount,
-              ),
+              itemBuilder: (_, index) {
+                final sale = controller.offlineSales[index];
+                final createdAt = DateFormat(
+                  'dd/MM/yyyy HH:mm',
+                ).format(sale.createdAt.toLocal());
+                final status = sale.status == OfflineSaleStatus.failed
+                    ? tr('Erreur')
+                    : (sale.status == OfflineSaleStatus.synced
+                        ? tr('Synchronisee')
+                        : tr('En attente'));
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: sale.status == OfflineSaleStatus.failed
+                        ? const Color(0xFFFEE2E2)
+                        : const Color(0xFFFEF3C7),
+                    child: Icon(
+                      sale.status == OfflineSaleStatus.failed
+                          ? Icons.error_outline
+                          : Icons.sync,
+                      color: sale.status == OfflineSaleStatus.failed
+                          ? const Color(0xFFB91C1C)
+                          : const Color(0xFF92400E),
+                    ),
+                  ),
+                  title: Text(sale.id),
+                  subtitle: Text(
+                    '$createdAt\n${sale.errorMessage ?? status}',
+                  ),
+                  isThreeLine: true,
+                  trailing: Text(status),
+                );
+              },
             ),
           ),
       ],
@@ -3625,8 +3969,8 @@ class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
         onTap: widget.onRefresh,
       ),
       _ActionMenuItem(
-        icon: Icons.history,
-        label: tr('Historique'),
+        icon: Icons.sync,
+        label: tr('Synchronisation'),
         onTap: _openOrderHistory,
       ),
       _ActionMenuItem(
@@ -4446,7 +4790,6 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
   late bool _showCashButton;
   late bool _showResetButton;
   late bool _showHoldButton;
-  late bool _showPrintPreview;
   late bool _showHistoryPanel;
   late int _gridColumns;
   late bool _resetHistoryAt4;
@@ -4473,7 +4816,6 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
     _showCashButton = appearance.showCashButton;
     _showResetButton = appearance.showResetButton;
     _showHoldButton = appearance.showHoldButton;
-    _showPrintPreview = appearance.showPrintPreview;
     _showHistoryPanel = appearance.showHistoryPanel;
     _gridColumns = appearance.productGridColumns.clamp(3, 5);
     _resetHistoryAt4 = appearance.resetHistoryAt4Am;
@@ -4779,15 +5121,6 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
               value: _showHoldButton,
               onChanged: (value) => setState(() => _showHoldButton = value),
             ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(tr('Prévisualiser l\'impression')),
-              subtitle: Text(
-                tr('Affiche un aperçu du ticket avant impression.'),
-              ),
-              value: _showPrintPreview,
-              onChanged: (value) => setState(() => _showPrintPreview = value),
-            ),
           ],
         ),
       ),
@@ -4813,7 +5146,6 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
             appearance.updateCashButtonVisibility(_showCashButton);
             appearance.updateResetButtonVisibility(_showResetButton);
             appearance.updateHoldButtonVisibility(_showHoldButton);
-            appearance.updatePrintPreviewVisibility(_showPrintPreview);
             appearance.updateHistoryPanelVisibility(_showHistoryPanel);
             appearance.updateHistoryReset(_resetHistoryAt4);
             appearance.updateHistoryResetHour(_resetHour);
@@ -4956,6 +5288,11 @@ class _PrinterSettingsDialog extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
               ],
+              Text(
+                tr('Connexion imprimante'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
               _PrinterTypeSelector(controller: controller),
               if (!controller.currentTypeSupported)
                 Padding(
@@ -4968,7 +5305,11 @@ class _PrinterSettingsDialog extends StatelessWidget {
                   ),
                 ),
               const SizedBox(height: 12),
-              Row(
+              _ConnectedPrinterCard(controller: controller),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
                 children: [
                   OutlinedButton.icon(
                     onPressed: controller.canDiscover
@@ -4987,7 +5328,11 @@ class _PrinterSettingsDialog extends StatelessWidget {
                           : tr('Chercher des imprimantes'),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: controller.showPrinterDiscovery,
+                    icon: const Icon(Icons.tune),
+                    label: Text(tr('Modifier la sélection')),
+                  ),
                   if (controller.canUseManualEntry)
                     OutlinedButton.icon(
                       onPressed: controller.manualAddress.trim().isEmpty
@@ -4998,17 +5343,22 @@ class _PrinterSettingsDialog extends StatelessWidget {
                     ),
                 ],
               ),
-              if (controller.canUseManualEntry) ...[
-                const SizedBox(height: 12),
-                _ManualNetworkFields(controller: controller),
+              if (controller.showDiscoveredPrinters) ...[
+                if (controller.canUseManualEntry) ...[
+                  const SizedBox(height: 12),
+                  _ManualNetworkFields(controller: controller),
+                ],
+                const SizedBox(height: 16),
+                _PrinterDeviceList(controller: controller),
               ],
-              const SizedBox(height: 16),
-              _PrinterDeviceList(controller: controller),
               const Divider(height: 32),
+              Text(
+                tr('Configuration papier et coupe'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
               _PaperOptions(controller: controller),
               const SizedBox(height: 8),
-              const _PrintPreviewSection(),
-              const SizedBox(height: 12),
               Text(tr('Taille du texte (%)'),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
@@ -5039,36 +5389,20 @@ class _PrinterSettingsDialog extends StatelessWidget {
                 value: controller.autoCut,
                 onChanged: controller.toggleAutoCut,
                 title: Text(tr('Activer le cutter')),
+                subtitle: Text(
+                  controller.autoCut
+                      ? tr('La coupe sera envoyée après impression.')
+                      : tr('Le ticket sortira sans commande de coupe.'),
+                ),
                 contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 8),
-              Text(tr('Infos Wi-Fi (pour ticket)'),
+              Text(
+                tr('Gestion des tickets'),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              const SizedBox(height: 4),
-              TextFormField(
-                key: ValueKey('ssid-${controller.wifiSsid}'),
-                initialValue: controller.wifiSsid,
-                decoration: InputDecoration(
-                  labelText: tr('SSID'),
-                  border: _outlineInputBorder(context),
-                  enabledBorder: _outlineInputBorder(context),
-                  focusedBorder: _outlineInputBorder(context, width: 1.8),
-                ),
-                onChanged: controller.updateWifiSsid,
-              ),
               const SizedBox(height: 8),
-              TextFormField(
-                key: ValueKey('wifipass-${controller.wifiPassword}'),
-                initialValue: controller.wifiPassword,
-                decoration: InputDecoration(
-                  labelText: tr('Mot de passe Wi-Fi'),
-                  border: _outlineInputBorder(context),
-                  enabledBorder: _outlineInputBorder(context),
-                  focusedBorder: _outlineInputBorder(context, width: 1.8),
-                ),
-                onChanged: controller.updateWifiPassword,
-              ),
+              _TicketContentSection(controller: controller),
               if (controller.statusMessage != null) ...[
                 const SizedBox(height: 8),
                 _PrinterStatusBanner(
@@ -5200,6 +5534,94 @@ class _PrinterTypeSelector extends StatelessWidget {
   }
 }
 
+class _ConnectedPrinterCard extends StatelessWidget {
+  const _ConnectedPrinterCard({required this.controller});
+
+  final PrinterSettingsController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = controller.selectedDevice;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    if (selected == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: scheme.surfaceVariant.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.print_disabled_outlined),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                tr('Aucune imprimante connectée pour ce service.'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.print, color: Colors.green),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  tr('Imprimante connectée'),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  selected.type.label,
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            selected.name,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(selected.details),
+        ],
+      ),
+    );
+  }
+}
+
 class _PrinterDeviceList extends StatelessWidget {
   const _PrinterDeviceList({required this.controller});
 
@@ -5233,6 +5655,75 @@ class _PrinterDeviceList extends StatelessWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+class _TicketContentSection extends StatelessWidget {
+  const _TicketContentSection({required this.controller});
+
+  final PrinterSettingsController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.22),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tr('Contenu imprimé sur les tickets'),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            tr(
+              'Ces textes sont partagés sur cette caisse et seront utilisés pour tous les utilisateurs.',
+            ),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            key: ValueKey('ticket-header-${controller.ticketHeader}'),
+            initialValue: controller.ticketHeader,
+            minLines: 2,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: tr('Entête du ticket'),
+              hintText: tr('Ex: Bienvenue chez nous'),
+              border: _outlineInputBorder(context),
+              enabledBorder: _outlineInputBorder(context),
+              focusedBorder: _outlineInputBorder(context, width: 1.8),
+            ),
+            onChanged: controller.updateTicketHeader,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            key: ValueKey('ticket-footer-${controller.ticketFooter}'),
+            initialValue: controller.ticketFooter,
+            minLines: 2,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: tr('Bas de ticket'),
+              hintText: tr('Ex: Merci pour votre visite'),
+              border: _outlineInputBorder(context),
+              enabledBorder: _outlineInputBorder(context),
+              focusedBorder: _outlineInputBorder(context, width: 1.8),
+            ),
+            onChanged: controller.updateTicketFooter,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -5393,175 +5884,6 @@ class _PrinterStatusBanner extends StatelessWidget {
   }
 }
 
-class _PrintPreviewSection extends StatelessWidget {
-  const _PrintPreviewSection();
-
-  @override
-  Widget build(BuildContext context) {
-    // Use the nearest provider inside the dialog tree (it is provided by the parent PosPage).
-    final pos = context.read<PosController>();
-    final currency = pos.currencySymbol;
-    final previewItems = pos.cartItems.isNotEmpty
-        ? pos.cartItems.take(3).toList()
-        : pos.products
-              .take(3)
-              .map((p) => CartItem(product: p, quantity: 1, options: p.options))
-              .toList();
-
-    String _formatAmount(double value) =>
-        _formatCurrency(value, currency, pos.isCurrencySymbolRight);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          tr('Prévisualisation avant impression'),
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _PreviewCard(
-                title: tr('Ticket de vente'),
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "${tr('Client')}: ${pos.selectedCustomer?.name ?? tr('Walk-in')}",
-                    ),
-                    const SizedBox(height: 4),
-                    ...previewItems.map(
-                      (item) => Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.product.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Text(
-                            '${tr('x')}${item.quantity.toStringAsFixed(0)}',
-                          ),
-                          Text(
-                            _formatAmount(item.product.price * item.quantity),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(),
-                    _previewLine(tr('Total'), _formatAmount(pos.subTotal)),
-                    _previewLine(tr('TVA'), _formatAmount(pos.taxTotal)),
-                    _previewLine(tr('Livraison'), _formatAmount(pos.shipping)),
-                    const Divider(),
-                    _previewLine(
-                      tr('À payer'),
-                      _formatAmount(pos.grandTotal),
-                      bold: true,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _PreviewCard(
-                title: tr('Historique (dernier)'),
-                content: Builder(
-                  builder: (_) {
-                    final last = pos.recentOrders.isNotEmpty
-                        ? pos.recentOrders.first
-                        : null;
-                    if (last == null) {
-                      return Text(tr('Aucune commande encore enregistrée.'));
-                    }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          last.referenceCode,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        Text(last.customerName),
-                        const SizedBox(height: 4),
-                        _previewLine(
-                          tr('Montant'),
-                          _formatAmount(last.grandTotal),
-                        ),
-                        _previewLine(tr('Payé'), _formatAmount(last.paidAmount)),
-                        _previewLine(
-                          tr('Articles'),
-                          last.itemCount.toString(),
-                        ),
-                        if (last.createdAt != null)
-                          Text(
-                            DateFormat(
-                              'dd/MM/yyyy HH:mm',
-                            ).format(last.createdAt!.toLocal()),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _previewLine(String label, String value, {bool bold = false}) {
-    final style = TextStyle(
-      fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-    );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: style),
-          Text(value, style: style),
-        ],
-      ),
-    );
-  }
-}
-
-class _PreviewCard extends StatelessWidget {
-  const _PreviewCard({required this.title, required this.content});
-
-  final String title;
-  final Widget content;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.print_outlined, size: 18),
-              const SizedBox(width: 6),
-              Text(title, style: Theme.of(context).textTheme.labelLarge),
-            ],
-          ),
-          const SizedBox(height: 8),
-          content,
-        ],
-      ),
-    );
-  }
-}
-
 class _FilterChips<T> extends StatelessWidget {
   const _FilterChips({
     required this.title,
@@ -5618,21 +5940,12 @@ class _OrderHistoryDialogState extends State<_OrderHistoryDialog> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final pos = context.read<PosController>();
-      pos.loadOrderHistory(hours: pos.historyHours);
-      pos.loadHistoryUsers();
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<PosController>();
-    final filteredOrders = controller.filteredRecentOrders;
-    final auth = context.read<AuthController>();
-
     return AlertDialog(
-      title: Text(tr('Historique des commandes')),
+      title: Text(tr('Synchronisation des commandes')),
       content: SizedBox(
         width: 640,
         child: _HistorySection(
@@ -5640,53 +5953,6 @@ class _OrderHistoryDialogState extends State<_OrderHistoryDialog> {
         ),
       ),
       actions: [
-        OutlinedButton.icon(
-          onPressed: () async {
-            final posController = context.read<PosController>();
-            final printerController = context.read<PrinterSettingsController>();
-            final ordersWithNames =
-                await posController.loadProductNamesForOrders(filteredOrders);
-            final confirm = await showDialog<bool>(
-              context: context,
-              builder: (_) => _HistoryPrintPreviewDialog(
-                orders: ordersWithNames,
-                register: posController.displayRegisterDetails,
-                currencySymbol: posController.currencySymbol,
-                currencyOnRight: posController.isCurrencySymbolRight,
-              ),
-            );
-            if (confirm != true) return;
-            final services = posController.activePrintingServices;
-            final resolved = services.isNotEmpty
-                ? services
-                : [PrintingService.fallback(storeId: posController.selectedWarehouse?.id ?? 0)];
-            printerController.syncServices(resolved);
-            final receiptService = resolved.firstWhere(
-              (service) => service.isReceipt,
-              orElse: () => resolved.first,
-            );
-            await printerController.printSalesHistory(
-              orders: ordersWithNames,
-              register: posController.displayRegisterDetails,
-              currencySymbol: posController.currencySymbol,
-              currencyOnRight: posController.isCurrencySymbolRight,
-              userLabel: auth.userLabel,
-              serviceId: receiptService.id,
-            );
-            await posController.resetHistoryStats();
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  tr('Historique réinitialisé après impression.'),
-                ),
-                duration: const Duration(seconds: 5),
-              ),
-            );
-          },
-          icon: const Icon(Icons.print_outlined),
-          label: Text(tr('Imprimer')),
-        ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: Text(tr('Fermer')),
@@ -5959,10 +6225,15 @@ class _SummaryPill extends StatelessWidget {
 }
 
 class _OrderHistoryRow extends StatelessWidget {
-  const _OrderHistoryRow({required this.order, required this.formatAmount});
+  const _OrderHistoryRow({
+    required this.order,
+    required this.formatAmount,
+    this.onPayAndPrint,
+  });
 
   final OrderSummary order;
   final String Function(double) formatAmount;
+  final VoidCallback? onPayAndPrint;
 
   @override
   Widget build(BuildContext context) {
@@ -6053,6 +6324,21 @@ class _OrderHistoryRow extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(date, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _StatusChip(
+                    label: _statusLabel(order.status),
+                    color: _statusColor(order.status),
+                  ),
+                  _StatusChip(
+                    label: _paymentStatusLabel(order.paymentStatus),
+                    color: _statusColor(order.paymentStatus),
+                  ),
+                ],
+              ),
               if (order.userName != null && order.userName!.isNotEmpty)
                 Text(
                   '${tr('Utilisateur')}: ${order.userName}',
@@ -6070,6 +6356,14 @@ class _OrderHistoryRow extends StatelessWidget {
                 '${tr('Payé')}: ${formatAmount(order.paidAmount)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+              if (onPayAndPrint != null) ...[
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: onPayAndPrint,
+                  icon: const Icon(Icons.print_outlined, size: 18),
+                  label: Text(tr('Payer & imprimer')),
+                ),
+              ],
             ],
           ),
         ),
@@ -6082,6 +6376,8 @@ class _OrderHistoryRow extends StatelessWidget {
     if (normalized == 'paid') return tr('Payée');
     if (normalized == 'partial') return tr('Partielle');
     if (normalized == 'unpaid') return tr('Impayée');
+    if (normalized == 'onhold') return tr('En attente');
+    if (normalized == 'pos') return tr('POS');
     switch (status) {
       case '1':
         return tr('Complétée');
@@ -6099,6 +6395,8 @@ class _OrderHistoryRow extends StatelessWidget {
     if (normalized == 'paid') return Colors.green.shade200;
     if (normalized == 'partial') return Colors.orange.shade200;
     if (normalized == 'unpaid') return Colors.red.shade200;
+    if (normalized == 'onhold') return const Color(0xFFFDE68A);
+    if (normalized == 'pos') return const Color(0xFFBFDBFE);
     switch (status) {
       case '1':
         return Colors.green.shade200;
@@ -6162,6 +6460,10 @@ class _PaymentDialogResult {
     required this.receivedAmount,
     required this.shouldPrint,
     required this.change,
+    required this.items,
+    required this.discountAmount,
+    required this.shipping,
+    required this.taxRate,
   });
 
   final int paymentTypeId;
@@ -6169,42 +6471,50 @@ class _PaymentDialogResult {
   final double receivedAmount;
   final bool shouldPrint;
   final double change;
+  final List<CartItem> items;
+  final double discountAmount;
+  final double shipping;
+  final double taxRate;
 }
 
-class _PaymentDialog extends StatefulWidget {
-  const _PaymentDialog({
-    required this.grandTotal,
+class _SimplePaymentDialogResult {
+  const _SimplePaymentDialogResult({
+    required this.paymentTypeId,
+    required this.receivedAmount,
+  });
+
+  final int paymentTypeId;
+  final double receivedAmount;
+}
+
+class _SimplePaymentDialog extends StatefulWidget {
+  const _SimplePaymentDialog({
+    required this.amountDue,
     required this.currencySymbol,
     required this.currencyOnRight,
     required this.paymentMethods,
     required this.defaultPaymentMethodId,
   });
 
-  final double grandTotal;
+  final double amountDue;
   final String currencySymbol;
   final bool currencyOnRight;
   final List<PaymentMethod> paymentMethods;
   final int defaultPaymentMethodId;
 
   @override
-  State<_PaymentDialog> createState() => _PaymentDialogState();
+  State<_SimplePaymentDialog> createState() => _SimplePaymentDialogState();
 }
 
-class _PaymentDialogState extends State<_PaymentDialog> {
-  late TextEditingController _receivedController;
-  double _change = 0;
-  int _paymentTypeId = 1;
-  int _paymentStatusId = 1;
+class _SimplePaymentDialogState extends State<_SimplePaymentDialog> {
+  late final TextEditingController _receivedController;
+  late int _paymentTypeId;
 
   @override
   void initState() {
     super.initState();
-    _receivedController = TextEditingController(
-      text: widget.grandTotal.toStringAsFixed(2),
-    );
-    _change =
-        (double.tryParse(_receivedController.text) ?? widget.grandTotal) -
-        widget.grandTotal;
+    _receivedController =
+        TextEditingController(text: widget.amountDue.toStringAsFixed(2));
     _paymentTypeId = widget.defaultPaymentMethodId;
   }
 
@@ -6216,27 +6526,220 @@ class _PaymentDialogState extends State<_PaymentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    InputDecoration fieldDecoration(String label, IconData icon) {
-      return InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        prefixText: widget.currencyOnRight ? null : widget.currencySymbol,
-        suffixText: widget.currencyOnRight ? widget.currencySymbol : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    return AlertDialog(
+      title: Text(tr('Payer la commande')),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _receivedController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: tr('Montant reçu'),
+              prefixText: widget.currencyOnRight ? null : widget.currencySymbol,
+              suffixText: widget.currencyOnRight ? widget.currencySymbol : null,
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            value: _paymentTypeId,
+            decoration: InputDecoration(labelText: tr('Type de paiement')),
+            items: widget.paymentMethods
+                .map(
+                  (method) => DropdownMenuItem(
+                    value: method.id,
+                    child: Text(method.name),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) => setState(() => _paymentTypeId = value ?? _paymentTypeId),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(tr('Annuler')),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        FilledButton.icon(
+          onPressed: () => Navigator.of(context).pop(
+            _SimplePaymentDialogResult(
+              paymentTypeId: _paymentTypeId,
+              receivedAmount:
+                  double.tryParse(_receivedController.text) ?? widget.amountDue,
+            ),
+          ),
+          icon: const Icon(Icons.print_outlined),
+          label: Text(tr('Payer & imprimer')),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFF7C045)),
-        ),
-      );
-    }
+      ],
+    );
+  }
+}
 
+class _PaymentDialog extends StatefulWidget {
+  const _PaymentDialog({
+    required this.items,
+    required this.grandTotal,
+    required this.discountAmount,
+    required this.shipping,
+    required this.taxRate,
+    required this.loyaltyRedeemAmount,
+    required this.currencySymbol,
+    required this.currencyOnRight,
+    required this.paymentMethods,
+    required this.defaultPaymentMethodId,
+  });
+
+  final List<CartItem> items;
+  final double grandTotal;
+  final double discountAmount;
+  final double shipping;
+  final double taxRate;
+  final double loyaltyRedeemAmount;
+  final String currencySymbol;
+  final bool currencyOnRight;
+  final List<PaymentMethod> paymentMethods;
+  final int defaultPaymentMethodId;
+
+  @override
+  State<_PaymentDialog> createState() => _PaymentDialogState();
+}
+
+class _PaymentDialogState extends State<_PaymentDialog> {
+  late TextEditingController _receivedController;
+  late TextEditingController _discountController;
+  late TextEditingController _shippingController;
+  late TextEditingController _taxController;
+  late List<CartItem> _items;
+  double _change = 0;
+  int _paymentTypeId = 1;
+  int _paymentStatusId = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _items = widget.items.map((item) => item.copyWith()).toList();
+    _receivedController = TextEditingController(
+      text: widget.grandTotal.toStringAsFixed(2),
+    );
+    _discountController = TextEditingController(
+      text: widget.discountAmount.toStringAsFixed(2),
+    );
+    _shippingController = TextEditingController(
+      text: widget.shipping.toStringAsFixed(2),
+    );
+    _taxController = TextEditingController(
+      text: widget.taxRate.toStringAsFixed(2),
+    );
+    _paymentTypeId = widget.defaultPaymentMethodId;
+    _syncReceivedWithTotal();
+  }
+
+  @override
+  void dispose() {
+    _receivedController.dispose();
+    _discountController.dispose();
+    _shippingController.dispose();
+    _taxController.dispose();
+    super.dispose();
+  }
+
+  double get _itemsSubTotal =>
+      _items.fold<double>(0, (sum, item) => sum + item.subTotal);
+
+  double get _discountAmount =>
+      double.tryParse(_discountController.text) ?? widget.discountAmount;
+
+  double get _shippingAmount =>
+      double.tryParse(_shippingController.text) ?? widget.shipping;
+
+  double get _taxRate =>
+      double.tryParse(_taxController.text) ?? widget.taxRate;
+
+  double get _taxableBase => (_itemsSubTotal - _discountAmount).clamp(0, double.infinity);
+
+  double get _grandTotal => _taxableBase + (_taxableBase * (_taxRate / 100)) + _shippingAmount;
+
+  void _syncChange() {
+    final received = double.tryParse(_receivedController.text) ?? _grandTotal;
+    _change = received - _grandTotal;
+  }
+
+  void _syncReceivedWithTotal() {
+    _receivedController.text = _grandTotal.toStringAsFixed(2);
+    _syncChange();
+  }
+
+  void _updateItemUnitPrice(int index, String value) {
+    final parsed = double.tryParse(value);
+    if (parsed == null || parsed < 0) return;
+    setState(() {
+      _items[index] = _items[index].copyWith(customUnitPrice: parsed);
+      _syncReceivedWithTotal();
+    });
+  }
+
+  InputDecoration _fieldDecoration(
+    String label,
+    IconData icon, {
+    bool useCurrencyAffixes = true,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      prefixText: useCurrencyAffixes && !widget.currencyOnRight
+          ? widget.currencySymbol
+          : null,
+      suffixText: useCurrencyAffixes && widget.currencyOnRight
+          ? widget.currencySymbol
+          : null,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFF7C045)),
+      ),
+    );
+  }
+
+  Widget _priceEditor(BuildContext context, int index) {
+    final item = _items[index];
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            '${item.quantity} x ${item.product.name}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF111827),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 110,
+          child: TextFormField(
+            initialValue: item.unitPrice.toStringAsFixed(2),
+            decoration: _fieldDecoration(tr('Prix'), Icons.edit_outlined),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (value) => _updateItemUnitPrice(index, value),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       backgroundColor: Colors.transparent,
@@ -6277,9 +6780,56 @@ class _PaymentDialogState extends State<_PaymentDialog> {
                 ],
               ),
               const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < _items.length; i++) ...[
+                        _priceEditor(context, i),
+                        if (i != _items.length - 1) const SizedBox(height: 10),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _discountController,
+                      decoration: _fieldDecoration(tr('Remise'), Icons.sell_outlined),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (_) => setState(_syncReceivedWithTotal),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _shippingController,
+                      decoration: _fieldDecoration(tr('Livraison'), Icons.local_shipping_outlined),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (_) => setState(_syncReceivedWithTotal),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _taxController,
+                decoration: _fieldDecoration(
+                  tr('Taxe %'),
+                  Icons.percent_outlined,
+                  useCurrencyAffixes: false,
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (_) => setState(_syncReceivedWithTotal),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: _receivedController,
-                decoration: fieldDecoration(
+                decoration: _fieldDecoration(
                   tr('Montant reçu'),
                   Icons.payments_outlined,
                 ),
@@ -6287,24 +6837,23 @@ class _PaymentDialogState extends State<_PaymentDialog> {
                   decimal: true,
                 ),
                 onChanged: (value) {
-                  final parsed = double.tryParse(value) ?? widget.grandTotal;
-                  setState(() => _change = parsed - widget.grandTotal);
+                  setState(_syncChange);
                 },
               ),
               const SizedBox(height: 12),
               TextField(
-                decoration: fieldDecoration(
+                decoration: _fieldDecoration(
                   tr('Montant à payer'),
                   Icons.request_quote_outlined,
                 ),
                 readOnly: true,
                 controller: TextEditingController(
-                  text: widget.grandTotal.toStringAsFixed(2),
+                  text: _grandTotal.toStringAsFixed(2),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
-                decoration: fieldDecoration(tr('Rendu'), Icons.change_circle_outlined),
+                decoration: _fieldDecoration(tr('Rendu'), Icons.change_circle_outlined),
                 readOnly: true,
                 controller: TextEditingController(
                   text: _change.toStringAsFixed(2),
@@ -6361,9 +6910,13 @@ class _PaymentDialogState extends State<_PaymentDialog> {
                           paymentStatusId: _paymentStatusId,
                           receivedAmount:
                               double.tryParse(_receivedController.text) ??
-                              widget.grandTotal,
+                              _grandTotal,
                           shouldPrint: false,
                           change: _change,
+                          items: _items,
+                          discountAmount: _discountAmount,
+                          shipping: _shippingAmount,
+                          taxRate: _taxRate,
                         ),
                       ),
                       child: Text(tr('Payer')),
@@ -6378,9 +6931,13 @@ class _PaymentDialogState extends State<_PaymentDialog> {
                           paymentStatusId: _paymentStatusId,
                           receivedAmount:
                               double.tryParse(_receivedController.text) ??
-                              widget.grandTotal,
+                              _grandTotal,
                           shouldPrint: true,
                           change: _change,
+                          items: _items,
+                          discountAmount: _discountAmount,
+                          shipping: _shippingAmount,
+                          taxRate: _taxRate,
                         ),
                       ),
                       icon: const Icon(Icons.receipt_long),
@@ -6515,7 +7072,7 @@ class _ReceiptPreviewDialog extends StatelessWidget {
                         Expanded(
                           flex: 6,
                           child: Text(
-                            '${item.quantity} x ${format(item.product.price)}',
+                            '${item.quantity} x ${format(item.unitPrice)}',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),

@@ -27,7 +27,7 @@ class AuthRepository {
     final response = await apiClient.post(
       ApiEndpoints.authLogin,
       body: {
-        'email': identifier,
+        'username': identifier,
         'password': password,
       },
     );

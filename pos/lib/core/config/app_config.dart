@@ -6,6 +6,7 @@ class AppConfig {
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://pos.nimirik.com/api',
+    //defaultValue: 'http://localhost:8000/api',
   );
 
   static const Duration networkTimeout = Duration(seconds: 60);

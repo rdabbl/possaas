@@ -15,15 +15,15 @@ class AuthController extends BaseApiController
     public function login(Request $request)
     {
         $data = $request->validate([
-            'email' => ['required', 'email'],
+            'username' => ['required', 'string'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $data['email'])->first();
+        $user = User::where('username', $data['username'])->first();
 
         if (!$user || !Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'username' => ['The provided credentials are incorrect.'],
             ]);
         }
 
@@ -38,6 +38,7 @@ class AuthController extends BaseApiController
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
+                'username' => $user->username,
                 'email' => $user->email,
                 'manager_id' => $user->manager_id,
                 'store_id' => $user->store_id,
@@ -68,6 +69,7 @@ class AuthController extends BaseApiController
         }
 
         $payload = $user->toArray();
+        $payload['username'] = $user->username;
         $payload['currency'] = $currency?->id;
         $payload['currency_code'] = $currency?->code ?? $manager?->currency ?? 'USD';
         $payload['currency_symbol'] = $currency?->symbol ?? ($manager?->currency ?? 'USD');

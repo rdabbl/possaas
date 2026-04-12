@@ -37,15 +37,14 @@ class ManagerController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:managers,username'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:6'],
             'is_active' => ['nullable', 'boolean'],
             'max_stores' => ['nullable', 'integer', 'min:0'],
             'max_devices' => ['nullable', 'integer', 'min:0'],
             'currency' => ['nullable', 'string', 'size:3'],
             'timezone' => ['nullable', 'string', 'max:255'],
             'plan_id' => ['nullable', 'exists:plans,id'],
-            'admin_name' => ['nullable', 'string', 'max:255'],
-            'admin_email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
-            'admin_password' => ['nullable', 'string', 'min:6'],
         ]);
 
         $data['slug'] = $this->generateUniqueSlug($data['name']);
@@ -91,20 +90,16 @@ class ManagerController extends Controller
             ]);
         }
 
-        if (!empty($data['admin_email'])) {
-            $adminName = $data['admin_name'] ?? $manager->name . ' Admin';
-            $adminPassword = $data['admin_password'] ?? 'password123';
-
-            User::create([
-                'manager_id' => $manager->id,
-                'store_id' => $store?->id,
-                'name' => $adminName,
-                'email' => $data['admin_email'],
-                'password' => Hash::make($adminPassword),
-                'is_active' => true,
-                'is_super_admin' => false,
-            ]);
-        }
+        User::create([
+            'manager_id' => $manager->id,
+            'store_id' => $store?->id,
+            'name' => $manager->name,
+            'username' => $manager->username,
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'is_active' => true,
+            'is_super_admin' => false,
+        ]);
 
         return redirect()->route('admin.managers.index')
             ->with('success', 'Manager created.');
@@ -115,15 +110,26 @@ class ManagerController extends Controller
         $currencies = Currency::where('is_active', true)->orderBy('name')->get();
         $plans = Plan::where('is_active', true)->orderBy('name')->get();
         $timezones = \DateTimeZone::listIdentifiers();
+        $managerUser = User::where('manager_id', $manager->id)
+            ->where('is_super_admin', false)
+            ->orderBy('id')
+            ->first();
 
-        return view('admin.managers.edit', compact('manager', 'currencies', 'plans', 'timezones'));
+        return view('admin.managers.edit', compact('manager', 'managerUser', 'currencies', 'plans', 'timezones'));
     }
 
     public function update(Request $request, Manager $manager)
     {
+        $managerUser = User::where('manager_id', $manager->id)
+            ->where('is_super_admin', false)
+            ->orderBy('id')
+            ->first();
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:managers,username,' . $manager->id],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . ($managerUser?->id ?? 'NULL')],
+            'password' => ['nullable', 'string', 'min:6'],
             'is_active' => ['nullable', 'boolean'],
             'max_stores' => ['nullable', 'integer', 'min:0'],
             'max_devices' => ['nullable', 'integer', 'min:0'],
@@ -151,6 +157,22 @@ class ManagerController extends Controller
         }
 
         $manager->update($data);
+
+        $store = Store::where('manager_id', $manager->id)->orderBy('id')->first();
+        $managerUser ??= new User([
+            'manager_id' => $manager->id,
+            'is_super_admin' => false,
+        ]);
+        $managerUser->manager_id = $manager->id;
+        $managerUser->store_id = $managerUser->store_id ?? $store?->id;
+        $managerUser->name = $manager->name;
+        $managerUser->username = $manager->username;
+        $managerUser->email = $data['email'];
+        $managerUser->is_active = $manager->is_active;
+        if (!empty($data['password'])) {
+            $managerUser->password = Hash::make($data['password']);
+        }
+        $managerUser->save();
 
         return redirect()->route('admin.managers.index')
             ->with('success', 'Manager updated.');

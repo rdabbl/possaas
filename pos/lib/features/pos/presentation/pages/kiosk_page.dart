@@ -39,8 +39,6 @@ class _KioskStrings {
   }
 
   String get addToCart => tr('Ajouter au panier');
-  String get checkout => tr('Commander et payer');
-  String get order => tr('Commander à la caisse');
   String get addRequired => tr('Ajoutez un produit d\'abord.');
 }
 
@@ -54,6 +52,8 @@ class KioskPage extends StatefulWidget {
 class _KioskPageState extends State<KioskPage> {
   Product? _selectedProduct;
   final List<CartItem> _cart = [];
+  String _serviceMode = 'sur place';
+  int _quarterTurns = 0;
   _KioskStrings get _strings => const _KioskStrings();
 
   Product? _resolveSelected(List<Product> products) {
@@ -88,6 +88,17 @@ class _KioskPageState extends State<KioskPage> {
 
   void _clearCart() {
     _cart.clear();
+    setState(() {});
+  }
+
+  void _updateCartQuantity(CartItem item, int quantity) {
+    final index = _cart.indexWhere((entry) => entry.id == item.id);
+    if (index == -1) return;
+    if (quantity <= 0) {
+      _cart.removeAt(index);
+    } else {
+      _cart[index] = _cart[index].copyWith(quantity: quantity);
+    }
     setState(() {});
   }
 
@@ -133,6 +144,7 @@ class _KioskPageState extends State<KioskPage> {
                               product: selectedProduct,
                               currencySymbol: pos.currencySymbol,
                               symbolOnRight: pos.isCurrencySymbolRight,
+                              cartItems: _cart,
                               cartCount: _cartCount,
                               cartTotal: _cartTotal,
                               strings: strings,
@@ -142,12 +154,16 @@ class _KioskPageState extends State<KioskPage> {
                                   _addToCart(selected);
                                 }
                               },
-                              onCheckout: () => _handleSubmit(
-                                pos,
-                                selectedProduct,
-                                markUnpaid: false,
-                              ),
-                              onOrder: () => _handleSubmit(
+                              onIncreaseItem: (item) =>
+                                  _updateCartQuantity(item, item.quantity + 1),
+                              onDecreaseItem: (item) =>
+                                  _updateCartQuantity(item, item.quantity - 1),
+                              onRemoveItem: (item) => _updateCartQuantity(item, 0),
+                              serviceMode: _serviceMode,
+                              onServiceModeChanged: (value) {
+                                setState(() => _serviceMode = value);
+                              },
+                              onSubmit: () => _handleSubmit(
                                 pos,
                                 selectedProduct,
                                 markUnpaid: true,
@@ -176,6 +192,7 @@ class _KioskPageState extends State<KioskPage> {
                             product: selectedProduct,
                             currencySymbol: pos.currencySymbol,
                             symbolOnRight: pos.isCurrencySymbolRight,
+                            cartItems: _cart,
                             cartCount: _cartCount,
                             cartTotal: _cartTotal,
                             strings: strings,
@@ -185,12 +202,16 @@ class _KioskPageState extends State<KioskPage> {
                                 _addToCart(selected);
                               }
                             },
-                            onCheckout: () => _handleSubmit(
-                              pos,
-                              selectedProduct,
-                              markUnpaid: false,
-                            ),
-                            onOrder: () => _handleSubmit(
+                            onIncreaseItem: (item) =>
+                                _updateCartQuantity(item, item.quantity + 1),
+                            onDecreaseItem: (item) =>
+                                _updateCartQuantity(item, item.quantity - 1),
+                            onRemoveItem: (item) => _updateCartQuantity(item, 0),
+                            serviceMode: _serviceMode,
+                            onServiceModeChanged: (value) {
+                              setState(() => _serviceMode = value);
+                            },
+                            onSubmit: () => _handleSubmit(
                               pos,
                               selectedProduct,
                               markUnpaid: true,
@@ -209,6 +230,16 @@ class _KioskPageState extends State<KioskPage> {
                             onPressed: () => Navigator.of(context).pop(),
                             icon: const Icon(Icons.arrow_back),
                             label: Text(strings.backToPos),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _quarterTurns = (_quarterTurns + 1) % 4;
+                              });
+                            },
+                            icon: const Icon(Icons.screen_rotation_alt_outlined),
+                            label: Text(tr('Rotation')),
                           ),
                           const Spacer(),
                           ToggleButtons(
@@ -232,7 +263,12 @@ class _KioskPageState extends State<KioskPage> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      Expanded(child: content),
+                      Expanded(
+                        child: RotatedBox(
+                          quarterTurns: _quarterTurns,
+                          child: content,
+                        ),
+                      ),
                     ],
                   ),
                 );
@@ -272,18 +308,19 @@ class _KioskPageState extends State<KioskPage> {
         companyName: pos.companyName,
         queueNumber: queueNumber,
         total: totalWithTax,
-        confirmLabel:
-            markUnpaid ? tr('Confirmer la commande') : tr('Payer & imprimer'),
+        confirmLabel: tr('Commander'),
+        serviceMode: _serviceMode,
       ),
     );
     if (confirmed != true) return;
 
     final ok = await pos.submitKioskOrder(
       items: List<CartItem>.from(_cart),
-      markUnpaid: markUnpaid,
       queueNumber: queueNumber,
-      receivedAmount: markUnpaid ? 0 : totalWithTax,
-      paymentTypeId: 1,
+      serviceMode: _serviceMode,
+      receivedAmount: 0,
+      paymentTypeId: 0,
+      saleStatus: 'pos',
     );
     if (!mounted) return;
     if (!ok) {
@@ -330,8 +367,8 @@ class _KioskPageState extends State<KioskPage> {
         warehouseName: pos.selectedWarehouse?.name,
         companyLogoUrl: pos.companyLogo,
         paymentType: tr('Espèce'),
-        paymentStatus: markUnpaid ? tr('Impayée') : tr('Payée'),
-        receivedAmount: markUnpaid ? 0 : totalWithTax,
+        paymentStatus: tr('Impayée'),
+        receivedAmount: 0,
         change: 0,
         serviceId: service.id,
         template: service.template,
@@ -356,9 +393,7 @@ class _KioskPageState extends State<KioskPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              markUnpaid
-                  ? tr('Vous pouvez prendre votre place à la caisse.')
-                  : tr('Votre paiement est confirmé.'),
+              tr('Votre commande a été envoyée vers le POS.'),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -521,22 +556,32 @@ class _KioskDetailPanel extends StatelessWidget {
     required this.product,
     required this.currencySymbol,
     required this.symbolOnRight,
+    required this.cartItems,
     required this.cartCount,
     required this.cartTotal,
     required this.onAdd,
-    required this.onCheckout,
-    required this.onOrder,
+    required this.onIncreaseItem,
+    required this.onDecreaseItem,
+    required this.onRemoveItem,
+    required this.serviceMode,
+    required this.onServiceModeChanged,
+    required this.onSubmit,
     required this.strings,
   });
 
   final Product? product;
   final String currencySymbol;
   final bool symbolOnRight;
+  final List<CartItem> cartItems;
   final int cartCount;
   final double cartTotal;
   final VoidCallback onAdd;
-  final VoidCallback onCheckout;
-  final VoidCallback onOrder;
+  final ValueChanged<CartItem> onIncreaseItem;
+  final ValueChanged<CartItem> onDecreaseItem;
+  final ValueChanged<CartItem> onRemoveItem;
+  final String serviceMode;
+  final ValueChanged<String> onServiceModeChanged;
+  final VoidCallback onSubmit;
   final _KioskStrings strings;
 
   @override
@@ -584,7 +629,50 @@ class _KioskDetailPanel extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 20),
+            if (cartItems.isNotEmpty)
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        strings.cartSummary(cartCount),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: cartItems.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final item = cartItems[index];
+                            return _KioskCartItemTile(
+                              item: item,
+                              currencySymbol: currencySymbol,
+                              symbolOnRight: symbolOnRight,
+                              onIncrease: () => onIncreaseItem(item),
+                              onDecrease: () => onDecreaseItem(item),
+                              onRemove: () => onRemoveItem(item),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              const Spacer(),
             if (cartCount > 0)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -648,37 +736,189 @@ class _KioskDetailPanel extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: canSubmit ? onOrder : null,
-                    icon: const Icon(Icons.receipt_long),
-                    label: Text(strings.order),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
+                  child: _ServiceModeChip(
+                    label: tr('Sur place'),
+                    selected: serviceMode == 'sur place',
+                    onTap: () => onServiceModeChanged('sur place'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: FilledButton.icon(
-                    onPressed: canSubmit ? onCheckout : null,
-                    icon: const Icon(Icons.payments_outlined),
-                    label: Text(strings.checkout),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      backgroundColor: const Color(0xFF16A34A),
-                      foregroundColor: Colors.white,
-                    ),
+                  child: _ServiceModeChip(
+                    label: tr('Emporter'),
+                    selected: serviceMode == 'emporter',
+                    onTap: () => onServiceModeChanged('emporter'),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: canSubmit ? onSubmit : null,
+                icon: const Icon(Icons.receipt_long),
+                label: Text(tr('Commander')),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  backgroundColor: const Color(0xFF111827),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _KioskCartItemTile extends StatelessWidget {
+  const _KioskCartItemTile({
+    required this.item,
+    required this.currencySymbol,
+    required this.symbolOnRight,
+    required this.onIncrease,
+    required this.onDecrease,
+    required this.onRemove,
+  });
+
+  final CartItem item;
+  final String currencySymbol;
+  final bool symbolOnRight;
+  final VoidCallback onIncrease;
+  final VoidCallback onDecrease;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.product.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: onRemove,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFFEE2E2),
+                  foregroundColor: const Color(0xFFB91C1C),
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: Text(tr('Supprimer')),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _KioskQtyButton(icon: Icons.remove, onTap: onDecrease),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  '${item.quantity}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              _KioskQtyButton(icon: Icons.add, onTap: onIncrease),
+              const Spacer(),
+              Text(
+                _formatCurrency(item.subTotal, currencySymbol, symbolOnRight),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KioskQtyButton extends StatelessWidget {
+  const _KioskQtyButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, size: 18, color: const Color(0xFF111827)),
+      ),
+    );
+  }
+}
+
+class _ServiceModeChip extends StatelessWidget {
+  const _ServiceModeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF111827) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : const Color(0xFF111827),
+          ),
         ),
       ),
     );
@@ -828,6 +1068,7 @@ class _KioskReceiptPreviewDialog extends StatelessWidget {
     required this.queueNumber,
     required this.total,
     required this.confirmLabel,
+    required this.serviceMode,
   });
 
   final List<CartItem> items;
@@ -837,6 +1078,7 @@ class _KioskReceiptPreviewDialog extends StatelessWidget {
   final int queueNumber;
   final double total;
   final String confirmLabel;
+  final String serviceMode;
 
   @override
   Widget build(BuildContext context) {
@@ -897,6 +1139,16 @@ class _KioskReceiptPreviewDialog extends StatelessWidget {
                 ),
               ),
               const Divider(),
+              Row(
+                children: [
+                  Expanded(child: Text(tr('Service'))),
+                  Text(
+                    serviceMode == 'emporter' ? tr('Emporter') : tr('Sur place'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(child: Text(tr('Total'))),

@@ -12,6 +12,10 @@
                 <input name="name" value="{{ old('name', $user->name) }}" required>
             </div>
             <div class="field">
+                <label>{{ t("Username") }}</label>
+                <input name="username" value="{{ old('username', $user->username) }}" required>
+            </div>
+            <div class="field">
                 <label>{{ t("Email") }}</label>
                 <input name="email" type="email" value="{{ old('email', $user->email) }}" required>
             </div>

@@ -16,6 +16,14 @@
                 <input name="username" value="{{ old('username', $manager->username) }}" required>
             </div>
             <div class="field">
+                <label>{{ t("Email") }}</label>
+                <input name="email" type="email" value="{{ old('email', $managerUser?->email) }}" required>
+            </div>
+            <div class="field">
+                <label>{{ t("New Password (optional)") }}</label>
+                <input name="password" type="password">
+            </div>
+            <div class="field">
                 <label>{{ t("Active") }}</label>
                 <select name="is_active">
                     <option value="1" {{ old('is_active', $manager->is_active ? 1 : 0) == 1 ? 'selected' : '' }}>Yes</option>
