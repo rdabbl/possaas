@@ -19,9 +19,6 @@
 -- Current Database: `pos_saas`
 --
 
-CREATE DATABASE /*!32312 IF NOT EXISTS*/ `pos_saas` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-
-USE `pos_saas`;
 
 --
 -- Table structure for table `cache`
