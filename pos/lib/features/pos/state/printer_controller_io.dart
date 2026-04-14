@@ -815,9 +815,8 @@ class PrinterSettingsController extends ChangeNotifier {
         ),
       );
     }
-    _appendCut(bytes, g, autoCut: autoCut);
 
-    // Mini ticket apres coupe
+    // Mini ticket resume
     bytes.addAll(
       g.text(
         title,
@@ -1246,15 +1245,7 @@ class PrinterSettingsController extends ChangeNotifier {
   }) {
     bytes.addAll(generator.feed(6));
     if (autoCut) {
-      // Some printers ignore one cut variant but accept another.
-      // Send the library cut first, then common raw ESC/POS fallbacks.
       bytes.addAll(generator.cut(mode: PosCutMode.full));
-      bytes.addAll(<int>[0x1D, 0x56, 0x00]); // GS V 0 full cut
-      bytes.addAll(<int>[0x1D, 0x56, 0x01]); // GS V 1 partial cut
-      bytes.addAll(<int>[0x1D, 0x56, 0x41, 0x00]); // GS V A 0
-      bytes.addAll(<int>[0x1D, 0x56, 0x41, 0x01]); // GS V A 1
-      bytes.addAll(<int>[0x1B, 0x69]); // ESC i
-      bytes.addAll(<int>[0x1B, 0x6D]); // ESC m
     } else {
       bytes.addAll(generator.feed(2));
     }

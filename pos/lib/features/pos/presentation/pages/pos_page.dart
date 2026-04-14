@@ -981,31 +981,76 @@ class _CatalogPanel extends StatelessWidget {
           ? '${tr('Loyalty balance')}: ${controller.selectedCustomerPoints} ${tr('pts')} '
               '(${_formatCurrency(controller.loyaltyAvailableAmount, controller.currencySymbol, controller.isCurrencySymbolRight)})'
           : '';
+      Future<void> handleAddCustomer() async {
+        final result = await showDialog<_NewCustomerPayload>(
+          context: context,
+          builder: (_) => const _NewCustomerDialog(),
+        );
+        if (result == null) return;
+        final created = await controller.createCustomer(
+          name: result.name,
+          email: result.email,
+          phone: result.phone,
+          address: result.address,
+          note: result.note,
+        );
+        if (!context.mounted) return;
+        if (created == null) {
+          final message = controller.errorMessage ?? tr('Erreur lors de la création du client.');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('Client ajouté.'))),
+        );
+      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DropdownButtonFormField<Customer>(
-            value: selectedCustomer,
-            decoration: InputDecoration(
-              labelText: tr('Client'),
-              filled: true,
-              fillColor: const Color(0xFFF3F4F6),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            ),
-            items: customers
-                .map(
-                  (customer) => DropdownMenuItem(
-                    value: customer,
-                    child: Text(customer.name),
+          Row(
+            children: [
+              IconButton(
+                onPressed: controller.offlineMode ? null : handleAddCustomer,
+                tooltip: tr('Nouveau client'),
+                icon: const Icon(Icons.person_add_alt_1),
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFFF3F4F6),
+                  foregroundColor: const Color(0xFF111827),
+                  padding: const EdgeInsets.all(10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                )
-                .toList(),
-            onChanged: customers.isEmpty ? null : controller.selectCustomer,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonFormField<Customer>(
+                  value: selectedCustomer,
+                  decoration: InputDecoration(
+                    labelText: tr('Client'),
+                    filled: true,
+                    fillColor: const Color(0xFFF3F4F6),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  ),
+                  items: customers
+                      .map(
+                        (customer) => DropdownMenuItem(
+                          value: customer,
+                          child: Text(customer.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: customers.isEmpty ? null : controller.selectCustomer,
+                ),
+              ),
+            ],
           ),
           if (showLoyalty)
             Padding(
@@ -6577,6 +6622,141 @@ class _SimplePaymentDialogState extends State<_SimplePaymentDialog> {
   }
 }
 
+class _NewCustomerPayload {
+  const _NewCustomerPayload({
+    required this.name,
+    this.email,
+    this.phone,
+    this.address,
+    this.note,
+  });
+
+  final String name;
+  final String? email;
+  final String? phone;
+  final String? address;
+  final String? note;
+}
+
+class _NewCustomerDialog extends StatefulWidget {
+  const _NewCustomerDialog();
+
+  @override
+  State<_NewCustomerDialog> createState() => _NewCustomerDialogState();
+}
+
+class _NewCustomerDialogState extends State<_NewCustomerDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _emailController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _addressController;
+  late final TextEditingController _noteController;
+  String? _nameError;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _phoneController = TextEditingController();
+    _addressController = TextEditingController();
+    _noteController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = tr('Nom requis'));
+      return;
+    }
+    Navigator.of(context).pop(
+      _NewCustomerPayload(
+        name: name,
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        address: _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(tr('Nouveau client')),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: tr('Nom (requis)'),
+                errorText: _nameError,
+              ),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _phoneController,
+              decoration: InputDecoration(labelText: tr('Téléphone')),
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(labelText: tr('Email')),
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _addressController,
+              decoration: InputDecoration(labelText: tr('Adresse')),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _noteController,
+              decoration: InputDecoration(labelText: tr('Note')),
+              maxLines: 2,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(tr('Annuler')),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(tr('Enregistrer')),
+        ),
+      ],
+    );
+  }
+}
+
 class _PaymentDialog extends StatefulWidget {
   const _PaymentDialog({
     required this.items,
@@ -6740,6 +6920,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final maxDialogHeight = MediaQuery.of(context).size.height - 48;
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       backgroundColor: Colors.transparent,
@@ -6758,195 +6939,197 @@ class _PaymentDialogState extends State<_PaymentDialog> {
           ],
         ),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    tr('Paiement'),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF111827),
+          constraints: BoxConstraints(maxWidth: 520, maxHeight: maxDialogHeight),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      tr('Paiement'),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827),
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 220),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < _items.length; i++) ...[
-                        _priceEditor(context, i),
-                        if (i != _items.length - 1) const SizedBox(height: 10),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 220),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < _items.length; i++) ...[
+                          _priceEditor(context, i),
+                          if (i != _items.length - 1) const SizedBox(height: 10),
+                        ],
                       ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _discountController,
-                      decoration: _fieldDecoration(tr('Remise'), Icons.sell_outlined),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (_) => setState(_syncReceivedWithTotal),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: _shippingController,
-                      decoration: _fieldDecoration(tr('Livraison'), Icons.local_shipping_outlined),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (_) => setState(_syncReceivedWithTotal),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _discountController,
+                        decoration: _fieldDecoration(tr('Remise'), Icons.sell_outlined),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (_) => setState(_syncReceivedWithTotal),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _shippingController,
+                        decoration: _fieldDecoration(tr('Livraison'), Icons.local_shipping_outlined),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (_) => setState(_syncReceivedWithTotal),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _taxController,
+                  decoration: _fieldDecoration(
+                    tr('Taxe %'),
+                    Icons.percent_outlined,
+                    useCurrencyAffixes: false,
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => setState(_syncReceivedWithTotal),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _receivedController,
+                  decoration: _fieldDecoration(
+                    tr('Montant reçu'),
+                    Icons.payments_outlined,
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (value) {
+                    setState(_syncChange);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  decoration: _fieldDecoration(
+                    tr('Montant à payer'),
+                    Icons.request_quote_outlined,
+                  ),
+                  readOnly: true,
+                  controller: TextEditingController(
+                    text: _grandTotal.toStringAsFixed(2),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  decoration: _fieldDecoration(tr('Rendu'), Icons.change_circle_outlined),
+                  readOnly: true,
+                  controller: TextEditingController(
+                    text: _change.toStringAsFixed(2),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  value: _paymentTypeId,
+                  decoration: InputDecoration(
+                    labelText: tr('Type de paiement'),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _taxController,
-                decoration: _fieldDecoration(
-                  tr('Taxe %'),
-                  Icons.percent_outlined,
-                  useCurrencyAffixes: false,
-                ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                onChanged: (_) => setState(_syncReceivedWithTotal),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _receivedController,
-                decoration: _fieldDecoration(
-                  tr('Montant reçu'),
-                  Icons.payments_outlined,
-                ),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                onChanged: (value) {
-                  setState(_syncChange);
-                },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                decoration: _fieldDecoration(
-                  tr('Montant à payer'),
-                  Icons.request_quote_outlined,
-                ),
-                readOnly: true,
-                controller: TextEditingController(
-                  text: _grandTotal.toStringAsFixed(2),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                decoration: _fieldDecoration(tr('Rendu'), Icons.change_circle_outlined),
-                readOnly: true,
-                controller: TextEditingController(
-                  text: _change.toStringAsFixed(2),
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<int>(
-                value: _paymentTypeId,
-                decoration: InputDecoration(
-                  labelText: tr('Type de paiement'),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                items: widget.paymentMethods
-                    .map(
-                      (method) => DropdownMenuItem(
-                        value: method.id,
-                        child: Text(method.name),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => _paymentTypeId = value ?? 1),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<int>(
-                value: _paymentStatusId,
-                decoration: InputDecoration(
-                  labelText: tr('Statut'),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                items: _paymentStatuses
-                    .map(
-                      (option) => DropdownMenuItem(
-                        value: option.id,
-                        child: Text(tr(option.label)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => _paymentStatusId = value ?? 1),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(
-                        _PaymentDialogResult(
-                          paymentTypeId: _paymentTypeId,
-                          paymentStatusId: _paymentStatusId,
-                          receivedAmount:
-                              double.tryParse(_receivedController.text) ??
-                              _grandTotal,
-                          shouldPrint: false,
-                          change: _change,
-                          items: _items,
-                          discountAmount: _discountAmount,
-                          shipping: _shippingAmount,
-                          taxRate: _taxRate,
+                  items: widget.paymentMethods
+                      .map(
+                        (method) => DropdownMenuItem(
+                          value: method.id,
+                          child: Text(method.name),
                         ),
-                      ),
-                      child: Text(tr('Payer')),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setState(() => _paymentTypeId = value ?? 1),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  value: _paymentStatusId,
+                  decoration: InputDecoration(
+                    labelText: tr('Statut'),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () => Navigator.of(context).pop(
-                        _PaymentDialogResult(
-                          paymentTypeId: _paymentTypeId,
-                          paymentStatusId: _paymentStatusId,
-                          receivedAmount:
-                              double.tryParse(_receivedController.text) ??
-                              _grandTotal,
-                          shouldPrint: true,
-                          change: _change,
-                          items: _items,
-                          discountAmount: _discountAmount,
-                          shipping: _shippingAmount,
-                          taxRate: _taxRate,
+                  items: _paymentStatuses
+                      .map(
+                        (option) => DropdownMenuItem(
+                          value: option.id,
+                          child: Text(tr(option.label)),
                         ),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setState(() => _paymentStatusId = value ?? 1),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(
+                          _PaymentDialogResult(
+                            paymentTypeId: _paymentTypeId,
+                            paymentStatusId: _paymentStatusId,
+                            receivedAmount:
+                                double.tryParse(_receivedController.text) ??
+                                _grandTotal,
+                            shouldPrint: false,
+                            change: _change,
+                            items: _items,
+                            discountAmount: _discountAmount,
+                            shipping: _shippingAmount,
+                            taxRate: _taxRate,
+                          ),
+                        ),
+                        child: Text(tr('Payer')),
                       ),
-                      icon: const Icon(Icons.receipt_long),
-                      label: Text(tr('Payer & imprimer')),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => Navigator.of(context).pop(
+                          _PaymentDialogResult(
+                            paymentTypeId: _paymentTypeId,
+                            paymentStatusId: _paymentStatusId,
+                            receivedAmount:
+                                double.tryParse(_receivedController.text) ??
+                                _grandTotal,
+                            shouldPrint: true,
+                            change: _change,
+                            items: _items,
+                            discountAmount: _discountAmount,
+                            shipping: _shippingAmount,
+                            taxRate: _taxRate,
+                          ),
+                        ),
+                        icon: const Icon(Icons.receipt_long),
+                        label: Text(tr('Payer & imprimer')),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

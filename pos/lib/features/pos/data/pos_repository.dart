@@ -63,6 +63,28 @@ class PosRepository {
         .toList();
   }
 
+  Future<Customer> createCustomer({
+    required String name,
+    String? email,
+    String? phone,
+    String? address,
+    String? note,
+  }) async {
+    final payload = <String, dynamic>{
+      'name': name.trim(),
+      if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+      if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+      if (address != null && address.trim().isNotEmpty) 'address': address.trim(),
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    };
+    final result = await apiClient.post(ApiEndpoints.customers, body: payload);
+    final data = result['data'];
+    if (data is Map<String, dynamic>) {
+      return Customer.fromJson(data);
+    }
+    return Customer.fromJson(result);
+  }
+
   Future<Map<String, dynamic>> fetchFrontSetting() {
     return apiClient.get(ApiEndpoints.frontSetting);
   }

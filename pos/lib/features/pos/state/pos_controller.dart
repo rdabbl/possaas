@@ -871,6 +871,55 @@ class PosController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Customer?> createCustomer({
+    required String name,
+    String? email,
+    String? phone,
+    String? address,
+    String? note,
+  }) async {
+    if (_offlineMode) {
+      _errorMessage = 'Mode hors ligne: impossible d\'ajouter un client.';
+      notifyListeners();
+      return null;
+    }
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      _errorMessage = 'Le nom du client est requis.';
+      notifyListeners();
+      return null;
+    }
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+    try {
+      final created = await repository.createCustomer(
+        name: trimmedName,
+        email: email,
+        phone: phone,
+        address: address,
+        note: note,
+      );
+      _customers = _customers.where((c) => c.id != created.id).toList()
+        ..add(created);
+      _selectedCustomer = created;
+      _normalizeCustomers();
+      await _cacheCustomers(_customers);
+      await _persistSelectedCustomer();
+      _successMessage = 'Client ajouté.';
+      notifyListeners();
+      return created;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      notifyListeners();
+      return null;
+    } catch (error) {
+      _errorMessage = error.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<void> selectWarehouse(Warehouse? warehouse) async {
     _selectedWarehouse = warehouse;
     _selectedWarehouseId = warehouse?.id;
