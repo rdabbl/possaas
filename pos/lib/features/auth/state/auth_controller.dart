@@ -34,7 +34,7 @@ class AuthController extends ChangeNotifier {
 
   Future<void> bootstrap() async {
     final splashStartedAt = DateTime.now();
-    const minimumSplash = Duration(milliseconds: 900);
+    const minimumSplash = Duration(seconds: 5);
     debugPrint('[AuthController] bootstrap started');
     _token = await repository.readToken();
     _userLabel = await repository.readUserIdentifier();

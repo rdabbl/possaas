@@ -693,25 +693,57 @@ class _CategoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final initials = label.trim().isEmpty ? '?' : label.trim()[0].toUpperCase();
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          width: 100,
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: selected ? _kioskYellow : _kioskYellowSoft,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Text(
-            label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: const Color(0xFF1F2937),
-              fontWeight: FontWeight.w700,
+            color: selected ? _kioskYellow : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? _kioskYellow : const Color(0xFFE5E7EB),
+              width: 1.2,
             ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0F000000),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: selected ? Colors.white24 : const Color(0xFFF3F4F6),
+                child: Text(
+                  initials,
+                  style: TextStyle(
+                    color: selected ? Colors.white : const Color(0xFF6B7280),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? Colors.black : const Color(0xFF111827),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -761,9 +793,16 @@ class _ProductGrid3 extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: _kioskYellowSoft,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _kioskYellowBorder),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0F000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -773,7 +812,7 @@ class _ProductGrid3 extends StatelessWidget {
                     url: product.imageUrl,
                     width: double.infinity,
                     borderRadius: BorderRadius.circular(12),
-                    backgroundColor: _kioskYellowSoft,
+                    backgroundColor: const Color(0xFFF3F4F6),
                     fallbackIcon: Icons.fastfood,
                     iconSize: 40,
                     iconColor: const Color(0xFF6B7280),
@@ -792,8 +831,8 @@ class _ProductGrid3 extends StatelessWidget {
                 Text(
                   _formatCurrency(product.price, currencySymbol, symbolOnRight),
                   style: const TextStyle(
-                    color: Color(0xFF111827),
-                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFF59E0B),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],

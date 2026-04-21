@@ -132,6 +132,9 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
   double _lastTax = 0;
   double _lastLoyalty = 0;
   bool _messageClearScheduled = false;
+  bool _showTopStatusBanner = true;
+  String _bannerSignature = '';
+  Timer? _topBannerTimer;
   late final PosController _posController;
 
   @override
@@ -207,14 +210,12 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
   }
 
   void _showReconnectSnack(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 5)),
-    );
+    // Status is now visible in the banner indicator; keep this silent.
   }
 
   @override
   void dispose() {
+    _topBannerTimer?.cancel();
     _searchController.dispose();
     _notesController.dispose();
     _discountController.dispose();
@@ -244,13 +245,15 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  _MainStatusBanner(
-                    errorMessage: controller.errorMessage,
-                    successMessage: controller.successMessage,
-                    offlineMode: controller.offlineMode,
-                    onDismiss: controller.clearMessages,
-                  ),
-                  const SizedBox(height: 10),
+                  if (_showTopStatusBanner) ...[
+                    _MainStatusBanner(
+                      errorMessage: controller.errorMessage,
+                      successMessage: controller.successMessage,
+                      offlineMode: controller.offlineMode,
+                      onDismiss: controller.clearMessages,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.all(12),
@@ -518,47 +521,11 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
   }
 
   Future<void> _openQuickMenu() async {
-    final controller = context.read<PosController>();
-    final auth = context.read<AuthController>();
-    final isFullScreen = _isDesktop ? await windowManager.isFullScreen() : false;
-    final accent = const Color(0xFFF7C045);
     final actions = [
-      _ActionMenuItem(
-        icon: Icons.refresh,
-        label: tr('Actualiser'),
-        onTap: () => controller.refreshProducts(skipSyncOffline: true),
-      ),
-      _ActionMenuItem(
-        icon: Icons.sync,
-        label: tr('Synchronisation'),
-        onTap: _openOrderHistory,
-      ),
-      _ActionMenuItem(
-        icon: Icons.calculate_outlined,
-        label: tr('Calculatrice'),
-        onTap: _openCalculator,
-      ),
-      _ActionMenuItem(
-        icon: isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-        label: isFullScreen
-            ? tr('Quitter plein écran')
-            : tr('Plein écran'),
-        onTap: _toggleFullScreen,
-      ),
-      _ActionMenuItem(
-        icon: Icons.attach_money,
-        label: tr('Cash en caisse'),
-        onTap: () => _promptCashInHandIfNeeded(force: true),
-      ),
       _ActionMenuItem(
         icon: Icons.tune,
         label: tr('Apparence'),
         onTap: _openAppearanceSettings,
-      ),
-      _ActionMenuItem(
-        icon: Icons.sync,
-        label: tr('Synchroniser'),
-        onTap: controller.refreshProducts,
       ),
       _ActionMenuItem(
         icon: Icons.print_outlined,
@@ -575,27 +542,23 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
         label: tr('Interface borne'),
         onTap: _openKioskPage,
       ),
-      _ActionMenuItem(
-        icon: controller.offlineMode ? Icons.cloud_off : Icons.cloud_done,
-        label:
-            controller.offlineMode ? tr('Mode hors ligne') : tr('Connecté'),
-        onTap: controller.offlineMode ? _attemptReconnect : null,
-        color: controller.offlineMode ? Colors.orange : const Color(0xFF22C55E),
-        background:
-            controller.offlineMode ? accent : const Color(0xFFF3F4F6),
-      ),
-      _ActionMenuItem(
-        icon: Icons.logout,
-        label: tr('Déconnexion'),
-        onTap: () async {
-          await auth.logout();
-        },
-      ),
     ];
     await _showActionMenu(context, actions);
   }
 
   void _maybeScheduleBannerClear(PosController controller) {
+    final signature =
+        '${controller.offlineMode}|${controller.errorMessage ?? ''}|${controller.successMessage ?? ''}';
+    if (_bannerSignature != signature) {
+      _bannerSignature = signature;
+      _showTopStatusBanner = true;
+      _topBannerTimer?.cancel();
+      _topBannerTimer = Timer(const Duration(seconds: 3), () {
+        if (!mounted) return;
+        setState(() => _showTopStatusBanner = false);
+      });
+    }
+
     final hasMessage =
         controller.errorMessage != null || controller.successMessage != null;
     if (hasMessage && !_messageClearScheduled) {
@@ -925,21 +888,6 @@ class _CatalogPanel extends StatelessWidget {
             .map((part) => part[0].toUpperCase())
             .join();
 
-    Widget buildProfileBadge() {
-      return CircleAvatar(
-        radius: 14,
-        backgroundColor: _posYellow,
-        child: Text(
-          initials,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
-            fontSize: 12,
-          ),
-        ),
-      );
-    }
-
     Widget buildSearch() {
       return TextField(
         controller: searchController,
@@ -948,23 +896,14 @@ class _CatalogPanel extends StatelessWidget {
           hintText: tr('Search'),
           prefixIcon: const Icon(Icons.search),
           suffixIcon: searchController.text.isEmpty
-              ? buildProfileBadge()
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        searchController.clear();
-                        controller.searchProducts('');
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                    buildProfileBadge(),
-                  ],
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    searchController.clear();
+                    controller.searchProducts('');
+                  },
                 ),
-          suffixIconConstraints:
-              const BoxConstraints(minWidth: 0, minHeight: 0),
           filled: true,
           fillColor: _posYellowSoft,
           border: OutlineInputBorder(
@@ -1367,6 +1306,8 @@ class _HeroBanner extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 4),
+                const _BannerDateTime(),
               ],
             ),
           ),
@@ -1466,6 +1407,35 @@ class _BannerIconButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _BannerDateTime extends StatelessWidget {
+  const _BannerDateTime();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DateTime>(
+      stream: Stream<DateTime>.periodic(
+        const Duration(seconds: 1),
+        (_) => DateTime.now(),
+      ),
+      initialData: DateTime.now(),
+      builder: (context, snapshot) {
+        final now = snapshot.data ?? DateTime.now();
+        final formatted = DateFormat('EEEE dd/MM/yyyy • HH:mm').format(now);
+        return Text(
+          formatted,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Color(0xFF6B7280),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        );
+      },
     );
   }
 }
@@ -1729,43 +1699,11 @@ class _TopActionButtonsState extends State<_TopActionButtons> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = _posYellow;
     final actions = [
-      _ActionMenuItem(
-        icon: Icons.refresh,
-        label: tr('Actualiser'),
-        onTap: widget.onRefresh,
-      ),
-      _ActionMenuItem(
-        icon: Icons.sync,
-        label: tr('Synchronisation'),
-        onTap: _openOrderHistory,
-      ),
-      _ActionMenuItem(
-        icon: Icons.calculate_outlined,
-        label: tr('Calculatrice'),
-        onTap: _openCalculator,
-      ),
-      _ActionMenuItem(
-        icon: _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-        label:
-            _isFullScreen ? tr('Quitter plein écran') : tr('Plein écran'),
-        onTap: _toggleFullScreen,
-      ),
-      _ActionMenuItem(
-        icon: Icons.attach_money,
-        label: tr('Cash en caisse'),
-        onTap: widget.onCashInHand,
-      ),
       _ActionMenuItem(
         icon: Icons.tune,
         label: tr('Apparence'),
         onTap: _openAppearanceSettings,
-      ),
-      _ActionMenuItem(
-        icon: Icons.sync,
-        label: tr('Synchroniser'),
-        onTap: widget.onSync,
       ),
       _ActionMenuItem(
         icon: Icons.print_outlined,
@@ -1781,18 +1719,6 @@ class _TopActionButtonsState extends State<_TopActionButtons> {
         icon: Icons.store_mall_directory_outlined,
         label: tr('Interface borne'),
         onTap: _openKioskPage,
-      ),
-      _ActionMenuItem(
-        icon: widget.offlineMode ? Icons.cloud_off : Icons.cloud_done,
-        label: widget.offlineMode ? tr('Mode hors ligne') : tr('Connecté'),
-        onTap: widget.offlineMode ? widget.onReconnect : null,
-        color: widget.offlineMode ? Colors.orange : const Color(0xFF22C55E),
-        background: widget.offlineMode ? accent : _posYellowSoft,
-      ),
-      _ActionMenuItem(
-        icon: Icons.logout,
-        label: tr('Déconnexion'),
-        onTap: widget.onLogout,
       ),
     ];
 
@@ -1888,16 +1814,16 @@ Future<void> _showActionMenu(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
               final height = constraints.maxHeight;
-              const crossAxisCount = 5;
+              const crossAxisCount = 4;
               final compactHeight = height < 700;
-              final iconSize = compactHeight ? 30.0 : 34.0;
+              final iconSize = compactHeight ? 36.0 : 42.0;
               final iconGlyphSize = compactHeight
-                  ? 20.0
-                  : 22.0;
+                  ? 24.0
+                  : 28.0;
               final spacing = compactHeight ? 6.0 : 8.0;
               final childAspectRatio = compactHeight
-                  ? 0.98
-                  : 0.92;
+                  ? 1.02
+                  : 0.96;
 
               return Container(
                 padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
@@ -1989,7 +1915,7 @@ Future<void> _showActionMenu(
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: labelStyle?.copyWith(
-                                        fontSize: compactHeight ? 9 : 10,
+                                        fontSize: compactHeight ? 10 : 11,
                                       ),
                                     ),
                                   ],
@@ -4079,40 +4005,9 @@ class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
   Widget build(BuildContext context) {
     final actions = [
       _ActionMenuItem(
-        icon: Icons.refresh,
-        label: tr('Actualiser'),
-        onTap: widget.onRefresh,
-      ),
-      _ActionMenuItem(
-        icon: Icons.sync,
-        label: tr('Synchronisation'),
-        onTap: _openOrderHistory,
-      ),
-      _ActionMenuItem(
-        icon: Icons.calculate_outlined,
-        label: tr('Calculatrice'),
-        onTap: _openCalculator,
-      ),
-      _ActionMenuItem(
-        icon: _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-        label:
-            _isFullScreen ? tr('Quitter plein écran') : tr('Plein écran'),
-        onTap: _toggleFullScreen,
-      ),
-      _ActionMenuItem(
-        icon: Icons.attach_money,
-        label: tr('Cash en caisse'),
-        onTap: widget.onCashInHand,
-      ),
-      _ActionMenuItem(
         icon: Icons.tune,
         label: tr('Apparence'),
         onTap: _openAppearanceSettings,
-      ),
-      _ActionMenuItem(
-        icon: Icons.sync,
-        label: tr('Synchroniser'),
-        onTap: widget.onSync,
       ),
       _ActionMenuItem(
         icon: Icons.print_outlined,
@@ -4128,20 +4023,6 @@ class _HeaderIconToolbarState extends State<_HeaderIconToolbar> {
         icon: Icons.store_mall_directory_outlined,
         label: tr('Interface borne'),
         onTap: _openKioskPage,
-      ),
-      _ActionMenuItem(
-        icon: widget.offlineMode ? Icons.cloud_off : Icons.cloud_done,
-        label: widget.offlineMode ? tr('Mode hors ligne') : tr('Connecté'),
-        onTap: widget.offlineMode ? widget.onReconnect : null,
-        color: widget.offlineMode ? Colors.orange : const Color(0xFF22C55E),
-        background: widget.offlineMode
-            ? const Color(0xFFFFF7ED)
-            : const Color(0xFFF3F4F6),
-      ),
-      _ActionMenuItem(
-        icon: Icons.logout,
-        label: tr('Déconnexion'),
-        onTap: widget.onLogout,
       ),
     ];
 
