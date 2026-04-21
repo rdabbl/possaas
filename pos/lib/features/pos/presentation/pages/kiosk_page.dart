@@ -52,6 +52,7 @@ class _KioskPageState extends State<KioskPage> {
   final List<CartItem> _cart = [];
   bool _showLanding = true;
   String _serviceMode = 'sur place';
+  bool _isSubmitting = false;
 
   _KioskStrings get _strings => const _KioskStrings();
 
@@ -177,7 +178,15 @@ class _KioskPageState extends State<KioskPage> {
                     onProductSelected: (product) =>
                         _showProductDetails(product, pos),
                     onOpenCart: () => _showCartSheet(pos),
-                    onSubmit: () => _handleSubmit(pos),
+                    onSubmit: () async {
+                      if (_isSubmitting) return;
+                      setState(() => _isSubmitting = true);
+                      await _handleSubmit(pos);
+                      if (mounted) {
+                        setState(() => _isSubmitting = false);
+                      }
+                    },
+                    isSubmitting: _isSubmitting,
                   ),
           ),
         );
@@ -211,6 +220,26 @@ class _KioskPageState extends State<KioskPage> {
     );
     if (confirmed != true) return;
 
+    var loaderOpened = false;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2.4),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(tr('Envoi de la commande...'))),
+          ],
+        ),
+      ),
+    );
+    loaderOpened = true;
+
     final ok = await pos.submitKioskOrder(
       items: List<CartItem>.from(_cart),
       queueNumber: queueNumber,
@@ -219,6 +248,10 @@ class _KioskPageState extends State<KioskPage> {
       paymentTypeId: 0,
       saleStatus: 'pos',
     );
+    if (loaderOpened && mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+      loaderOpened = false;
+    }
     if (!mounted) return;
     if (!ok) {
       final message = pos.errorMessage ?? tr('Erreur lors de la commande.');
@@ -347,7 +380,7 @@ class _KioskLandingView extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Image.asset(
-          'lib/features/pos/presentation/1.png',
+          'flutter_01.png',
           fit: BoxFit.cover,
         ),
         Container(
@@ -458,6 +491,7 @@ class _KioskOrderView extends StatelessWidget {
     required this.onProductSelected,
     required this.onOpenCart,
     required this.onSubmit,
+    required this.isSubmitting,
   });
 
   final PosController pos;
@@ -471,6 +505,7 @@ class _KioskOrderView extends StatelessWidget {
   final ValueChanged<Product> onProductSelected;
   final VoidCallback onOpenCart;
   final VoidCallback onSubmit;
+  final bool isSubmitting;
 
   @override
   Widget build(BuildContext context) {
@@ -527,6 +562,7 @@ class _KioskOrderView extends StatelessWidget {
                 symbolOnRight: pos.isCurrencySymbolRight,
                 onOpenCart: onOpenCart,
                 onSubmit: onSubmit,
+                isSubmitting: isSubmitting,
               ),
             ],
           ),
@@ -778,6 +814,7 @@ class _KioskFooterBar extends StatelessWidget {
     required this.symbolOnRight,
     required this.onOpenCart,
     required this.onSubmit,
+    required this.isSubmitting,
   });
 
   final int cartCount;
@@ -787,6 +824,7 @@ class _KioskFooterBar extends StatelessWidget {
   final bool symbolOnRight;
   final VoidCallback onOpenCart;
   final VoidCallback onSubmit;
+  final bool isSubmitting;
 
   @override
   Widget build(BuildContext context) {
@@ -815,15 +853,24 @@ class _KioskFooterBar extends StatelessWidget {
             ),
           ),
           OutlinedButton.icon(
-            onPressed: cartItems.isEmpty ? null : onOpenCart,
+            onPressed: cartItems.isEmpty || isSubmitting ? null : onOpenCart,
             icon: const Icon(Icons.shopping_cart_outlined),
             label: Text(tr('Voir panier')),
           ),
           const SizedBox(width: 10),
           FilledButton.icon(
-            onPressed: cartItems.isEmpty ? null : onSubmit,
-            icon: const Icon(Icons.receipt_long),
-            label: Text(tr('Commander')),
+            onPressed: cartItems.isEmpty || isSubmitting ? null : onSubmit,
+            icon: isSubmitting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
+                    ),
+                  )
+                : const Icon(Icons.receipt_long),
+            label: Text(isSubmitting ? tr('Envoi...') : tr('Commander')),
             style: FilledButton.styleFrom(
               backgroundColor: _kioskYellow,
               foregroundColor: Colors.black,

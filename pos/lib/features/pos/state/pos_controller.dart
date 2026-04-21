@@ -1299,7 +1299,7 @@ class PosController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _loadProducts({String? search}) async {
+  Future<void> _loadProducts() async {
     if (_offlineMode) {
       _setLoading(false);
       notifyListeners();
@@ -1307,10 +1307,10 @@ class PosController extends ChangeNotifier {
     }
     _setLoading(true);
     try {
+      // Always fetch the full catalog for the selected store, then apply
+      // category/search filters locally to avoid refresh on each navigation.
       final items = await repository.fetchProducts(
         warehouseId: _selectedWarehouseId,
-        categoryId: _selectedCategoryId,
-        search: search ?? _searchQuery,
       );
       _products = items;
       await _cacheProducts(items);

@@ -75,6 +75,7 @@ flutter:
   uses-material-design: true
   assets:
     - lib/features/pos/presentation/1.png
+    - flutter_01.png
     - flutter_02.png
 
   # To add assets to your application, add an assets section, like this:

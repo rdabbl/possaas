@@ -1119,6 +1119,12 @@ class _CatalogPanel extends StatelessWidget {
               onOpenHistory: onOpenHistory,
               onOpenCalculator: onOpenCalculator,
               onOpenKiosk: onOpenKiosk,
+              offlineMode: offlineMode,
+              statusMessage: controller.errorMessage ??
+                  controller.successMessage ??
+                  (offlineMode
+                      ? tr('Mode hors ligne actif. Les données locales sont utilisées.')
+                      : tr('Mode en ligne actif. Synchronisation opérationnelle.')),
             ),
             const SizedBox(height: 12),
             if (showClientOrWarehouse)
@@ -1215,6 +1221,8 @@ class _HeroBanner extends StatelessWidget {
     required this.onOpenHistory,
     required this.onOpenCalculator,
     required this.onOpenKiosk,
+    required this.offlineMode,
+    required this.statusMessage,
   });
 
   final String title;
@@ -1225,6 +1233,8 @@ class _HeroBanner extends StatelessWidget {
   final VoidCallback onOpenHistory;
   final VoidCallback onOpenCalculator;
   final VoidCallback onOpenKiosk;
+  final bool offlineMode;
+  final String statusMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -1233,7 +1243,7 @@ class _HeroBanner extends StatelessWidget {
         ? (defaultTitle.isNotEmpty ? defaultTitle[0].toUpperCase() : 'S')
         : title.trim()[0].toUpperCase();
     return Container(
-      height: 110,
+      height: 124,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
@@ -1249,6 +1259,44 @@ class _HeroBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
+          Tooltip(
+            message: offlineMode ? tr('Mode hors ligne') : tr('Mode en ligne'),
+            child: InkWell(
+              onTap: () {
+                showDialog<void>(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: Text(offlineMode ? tr('Mode hors ligne') : tr('Mode en ligne')),
+                    content: Text(statusMessage),
+                    actions: [
+                      FilledButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(tr('Fermer')),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: offlineMode ? const Color(0xFFFFEDD5) : const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: offlineMode ? const Color(0xFFF59E0B) : const Color(0xFF22C55E),
+                  ),
+                ),
+                child: Icon(
+                  offlineMode ? Icons.cloud_off : Icons.cloud_done,
+                  size: 20,
+                  color: offlineMode ? const Color(0xFFB45309) : const Color(0xFF166534),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           InkWell(
             onTap: onMenu,
             borderRadius: BorderRadius.circular(14),
@@ -1380,8 +1428,8 @@ class _BannerIconButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          width: 72,
-          height: 60,
+          width: 84,
+          height: 70,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -1391,8 +1439,8 @@ class _BannerIconButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 26,
-                height: 26,
+                width: 34,
+                height: 34,
                 decoration: const BoxDecoration(
                   color: _posYellow,
                   shape: BoxShape.circle,
@@ -1400,7 +1448,7 @@ class _BannerIconButton extends StatelessWidget {
                 child: Icon(
                   icon,
                   color: Colors.black,
-                  size: 16,
+                  size: 20,
                 ),
               ),
               const SizedBox(height: 2),
@@ -1410,7 +1458,7 @@ class _BannerIconButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Color(0xFF111827),
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -3134,8 +3182,8 @@ class _CartActions extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
+    const shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.zero,
     );
     final appearance = context.watch<AppearanceController>();
 
@@ -3144,7 +3192,7 @@ class _CartActions extends StatelessWidget {
         foregroundColor: color,
         side: BorderSide(color: color, width: 1.2),
         shape: shape,
-        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
         backgroundColor: Colors.white,
         visualDensity: VisualDensity.compact,
         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
@@ -3156,7 +3204,7 @@ class _CartActions extends StatelessWidget {
         backgroundColor: color,
         foregroundColor: Colors.white,
         shape: shape,
-        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
         visualDensity: VisualDensity.compact,
         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
       );
@@ -3383,7 +3431,6 @@ class _CartActions extends StatelessWidget {
                 children: [
                   for (var i = 0; i < buttonsList.length; i++) ...[
                     Expanded(child: buttonsList[i]),
-                    if (i < buttonsList.length - 1) const SizedBox(width: 8),
                   ],
                 ],
               );
