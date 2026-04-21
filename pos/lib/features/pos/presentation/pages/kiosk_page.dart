@@ -380,7 +380,7 @@ class _KioskLandingView extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Image.asset(
-          'flutter_01.png',
+          'flutter_02.png',
           fit: BoxFit.cover,
         ),
         Container(

@@ -33,6 +33,8 @@ class AuthController extends ChangeNotifier {
   bool get offlineMode => _offlineMode;
 
   Future<void> bootstrap() async {
+    final splashStartedAt = DateTime.now();
+    const minimumSplash = Duration(milliseconds: 900);
     debugPrint('[AuthController] bootstrap started');
     _token = await repository.readToken();
     _userLabel = await repository.readUserIdentifier();
@@ -46,6 +48,11 @@ class AuthController extends ChangeNotifier {
     if (_token == null && _offlineMode) {
       debugPrint('[AuthController] attempting offline session restore');
       await _restoreOfflineSessionIfPossible();
+    }
+
+    final elapsed = DateTime.now().difference(splashStartedAt);
+    if (elapsed < minimumSplash) {
+      await Future<void>.delayed(minimumSplash - elapsed);
     }
 
     _initializing = false;
