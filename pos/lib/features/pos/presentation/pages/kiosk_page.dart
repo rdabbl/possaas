@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -145,7 +146,7 @@ class _KioskPageState extends State<KioskPage> {
         final isFrench = i18n.locale.startsWith('fr');
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0B0F14),
+          backgroundColor: Colors.white,
           body: SafeArea(
             child: _showLanding
                 ? _KioskLandingView(
@@ -365,15 +366,6 @@ class _KioskLandingView extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: onBack,
-                    icon: const Icon(Icons.arrow_back),
-                    label: Text(tr('Retour POS')),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white54),
-                    ),
-                  ),
                   const Spacer(),
                   ToggleButtons(
                     isSelected: [!isFrench, isFrench],
@@ -440,6 +432,14 @@ class _KioskLandingView extends StatelessWidget {
             ],
           ),
         ),
+        Positioned(
+          top: 20,
+          left: 20,
+          child: _HoverBackButton(
+            label: tr('Retour POS'),
+            onPressed: onBack,
+          ),
+        ),
       ],
     );
   }
@@ -477,63 +477,127 @@ class _KioskOrderView extends StatelessWidget {
     final categories = pos.categories;
     final products = pos.products;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-      child: Column(
-        children: [
-          Row(
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+          child: Column(
             children: [
-              OutlinedButton.icon(
-                onPressed: onBack,
-                icon: const Icon(Icons.arrow_back),
-                label: Text(tr('Retour')),
-              ),
-              const SizedBox(width: 10),
-              Chip(
-                label: Text(
-                  serviceMode == 'emporter' ? tr('Emporter') : tr('Sur place'),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Chip(
+                  label: Text(
+                    serviceMode == 'emporter' ? tr('Emporter') : tr('Sur place'),
+                  ),
                 ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 176,
+                      child: _CategorySidebar(
+                        categories: categories,
+                        selectedCategoryId: pos.selectedCategoryId,
+                        allLabel: strings.all,
+                        onCategorySelected: onCategorySelected,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ProductGrid3(
+                        products: products,
+                        isLoading: pos.isLoading,
+                        noProductsLabel: strings.noProducts,
+                        onSelectProduct: onProductSelected,
+                        currencySymbol: pos.currencySymbol,
+                        symbolOnRight: pos.isCurrencySymbolRight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              _KioskFooterBar(
+                cartCount: cartCount,
+                cartTotal: cartTotal,
+                cartItems: cartItems,
+                currencySymbol: pos.currencySymbol,
+                symbolOnRight: pos.isCurrencySymbolRight,
+                onOpenCart: onOpenCart,
+                onSubmit: onSubmit,
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 200,
-                  child: _CategorySidebar(
-                    categories: categories,
-                    selectedCategoryId: pos.selectedCategoryId,
-                    allLabel: strings.all,
-                    onCategorySelected: onCategorySelected,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ProductGrid3(
-                    products: products,
-                    isLoading: pos.isLoading,
-                    noProductsLabel: strings.noProducts,
-                    onSelectProduct: onProductSelected,
-                    currencySymbol: pos.currencySymbol,
-                    symbolOnRight: pos.isCurrencySymbolRight,
-                  ),
-                ),
-              ],
+        ),
+        Positioned(
+          top: 10,
+          left: 10,
+          child: _HoverBackButton(
+            label: tr('Retour'),
+            onPressed: onBack,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HoverBackButton extends StatefulWidget {
+  const _HoverBackButton({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  State<_HoverBackButton> createState() => _HoverBackButtonState();
+}
+
+class _HoverBackButtonState extends State<_HoverBackButton> {
+  bool _hovering = false;
+  bool get _supportsHover =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_supportsHover) {
+      return OutlinedButton.icon(
+        onPressed: widget.onPressed,
+        icon: const Icon(Icons.arrow_back),
+        label: Text(widget.label),
+        style: OutlinedButton.styleFrom(
+          backgroundColor: _kioskYellowSoft,
+          foregroundColor: const Color(0xFF1F2937),
+          side: const BorderSide(color: _kioskYellowBorder),
+        ),
+      );
+    }
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 150),
+        opacity: _hovering ? 1 : 0,
+        child: IgnorePointer(
+          ignoring: !_hovering,
+          child: OutlinedButton.icon(
+            onPressed: widget.onPressed,
+            icon: const Icon(Icons.arrow_back),
+            label: Text(widget.label),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: _kioskYellowSoft,
+              foregroundColor: const Color(0xFF1F2937),
+              side: const BorderSide(color: _kioskYellowBorder),
             ),
           ),
-          const SizedBox(height: 10),
-          _KioskFooterBar(
-            cartCount: cartCount,
-            cartTotal: cartTotal,
-            cartItems: cartItems,
-            currencySymbol: pos.currencySymbol,
-            symbolOnRight: pos.isCurrencySymbolRight,
-            onOpenCart: onOpenCart,
-            onSubmit: onSubmit,
-          ),
-        ],
+        ),
       ),
     );
   }

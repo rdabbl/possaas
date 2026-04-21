@@ -317,7 +317,7 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
               );
 
         return Scaffold(
-          backgroundColor: const Color(0xFF050505),
+          backgroundColor: Colors.white,
           body: SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -1106,25 +1106,10 @@ class _CatalogPanel extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isTight = constraints.maxWidth < 980;
+        final showClientOrWarehouse = showClient || showWarehouse;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (isTight) ...[
-              if (showSearch) buildSearch(),
-              if (showClient) ...[const SizedBox(height: 12), buildCustomerSelector()],
-              if (showWarehouse) ...[const SizedBox(height: 12), buildWarehouseSelector()],
-            ] else
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (showSearch) Expanded(flex: 5, child: buildSearch()),
-                  if (showSearch && showClient) const SizedBox(width: 10),
-                  if (showClient) Expanded(flex: 4, child: buildCustomerSelector()),
-                  if ((showSearch || showClient) && showWarehouse) const SizedBox(width: 10),
-                  if (showWarehouse) Expanded(flex: 3, child: buildWarehouseSelector()),
-                ],
-              ),
-            const SizedBox(height: 12),
             _HeroBanner(
               title: storeName,
               userLabel: displayName,
@@ -1135,6 +1120,21 @@ class _CatalogPanel extends StatelessWidget {
               onOpenCalculator: onOpenCalculator,
               onOpenKiosk: onOpenKiosk,
             ),
+            const SizedBox(height: 12),
+            if (showClientOrWarehouse)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (showClient) Expanded(child: buildCustomerSelector()),
+                  if (showClient && showWarehouse) const SizedBox(width: 10),
+                  if (showWarehouse) Expanded(child: buildWarehouseSelector()),
+                ],
+              ),
+            if (showClientOrWarehouse) const SizedBox(height: 12),
+            if (isTight) ...[
+              if (showSearch) buildSearch(),
+            ] else
+              if (showSearch) buildSearch(),
             if (appearance.showCategoryFilter) ...[
               const SizedBox(height: 16),
               SizedBox(
@@ -1237,11 +1237,15 @@ class _HeroBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1F2937), Color(0xFF374151)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
+        color: Colors.white,
+        border: Border.all(color: _posYellowBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -1252,16 +1256,16 @@ class _HeroBanner extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFF7C045),
+                color: _posYellow,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.menu, color: Colors.white),
+              child: const Icon(Icons.menu, color: Colors.black),
             ),
           ),
           const SizedBox(width: 12),
           CircleAvatar(
             radius: 28,
-            backgroundColor: const Color(0xFFF7C045),
+            backgroundColor: _posYellow,
             child: Text(
               initials,
               style: const TextStyle(
@@ -1280,7 +1284,7 @@ class _HeroBanner extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFF111827),
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1290,11 +1294,11 @@ class _HeroBanner extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 12,
-                      backgroundColor: Colors.white24,
+                      backgroundColor: _posYellowSoft,
                       child: Text(
                         userInitials,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFF111827),
                           fontWeight: FontWeight.w700,
                           fontSize: 11,
                         ),
@@ -1307,7 +1311,7 @@ class _HeroBanner extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Color(0xFFE5E7EB),
+                          color: Color(0xFF6B7280),
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1376,20 +1380,28 @@ class _BannerIconButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          width: 66,
-          height: 54,
+          width: 72,
+          height: 60,
           decoration: BoxDecoration(
-            color: Colors.white24,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white24),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _posYellowBorder),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                color: Colors.white,
-                size: 18,
+              Container(
+                width: 26,
+                height: 26,
+                decoration: const BoxDecoration(
+                  color: _posYellow,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.black,
+                  size: 16,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -1397,7 +1409,7 @@ class _BannerIconButton extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF111827),
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
                 ),

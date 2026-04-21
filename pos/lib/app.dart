@@ -71,9 +71,7 @@ class PosApp extends StatelessWidget {
 
   Widget _buildHome(AuthController auth, PosRepository repository) {
     if (auth.initializing) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const _PosSplashScreen();
     }
     if (!auth.isAuthenticated) {
       return const LoginPage();
@@ -90,6 +88,38 @@ class PosApp extends StatelessWidget {
         ),
       ],
       child: const PosPage(),
+    );
+  }
+}
+
+class _PosSplashScreen extends StatelessWidget {
+  const _PosSplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7C045),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'flutter_02.png',
+              width: 150,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 18),
+            const SizedBox(
+              width: 30,
+              height: 30,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
