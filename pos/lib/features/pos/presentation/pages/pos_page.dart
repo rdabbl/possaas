@@ -108,6 +108,9 @@ String _historyLabelForHours(int hours) {
 
 const double _posDesignWidth = 1440;
 const double _posDesignHeight = 860;
+const Color _posYellow = Color(0xFFF7C045);
+const Color _posYellowSoft = Color(0xFFFFF6DE);
+const Color _posYellowBorder = Color(0xFFF6D58F);
 
 class PosPage extends StatefulWidget {
   const PosPage({super.key});
@@ -925,7 +928,7 @@ class _CatalogPanel extends StatelessWidget {
     Widget buildProfileBadge() {
       return CircleAvatar(
         radius: 14,
-        backgroundColor: const Color(0xFFF7C045),
+        backgroundColor: _posYellow,
         child: Text(
           initials,
           style: const TextStyle(
@@ -963,10 +966,10 @@ class _CatalogPanel extends StatelessWidget {
           suffixIconConstraints:
               const BoxConstraints(minWidth: 0, minHeight: 0),
           filled: true,
-          fillColor: const Color(0xFFF3F4F6),
+          fillColor: _posYellowSoft,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
+            borderSide: const BorderSide(color: _posYellowBorder),
           ),
           contentPadding: const EdgeInsets.symmetric(vertical: 0),
         ),
@@ -1016,7 +1019,7 @@ class _CatalogPanel extends StatelessWidget {
                 tooltip: tr('Nouveau client'),
                 icon: const Icon(Icons.person_add_alt_1),
                 style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFFF3F4F6),
+                  backgroundColor: _posYellowSoft,
                   foregroundColor: const Color(0xFF111827),
                   padding: const EdgeInsets.all(10),
                   shape: RoundedRectangleBorder(
@@ -1031,10 +1034,10 @@ class _CatalogPanel extends StatelessWidget {
                   decoration: InputDecoration(
                     labelText: tr('Client'),
                     filled: true,
-                    fillColor: const Color(0xFFF3F4F6),
+                    fillColor: _posYellowSoft,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
+                      borderSide: const BorderSide(color: _posYellowBorder),
                     ),
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1081,10 +1084,10 @@ class _CatalogPanel extends StatelessWidget {
         decoration: InputDecoration(
           labelText: tr('Magasin'),
           filled: true,
-          fillColor: const Color(0xFFF3F4F6),
+          fillColor: _posYellowSoft,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
+            borderSide: const BorderSide(color: _posYellowBorder),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         ),
@@ -1107,34 +1110,20 @@ class _CatalogPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (isTight) ...[
+              if (showSearch) buildSearch(),
+              if (showClient) ...[const SizedBox(height: 12), buildCustomerSelector()],
+              if (showWarehouse) ...[const SizedBox(height: 12), buildWarehouseSelector()],
+            ] else
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (showSearch) Expanded(child: buildSearch()) else const Spacer(),
+                  if (showSearch) Expanded(flex: 5, child: buildSearch()),
+                  if (showSearch && showClient) const SizedBox(width: 10),
+                  if (showClient) Expanded(flex: 4, child: buildCustomerSelector()),
+                  if ((showSearch || showClient) && showWarehouse) const SizedBox(width: 10),
+                  if (showWarehouse) Expanded(flex: 3, child: buildWarehouseSelector()),
                 ],
               ),
-              if (showClient) ...[
-                const SizedBox(height: 12),
-                buildCustomerSelector(),
-              ],
-              if (showWarehouse) ...[
-                const SizedBox(height: 12),
-                buildWarehouseSelector(),
-              ],
-            ] else ...[
-              Row(
-                children: [
-                  if (showSearch) Expanded(child: buildSearch()) else const Spacer(),
-                ],
-              ),
-              if (showClient) ...[
-                const SizedBox(height: 12),
-                buildCustomerSelector(),
-              ],
-              if (showWarehouse) ...[
-                const SizedBox(height: 12),
-                buildWarehouseSelector(),
-              ],
-            ],
             const SizedBox(height: 12),
             _HeroBanner(
               title: storeName,
@@ -1334,24 +1323,28 @@ class _HeroBanner extends StatelessWidget {
               _BannerIconButton(
                 icon: Icons.receipt_long,
                 onTap: onOpenHistory,
+                label: tr('Commandes'),
                 tooltip: tr('Historique'),
               ),
               const SizedBox(width: 8),
               _BannerIconButton(
                 icon: Icons.store_mall_directory_outlined,
                 onTap: onOpenKiosk,
+                label: tr('Borne'),
                 tooltip: tr('Interface borne'),
               ),
               const SizedBox(width: 8),
               _BannerIconButton(
                 icon: Icons.calculate_outlined,
                 onTap: onOpenCalculator,
+                label: tr('Calculatrice'),
                 tooltip: tr('Calculatrice'),
               ),
               const SizedBox(width: 8),
               _BannerIconButton(
                 icon: Icons.logout,
                 onTap: onLogout,
+                label: tr('Sortir'),
                 tooltip: tr('Déconnexion'),
               ),
             ],
@@ -1366,11 +1359,13 @@ class _BannerIconButton extends StatelessWidget {
   const _BannerIconButton({
     required this.icon,
     required this.onTap,
+    required this.label,
     required this.tooltip,
   });
 
   final IconData icon;
   final VoidCallback onTap;
+  final String label;
   final String tooltip;
 
   @override
@@ -1381,17 +1376,33 @@ class _BannerIconButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          width: 40,
-          height: 40,
+          width: 66,
+          height: 54,
           decoration: BoxDecoration(
             color: Colors.white24,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Colors.white24),
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 20,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1658,7 +1669,7 @@ class _TopActionButtonsState extends State<_TopActionButtons> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = const Color(0xFFF7C045);
+    final accent = _posYellow;
     final actions = [
       _ActionMenuItem(
         icon: Icons.refresh,
@@ -1716,7 +1727,7 @@ class _TopActionButtonsState extends State<_TopActionButtons> {
         label: widget.offlineMode ? tr('Mode hors ligne') : tr('Connecté'),
         onTap: widget.offlineMode ? widget.onReconnect : null,
         color: widget.offlineMode ? Colors.orange : const Color(0xFF22C55E),
-        background: widget.offlineMode ? accent : const Color(0xFFF3F4F6),
+        background: widget.offlineMode ? accent : _posYellowSoft,
       ),
       _ActionMenuItem(
         icon: Icons.logout,
@@ -1754,7 +1765,7 @@ class _ActionIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tile = Material(
-      color: background ?? Colors.white,
+      color: background ?? _posYellowSoft,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -1764,7 +1775,7 @@ class _ActionIcon extends StatelessWidget {
           height: 36,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
+            border: Border.all(color: _posYellowBorder),
           ),
           child: Icon(
             icon,
@@ -1809,7 +1820,7 @@ Future<void> _showActionMenu(
     backgroundColor: Colors.transparent,
     builder: (sheetContext) {
       final theme = Theme.of(sheetContext);
-      const accent = Color(0xFFF7C045);
+      const accent = _posYellow;
       return SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 14),
@@ -1831,9 +1842,9 @@ Future<void> _showActionMenu(
               return Container(
                 padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFDFDFB),
+                  color: _posYellowSoft,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFEFEFEF)),
+                  border: Border.all(color: _posYellowBorder),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x1A000000),
@@ -1891,7 +1902,7 @@ Future<void> _showActionMenu(
                                   color: item.background ?? const Color(0xFFFFFBF1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: const Color(0xFFF6D58F),
+                                    color: _posYellowBorder,
                                   ),
                                 ),
                                 padding: EdgeInsets.all(compactHeight ? 4 : 5),

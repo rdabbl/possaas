@@ -10,11 +10,11 @@ class AppearanceController extends ChangeNotifier {
   AppearanceController({AppearanceSettingsStorage? storage})
       : _storage = storage ?? const AppearanceSettingsStorage();
 
-  Color _accentColor = const Color(0xFF0F9A8A);
-  int _productGridColumns = 3;
+  Color _accentColor = const Color(0xFFF7C045);
+  int _productGridColumns = 5;
   bool _useDarkMode = false;
   bool _showClientField = !_isAndroid;
-  bool _showWarehouseField = !_isAndroid;
+  bool _showWarehouseField = false;
   bool _showSearchInput = !_isAndroid;
   bool _showCategoryFilter = !_isAndroid;
   bool _showAddToCartButton = !_isAndroid;
@@ -26,7 +26,7 @@ class AppearanceController extends ChangeNotifier {
   bool _showCashButton = !_isAndroid;
   bool _showResetButton = !_isAndroid;
   bool _showHoldButton = !_isAndroid;
-  bool _showHistoryPanel = !_isAndroid;
+  bool _showHistoryPanel = false;
   bool _showPrintPreview = true;
   double _uiScale = 1.0;
   bool _resetHistoryAt4Am = false;
@@ -310,19 +310,29 @@ class AppearanceController extends ChangeNotifier {
   }
 
   InputDecorationTheme _buildInputTheme(ColorScheme scheme) {
+    const yellowBorder = Color(0xFFF6D58F);
+    const yellowFill = Color(0xFFFFF6DE);
+    final focusColor = scheme.primary;
+
     OutlineInputBorder outline({double width = 1.2}) {
       return OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: scheme.primary, width: width),
+        borderSide: BorderSide(color: yellowBorder, width: width),
       );
     }
 
     return InputDecorationTheme(
+      filled: true,
+      fillColor: yellowFill,
       border: outline(),
       enabledBorder: outline(),
-      focusedBorder: outline(width: 1.8),
+      focusedBorder: outline(width: 1.8).copyWith(
+        borderSide: BorderSide(color: focusColor, width: 1.8),
+      ),
       errorBorder: outline(),
-      focusedErrorBorder: outline(width: 1.8),
+      focusedErrorBorder: outline(width: 1.8).copyWith(
+        borderSide: BorderSide(color: focusColor, width: 1.8),
+      ),
     );
   }
 

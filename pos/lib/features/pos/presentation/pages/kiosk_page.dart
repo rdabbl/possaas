@@ -13,6 +13,10 @@ import '../../state/pos_controller.dart';
 import '../../state/printer_controller.dart';
 import 'package:pos_nimirik/core/i18n/i18n.dart';
 
+const Color _kioskYellow = Color(0xFFF7C045);
+const Color _kioskYellowSoft = Color(0xFFFFF6DE);
+const Color _kioskYellowBorder = Color(0xFFF6D58F);
+
 String _formatCurrency(double value, String symbol, bool symbolOnRight) {
   final formatted = NumberFormat.currency(
     symbol: '',
@@ -121,6 +125,7 @@ class _KioskPageState extends State<KioskPage> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: _kioskYellowSoft,
       builder: (_) => _KioskCartSheet(
         cartItems: _cart,
         currencySymbol: pos.currencySymbol,
@@ -313,7 +318,7 @@ class _KioskLandingView extends StatelessWidget {
           onPressed: () => onSelectServiceMode(mode),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
-            backgroundColor: Colors.white,
+            backgroundColor: _kioskYellowSoft,
             foregroundColor: const Color(0xFF101828),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
@@ -551,9 +556,9 @@ class _CategorySidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _kioskYellowSoft,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: _kioskYellowBorder),
       ),
       child: ListView(
         padding: const EdgeInsets.all(10),
@@ -596,7 +601,7 @@ class _CategoryTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF111827) : const Color(0xFFF8FAFC),
+            color: selected ? _kioskYellow : _kioskYellowSoft,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Text(
@@ -604,7 +609,7 @@ class _CategoryTile extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: selected ? Colors.white : const Color(0xFF1F2937),
+              color: const Color(0xFF1F2937),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -656,9 +661,9 @@ class _ProductGrid3 extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _kioskYellowSoft,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: _kioskYellowBorder),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -668,7 +673,7 @@ class _ProductGrid3 extends StatelessWidget {
                     url: product.imageUrl,
                     width: double.infinity,
                     borderRadius: BorderRadius.circular(12),
-                    backgroundColor: const Color(0xFFF3F4F6),
+                    backgroundColor: _kioskYellowSoft,
                     fallbackIcon: Icons.fastfood,
                     iconSize: 40,
                     iconColor: const Color(0xFF6B7280),
@@ -724,7 +729,7 @@ class _KioskFooterBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _kioskYellowSoft,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
@@ -756,8 +761,8 @@ class _KioskFooterBar extends StatelessWidget {
             icon: const Icon(Icons.receipt_long),
             label: Text(tr('Commander')),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF111827),
-              foregroundColor: Colors.white,
+              backgroundColor: _kioskYellow,
+              foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             ),
           ),
@@ -822,7 +827,7 @@ class _KioskProductDialogState extends State<_KioskProductDialog> {
               width: double.infinity,
               height: 180,
               borderRadius: BorderRadius.circular(14),
-              backgroundColor: const Color(0xFFF3F4F6),
+              backgroundColor: _kioskYellowSoft,
               fallbackIcon: Icons.fastfood,
               iconSize: 54,
               iconColor: const Color(0xFF6B7280),
@@ -1009,7 +1014,7 @@ class _KioskCartSheet extends StatelessWidget {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                            border: Border.all(color: _kioskYellowBorder),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

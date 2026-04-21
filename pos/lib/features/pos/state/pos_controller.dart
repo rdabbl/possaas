@@ -521,7 +521,8 @@ class PosController extends ChangeNotifier {
     _successMessage = null;
     notifyListeners();
     try {
-      final storeId = _selectedWarehouseId;
+      final storeId =
+          _selectedWarehouseId ?? _selectedWarehouse?.id ?? (_warehouses.isNotEmpty ? _warehouses.first.id : null);
       if (storeId == null) {
         _errorMessage = 'Veuillez sélectionner un magasin.';
         notifyListeners();
@@ -942,20 +943,12 @@ class PosController extends ChangeNotifier {
 
   Future<void> selectCategory(int? categoryId) async {
     _selectedCategoryId = categoryId == 0 ? null : categoryId;
-    if (_offlineMode) {
-      notifyListeners();
-      return;
-    }
-    await _loadProducts();
+    notifyListeners();
   }
 
   Future<void> searchProducts(String query) async {
     _searchQuery = query;
-    if (_offlineMode) {
-      notifyListeners();
-      return;
-    }
-    await _loadProducts(search: query);
+    notifyListeners();
   }
 
   void addProduct(Product product, {List<ProductOption>? options}) {
