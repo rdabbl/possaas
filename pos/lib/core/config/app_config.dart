@@ -5,7 +5,7 @@ class AppConfig {
   /// flutter run --dart-define=API_BASE_URL=https://example.com/api
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://pos.nimirik.com/api',
+    defaultValue: 'https://app.kincash.fr/api',
     //defaultValue: 'http://localhost:8000/api',
   );
 
