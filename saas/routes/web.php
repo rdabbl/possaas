@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\ShippingController as AdminShippingController;
 use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\TranslationController as AdminTranslationController;
+use App\Http\Controllers\Admin\DataTransferController as AdminDataTransferController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -212,6 +213,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::post('/subscriptions', [AdminSubscriptionController::class, 'store'])->name('subscriptions.store');
     Route::get('/subscriptions/{subscription}/edit', [AdminSubscriptionController::class, 'edit'])->name('subscriptions.edit');
     Route::put('/subscriptions/{subscription}', [AdminSubscriptionController::class, 'update'])->name('subscriptions.update');
+
+    Route::get('/data-transfer', [AdminDataTransferController::class, 'index'])->name('data_transfer.index');
+    Route::get('/data-transfer/export', [AdminDataTransferController::class, 'export'])->name('data_transfer.export');
+    Route::post('/data-transfer/import', [AdminDataTransferController::class, 'import'])->name('data_transfer.import');
 });
 
 Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])->group(function () {

@@ -70,6 +70,7 @@ class DashboardController extends Controller
             ['label' => 'Languages', 'route' => route('admin.languages.index'), 'count' => $stats['languages']],
             ['label' => 'Translations', 'route' => route('admin.translations.index'), 'count' => $stats['translations']],
             ['label' => 'Shipping', 'route' => route('admin.shipping.index'), 'count' => null],
+            ['label' => 'Data Transfer', 'route' => route('admin.data_transfer.index'), 'count' => null],
         ];
 
         return view('admin.dashboard', compact('cards'));
