@@ -52,6 +52,7 @@ class _KioskPageState extends State<KioskPage> {
   final List<CartItem> _cart = [];
   bool _showLanding = true;
   String _serviceMode = 'sur place';
+  String _customerName = '';
   bool _isSubmitting = false;
 
   _KioskStrings get _strings => const _KioskStrings();
@@ -158,16 +159,14 @@ class _KioskPageState extends State<KioskPage> {
                     },
                     onBack: () => Navigator.of(context).pop(),
                     onSelectServiceMode: (mode) {
-                      setState(() {
-                        _serviceMode = mode;
-                        _showLanding = false;
-                      });
+                      _startOrderFlow(mode);
                     },
                   )
                 : _KioskOrderView(
                     pos: pos,
                     strings: _strings,
                     serviceMode: _serviceMode,
+                    customerName: _customerName,
                     cartCount: _cartCount,
                     cartTotal: _cartTotal,
                     cartItems: _cart,
@@ -194,6 +193,21 @@ class _KioskPageState extends State<KioskPage> {
     );
   }
 
+  Future<void> _startOrderFlow(String mode) async {
+    final entered = await showDialog<String>(
+      context: context,
+      builder: (_) => _KioskCustomerDialog(
+        mode: mode,
+      ),
+    );
+    if (!mounted || entered == null) return;
+    setState(() {
+      _serviceMode = mode;
+      _customerName = entered.trim();
+      _showLanding = false;
+    });
+  }
+
   Future<void> _handleSubmit(PosController pos) async {
     if (_cart.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -216,6 +230,7 @@ class _KioskPageState extends State<KioskPage> {
         total: totalWithTax,
         confirmLabel: tr('Commander'),
         serviceMode: _serviceMode,
+        customerName: _customerName,
       ),
     );
     if (confirmed != true) return;
@@ -244,6 +259,7 @@ class _KioskPageState extends State<KioskPage> {
       items: List<CartItem>.from(_cart),
       queueNumber: queueNumber,
       serviceMode: _serviceMode,
+      customerName: _customerName,
       receivedAmount: 0,
       paymentTypeId: 0,
       saleStatus: 'pos',
@@ -281,6 +297,10 @@ class _KioskPageState extends State<KioskPage> {
     if (!mounted) return;
 
     _clearCart();
+    setState(() {
+      _showLanding = true;
+      _customerName = '';
+    });
 
     await showDialog<void>(
       context: context,
@@ -309,6 +329,11 @@ class _KioskPageState extends State<KioskPage> {
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
               ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${tr('Client')}: ${_customerName.trim().isEmpty ? tr('N/A') : _customerName}',
               textAlign: TextAlign.center,
             ),
           ],
@@ -478,11 +503,79 @@ class _KioskLandingView extends StatelessWidget {
   }
 }
 
+class _KioskCustomerDialog extends StatefulWidget {
+  const _KioskCustomerDialog({required this.mode});
+
+  final String mode;
+
+  @override
+  State<_KioskCustomerDialog> createState() => _KioskCustomerDialogState();
+}
+
+class _KioskCustomerDialogState extends State<_KioskCustomerDialog> {
+  final TextEditingController _nameController = TextEditingController();
+  bool _submitted = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    setState(() => _submitted = true);
+    final value = _nameController.text.trim();
+    if (value.isEmpty) return;
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final modeLabel =
+        widget.mode == 'emporter' ? tr('Emporter') : tr('Sur place');
+    return AlertDialog(
+      title: Text(tr('Votre nom')),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('${tr('Service')}: $modeLabel'),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _nameController,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: tr('Nom client'),
+              hintText: tr('Ex: Ahmed'),
+              errorText: _submitted && _nameController.text.trim().isEmpty
+                  ? tr('Nom requis')
+                  : null,
+              border: const OutlineInputBorder(),
+            ),
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(tr('Annuler')),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(tr('Continuer')),
+        ),
+      ],
+    );
+  }
+}
+
 class _KioskOrderView extends StatelessWidget {
   const _KioskOrderView({
     required this.pos,
     required this.strings,
     required this.serviceMode,
+    required this.customerName,
     required this.cartCount,
     required this.cartTotal,
     required this.cartItems,
@@ -497,6 +590,7 @@ class _KioskOrderView extends StatelessWidget {
   final PosController pos;
   final _KioskStrings strings;
   final String serviceMode;
+  final String customerName;
   final int cartCount;
   final double cartTotal;
   final List<CartItem> cartItems;
@@ -521,8 +615,16 @@ class _KioskOrderView extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Chip(
+                  label: Text(serviceMode == 'emporter'
+                      ? tr('Emporter')
+                      : tr('Sur place')),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Chip(
                   label: Text(
-                    serviceMode == 'emporter' ? tr('Emporter') : tr('Sur place'),
+                    '${tr('Client')}: ${customerName.trim().isEmpty ? tr('N/A') : customerName}',
                   ),
                 ),
               ),
@@ -722,7 +824,8 @@ class _CategoryTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: selected ? Colors.white24 : const Color(0xFFF3F4F6),
+                backgroundColor:
+                    selected ? Colors.white24 : const Color(0xFFF3F4F6),
                 child: Text(
                   initials,
                   style: TextStyle(
@@ -1250,6 +1353,7 @@ class _KioskReceiptPreviewDialog extends StatelessWidget {
     required this.total,
     required this.confirmLabel,
     required this.serviceMode,
+    required this.customerName,
   });
 
   final List<CartItem> items;
@@ -1260,6 +1364,7 @@ class _KioskReceiptPreviewDialog extends StatelessWidget {
   final double total;
   final String confirmLabel;
   final String serviceMode;
+  final String customerName;
 
   @override
   Widget build(BuildContext context) {
@@ -1327,6 +1432,16 @@ class _KioskReceiptPreviewDialog extends StatelessWidget {
                     serviceMode == 'emporter'
                         ? tr('Emporter')
                         : tr('Sur place'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: Text(tr('Client'))),
+                  Text(
+                    customerName.trim().isEmpty ? tr('N/A') : customerName,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ],

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_config.dart';
 import '../data/appearance_settings_storage.dart';
 
 class AppearanceController extends ChangeNotifier {
@@ -32,6 +33,8 @@ class AppearanceController extends ChangeNotifier {
   bool _resetHistoryAt4Am = false;
   int _historyResetHour = 4;
   bool _swapSidePanels = false;
+  bool _kioskEnabled = true;
+  String _webViewUrl = AppConfig.defaultWebViewUrl;
   final AppearanceSettingsStorage _storage;
   bool _isLoaded = false;
 
@@ -57,6 +60,8 @@ class AppearanceController extends ChangeNotifier {
   bool get resetHistoryAt4Am => _resetHistoryAt4Am;
   int get historyResetHour => _historyResetHour;
   bool get swapSidePanels => _swapSidePanels;
+  bool get kioskEnabled => _kioskEnabled;
+  String get webViewUrl => _webViewUrl;
 
   ThemeData get theme {
     final colorScheme = ColorScheme.fromSeed(
@@ -101,21 +106,24 @@ class AppearanceController extends ChangeNotifier {
         style: FilledButton.styleFrom(
           backgroundColor: _accentColor,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: _accentColor,
           side: BorderSide(color: _accentColor, width: 1.4),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: _accentColor,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -309,6 +317,22 @@ class AppearanceController extends ChangeNotifier {
     _persist();
   }
 
+  void updateKioskEnabled(bool value) {
+    if (_kioskEnabled == value) return;
+    _kioskEnabled = value;
+    notifyListeners();
+    _persist();
+  }
+
+  void updateWebViewUrl(String value) {
+    final normalized = value.trim();
+    final next = normalized.isEmpty ? AppConfig.defaultWebViewUrl : normalized;
+    if (_webViewUrl == next) return;
+    _webViewUrl = next;
+    notifyListeners();
+    _persist();
+  }
+
   InputDecorationTheme _buildInputTheme(ColorScheme scheme) {
     const yellowBorder = Color(0xFFF6D58F);
     const yellowFill = Color(0xFFFFF6DE);
@@ -340,35 +364,48 @@ class AppearanceController extends ChangeNotifier {
     if (_isLoaded) return;
     final stored = await _storage.read();
     if (stored != null) {
-      _accentColor = Color(_intFrom(stored['accentColor']) ?? _accentColor.value);
+      _accentColor =
+          Color(_intFrom(stored['accentColor']) ?? _accentColor.value);
       _productGridColumns =
-          _intFrom(stored['productGridColumns'])?.clamp(1, 5) ?? _productGridColumns;
+          _intFrom(stored['productGridColumns'])?.clamp(1, 5) ??
+              _productGridColumns;
       _useDarkMode = _boolFrom(stored['useDarkMode']) ?? _useDarkMode;
-      _showClientField = _boolFrom(stored['showClientField']) ?? _showClientField;
+      _showClientField =
+          _boolFrom(stored['showClientField']) ?? _showClientField;
       _showWarehouseField =
           _boolFrom(stored['showWarehouseField']) ?? _showWarehouseField;
-      _showSearchInput = _boolFrom(stored['showSearchInput']) ?? _showSearchInput;
+      _showSearchInput =
+          _boolFrom(stored['showSearchInput']) ?? _showSearchInput;
       _showCategoryFilter =
           _boolFrom(stored['showCategoryFilter']) ?? _showCategoryFilter;
       _showAddToCartButton =
           _boolFrom(stored['showAddToCartButton']) ?? _showAddToCartButton;
-      _showProductCode = _boolFrom(stored['showProductCode']) ?? _showProductCode;
+      _showProductCode =
+          _boolFrom(stored['showProductCode']) ?? _showProductCode;
       _showStockInfo = _boolFrom(stored['showStockInfo']) ?? _showStockInfo;
-      _showCartSummary = _boolFrom(stored['showCartSummary']) ?? _showCartSummary;
-      _showTotalsInCart = _boolFrom(stored['showTotalsInCart']) ?? _showTotalsInCart;
-      _showProductList = _boolFrom(stored['showProductList']) ?? _showProductList;
+      _showCartSummary =
+          _boolFrom(stored['showCartSummary']) ?? _showCartSummary;
+      _showTotalsInCart =
+          _boolFrom(stored['showTotalsInCart']) ?? _showTotalsInCart;
+      _showProductList =
+          _boolFrom(stored['showProductList']) ?? _showProductList;
       _showCashButton = _boolFrom(stored['showCashButton']) ?? _showCashButton;
-      _showResetButton = _boolFrom(stored['showResetButton']) ?? _showResetButton;
+      _showResetButton =
+          _boolFrom(stored['showResetButton']) ?? _showResetButton;
       _showHoldButton = _boolFrom(stored['showHoldButton']) ?? _showHoldButton;
       _showPrintPreview =
           _boolFrom(stored['showPrintPreview']) ?? _showPrintPreview;
-      _showHistoryPanel = _boolFrom(stored['showHistoryPanel']) ?? _showHistoryPanel;
+      _showHistoryPanel =
+          _boolFrom(stored['showHistoryPanel']) ?? _showHistoryPanel;
       _uiScale = _doubleFrom(stored['uiScale'])?.clamp(0.6, 1.2) ?? _uiScale;
       _resetHistoryAt4Am =
           _boolFrom(stored['resetHistoryAt4Am']) ?? _resetHistoryAt4Am;
-      _historyResetHour =
-          _intFrom(stored['historyResetHour'])?.clamp(0, 23) ?? _historyResetHour;
+      _historyResetHour = _intFrom(stored['historyResetHour'])?.clamp(0, 23) ??
+          _historyResetHour;
       _swapSidePanels = _boolFrom(stored['swapSidePanels']) ?? _swapSidePanels;
+      _kioskEnabled = _boolFrom(stored['kioskEnabled']) ?? _kioskEnabled;
+      final storedUrl = stored['webViewUrl']?.toString().trim() ?? '';
+      _webViewUrl = storedUrl.isEmpty ? AppConfig.defaultWebViewUrl : storedUrl;
     }
     _isLoaded = true;
     notifyListeners();
@@ -397,6 +434,8 @@ class AppearanceController extends ChangeNotifier {
         'resetHistoryAt4Am': _resetHistoryAt4Am,
         'historyResetHour': _historyResetHour,
         'swapSidePanels': _swapSidePanels,
+        'kioskEnabled': _kioskEnabled,
+        'webViewUrl': _webViewUrl,
       };
 
   Future<void> _persist() async {

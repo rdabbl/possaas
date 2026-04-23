@@ -41,7 +41,8 @@ class PrinterDeviceInfo {
   final POSPrinter printer;
   final PrinterConnectionType type;
 
-  String get name => printer.name ?? printer.address ?? printer.id ?? 'Sans nom';
+  String get name =>
+      printer.name ?? printer.address ?? printer.id ?? 'Sans nom';
   String get details {
     switch (type) {
       case PrinterConnectionType.lan:
@@ -81,12 +82,16 @@ class PrinterSettingsController extends ChangeNotifier {
   String _manualPort = '9100';
   String _ticketHeader = '';
   String _ticketFooter = 'Merci pour votre achat.';
+  bool _showCustomerInfo = true;
+  bool _showCustomerPhone = true;
+  bool _showCustomerEmail = true;
   bool _hasLoadedInitialSettings = false;
   bool _showDiscoveredPrinters = true;
   List<PrintingService> _services = [];
   int? _activeServiceId;
 
-  UnmodifiableListView<PrinterDeviceInfo> get devices => UnmodifiableListView(_devices);
+  UnmodifiableListView<PrinterDeviceInfo> get devices =>
+      UnmodifiableListView(_devices);
   PrinterDeviceInfo? get selectedDevice => _selectedDevice;
   PrinterConnectionType get connectionType => _connectionType;
   bool get isScanning => _isScanning;
@@ -101,14 +106,20 @@ class PrinterSettingsController extends ChangeNotifier {
   String get manualPort => _manualPort;
   String get ticketHeader => _ticketHeader;
   String get ticketFooter => _ticketFooter;
+  bool get showCustomerInfo => _showCustomerInfo;
+  bool get showCustomerPhone => _showCustomerPhone;
+  bool get showCustomerEmail => _showCustomerEmail;
   bool get showDiscoveredPrinters => _showDiscoveredPrinters;
   List<PrintingService> get services => List.unmodifiable(_services);
   int? get activeServiceId => _activeServiceId;
-  PrintingService? get activeService =>
-      _activeServiceId == null ? null : _services.firstWhere(
-        (service) => service.id == _activeServiceId,
-        orElse: () => _services.isNotEmpty ? _services.first : PrintingService.fallback(),
-      );
+  PrintingService? get activeService => _activeServiceId == null
+      ? null
+      : _services.firstWhere(
+          (service) => service.id == _activeServiceId,
+          orElse: () => _services.isNotEmpty
+              ? _services.first
+              : PrintingService.fallback(),
+        );
 
   bool get isTestEnabled => _selectedDevice != null && !_isTesting;
   bool get canDiscover => !_isScanning && _supportsType(connectionType);
@@ -120,10 +131,11 @@ class PrinterSettingsController extends ChangeNotifier {
       PrinterConnectionType.values.where(_supportsType).toList();
 
   void syncServices(List<PrintingService> services, {int? preferredServiceId}) {
-    final normalized = services.isNotEmpty ? services : [PrintingService.fallback()];
+    final normalized =
+        services.isNotEmpty ? services : [PrintingService.fallback()];
     final same = _services.length == normalized.length &&
-        _services.every((service) =>
-            normalized.any((other) => other.id == service.id));
+        _services.every(
+            (service) => normalized.any((other) => other.id == service.id));
     _services = List<PrintingService>.from(normalized);
     final nextId = _resolveServiceId(preferredServiceId);
     if (_activeServiceId != nextId) {
@@ -257,6 +269,24 @@ class PrinterSettingsController extends ChangeNotifier {
     _ticketFooter = value;
   }
 
+  void toggleShowCustomerInfo(bool value) {
+    if (_showCustomerInfo == value) return;
+    _showCustomerInfo = value;
+    notifyListeners();
+  }
+
+  void toggleShowCustomerPhone(bool value) {
+    if (_showCustomerPhone == value) return;
+    _showCustomerPhone = value;
+    notifyListeners();
+  }
+
+  void toggleShowCustomerEmail(bool value) {
+    if (_showCustomerEmail == value) return;
+    _showCustomerEmail = value;
+    notifyListeners();
+  }
+
   void showPrinterDiscovery() {
     if (_showDiscoveredPrinters) return;
     _showDiscoveredPrinters = true;
@@ -287,7 +317,9 @@ class PrinterSettingsController extends ChangeNotifier {
 
   Future<void> discoverPrinters() async {
     if (!_supportsType(connectionType)) {
-      _setStatus('Ce type de connexion nest pas disponible sur cette plateforme.', true);
+      _setStatus(
+          'Ce type de connexion nest pas disponible sur cette plateforme.',
+          true);
       return;
     }
     _isScanning = true;
@@ -301,15 +333,21 @@ class PrinterSettingsController extends ChangeNotifier {
         case PrinterConnectionType.lan:
         case PrinterConnectionType.wifi:
           final printers = await NetworkPrinterManager.discover();
-          found = printers.map((p) => PrinterDeviceInfo(printer: p, type: connectionType)).toList();
+          found = printers
+              .map((p) => PrinterDeviceInfo(printer: p, type: connectionType))
+              .toList();
           break;
         case PrinterConnectionType.usb:
           final printers = await USBPrinterManager.discover();
-          found = printers.map((p) => PrinterDeviceInfo(printer: p, type: connectionType)).toList();
+          found = printers
+              .map((p) => PrinterDeviceInfo(printer: p, type: connectionType))
+              .toList();
           break;
         case PrinterConnectionType.bluetooth:
           final printers = await BluetoothPrinterManager.discover();
-          found = printers.map((p) => PrinterDeviceInfo(printer: p, type: connectionType)).toList();
+          found = printers
+              .map((p) => PrinterDeviceInfo(printer: p, type: connectionType))
+              .toList();
           break;
         case PrinterConnectionType.system:
           _setStatus('Type systeme non supporte pour impression.', true);
@@ -370,7 +408,8 @@ class PrinterSettingsController extends ChangeNotifier {
       _setStatus('Selectionnez une imprimante.', true);
       return;
     }
-    if (!_supportsType(selected.type) || selected.type == PrinterConnectionType.system) {
+    if (!_supportsType(selected.type) ||
+        selected.type == PrinterConnectionType.system) {
       _setStatus('Impression non supportee pour ce type.', true);
       return;
     }
@@ -415,6 +454,8 @@ class PrinterSettingsController extends ChangeNotifier {
     required String currencySymbol,
     required bool currencyOnRight,
     required String? customerName,
+    String? customerPhone,
+    String? customerEmail,
     required String? userLabel,
     required String? companyName,
     required String? companyAddress,
@@ -436,7 +477,8 @@ class PrinterSettingsController extends ChangeNotifier {
       _setStatus('Selectionnez une imprimante.', true);
       return;
     }
-    if (!_supportsType(selected.type) || selected.type == PrinterConnectionType.system) {
+    if (!_supportsType(selected.type) ||
+        selected.type == PrinterConnectionType.system) {
       _setStatus('Impression non supportee pour ce type.', true);
       return;
     }
@@ -459,6 +501,7 @@ class PrinterSettingsController extends ChangeNotifier {
               autoCut: snapshot.autoCut,
               ticketHeader: snapshot.ticketHeader,
               ticketFooter: snapshot.ticketFooter,
+              showCustomerInfo: snapshot.showCustomerInfo,
             )
           : _buildCombinedTicket(
               paperSize,
@@ -472,6 +515,8 @@ class PrinterSettingsController extends ChangeNotifier {
               currencySymbol: currencySymbol,
               currencyOnRight: currencyOnRight,
               customerName: customerName,
+              customerPhone: customerPhone,
+              customerEmail: customerEmail,
               userLabel: userLabel,
               companyName: companyName,
               companyAddress: companyAddress,
@@ -486,6 +531,9 @@ class PrinterSettingsController extends ChangeNotifier {
               autoCut: snapshot.autoCut,
               ticketHeader: snapshot.ticketHeader,
               ticketFooter: snapshot.ticketFooter,
+              showCustomerInfo: snapshot.showCustomerInfo,
+              showCustomerPhone: snapshot.showCustomerPhone,
+              showCustomerEmail: snapshot.showCustomerEmail,
             );
 
       final response = await _sendToPrinter(
@@ -520,7 +568,8 @@ class PrinterSettingsController extends ChangeNotifier {
       _setStatus('Selectionnez une imprimante.', true);
       return;
     }
-    if (!_supportsType(selected.type) || selected.type == PrinterConnectionType.system) {
+    if (!_supportsType(selected.type) ||
+        selected.type == PrinterConnectionType.system) {
       _setStatus('Impression non supportee pour ce type.', true);
       return;
     }
@@ -572,6 +621,9 @@ class PrinterSettingsController extends ChangeNotifier {
       manualPort: _manualPort,
       ticketHeader: _ticketHeader,
       ticketFooter: _ticketFooter,
+      showCustomerInfo: _showCustomerInfo,
+      showCustomerPhone: _showCustomerPhone,
+      showCustomerEmail: _showCustomerEmail,
     );
   }
 
@@ -590,7 +642,11 @@ class PrinterSettingsController extends ChangeNotifier {
       manualAddress: _stringFrom(settings['manualAddress']) ?? '',
       manualPort: _stringFrom(settings['manualPort']) ?? '9100',
       ticketHeader: _stringFrom(settings['ticketHeader']) ?? '',
-      ticketFooter: _stringFrom(settings['ticketFooter']) ?? 'Merci pour votre achat.',
+      ticketFooter:
+          _stringFrom(settings['ticketFooter']) ?? 'Merci pour votre achat.',
+      showCustomerInfo: _boolFrom(settings['showCustomerInfo']) ?? true,
+      showCustomerPhone: _boolFrom(settings['showCustomerPhone']) ?? true,
+      showCustomerEmail: _boolFrom(settings['showCustomerEmail']) ?? true,
     );
   }
 
@@ -607,10 +663,14 @@ class PrinterSettingsController extends ChangeNotifier {
   }
 
   String _formatReceiptAmount(double value, String symbol, bool symbolOnRight) {
-    final formatted = NumberFormat.currency(symbol: '', decimalDigits: 2).format(value).trim();
+    final formatted = NumberFormat.currency(symbol: '', decimalDigits: 2)
+        .format(value)
+        .trim();
     final trimmedSymbol = symbol.trim();
     if (trimmedSymbol.isEmpty) return formatted;
-    return symbolOnRight ? '$formatted $trimmedSymbol' : '$trimmedSymbol $formatted';
+    return symbolOnRight
+        ? '$formatted $trimmedSymbol'
+        : '$trimmedSymbol $formatted';
   }
 
   List<int> _buildCombinedTicket(
@@ -625,6 +685,8 @@ class PrinterSettingsController extends ChangeNotifier {
     required String currencySymbol,
     required bool currencyOnRight,
     required String? customerName,
+    String? customerPhone,
+    String? customerEmail,
     required String? userLabel,
     required String? companyName,
     required String? companyAddress,
@@ -639,9 +701,13 @@ class PrinterSettingsController extends ChangeNotifier {
     required bool autoCut,
     required String ticketHeader,
     required String ticketFooter,
+    required bool showCustomerInfo,
+    required bool showCustomerPhone,
+    required bool showCustomerEmail,
   }) {
     final g = Generator(paperSize, profile);
-    String fmt(double v) => _formatReceiptAmount(v, currencySymbol, currencyOnRight);
+    String fmt(double v) =>
+        _formatReceiptAmount(v, currencySymbol, currencyOnRight);
     final now = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
     final bytes = <int>[];
     final serverName = (userLabel ?? '').trim();
@@ -651,6 +717,8 @@ class PrinterSettingsController extends ChangeNotifier {
     final companyPhoneLine = (companyPhone ?? '').trim();
     final warehouseLine = (warehouseName ?? '').trim();
     final customerLine = (customerName ?? '').trim();
+    final customerPhoneLine = (customerPhone ?? '').trim();
+    final customerEmailLine = (customerEmail ?? '').trim();
     final ticketHeaderLine = ticketHeader.trim();
     final ticketFooterLine = ticketFooter.trim();
 
@@ -666,21 +734,32 @@ class PrinterSettingsController extends ChangeNotifier {
         ),
       ),
     );
-    bytes.addAll(g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
+    bytes.addAll(
+        g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
     if (companyAddressLine.isNotEmpty) {
-      bytes.addAll(g.text(companyAddressLine, styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text(companyAddressLine,
+          styles: const PosStyles(align: PosAlign.center)));
     }
     if (companyEmailLine.isNotEmpty) {
-      bytes.addAll(g.text('Email : $companyEmailLine', styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text('Email : $companyEmailLine',
+          styles: const PosStyles(align: PosAlign.center)));
     }
     if (companyPhoneLine.isNotEmpty) {
-      bytes.addAll(g.text('Tel : $companyPhoneLine', styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text('Tel : $companyPhoneLine',
+          styles: const PosStyles(align: PosAlign.center)));
     }
     if (warehouseLine.isNotEmpty) {
-      bytes.addAll(g.text('Magasin : $warehouseLine', styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text('Magasin : $warehouseLine',
+          styles: const PosStyles(align: PosAlign.center)));
     }
-    if (customerLine.isNotEmpty) {
+    if (showCustomerInfo && customerLine.isNotEmpty) {
       bytes.addAll(g.text('Client : $customerLine'));
+    }
+    if (showCustomerPhone && customerPhoneLine.isNotEmpty) {
+      bytes.addAll(g.text('Tel client : $customerPhoneLine'));
+    }
+    if (showCustomerEmail && customerEmailLine.isNotEmpty) {
+      bytes.addAll(g.text('Email client : $customerEmailLine'));
     }
     if (serverName.isNotEmpty) {
       bytes.addAll(g.text('Serveur : $serverName'));
@@ -690,12 +769,14 @@ class PrinterSettingsController extends ChangeNotifier {
     }
     if (ticketHeaderLine.isNotEmpty) {
       bytes.addAll(g.feed(1));
-      bytes.addAll(g.text(ticketHeaderLine, styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text(ticketHeaderLine,
+          styles: const PosStyles(align: PosAlign.center)));
     }
     bytes.addAll(g.hr());
 
     for (final item in items) {
-      final unitPrice = item.quantity == 0 ? 0.0 : item.subTotal / item.quantity;
+      final unitPrice =
+          item.quantity == 0 ? 0.0 : item.subTotal / item.quantity;
       bytes.addAll(
         g.text(
           item.product.name,
@@ -736,22 +817,34 @@ class PrinterSettingsController extends ChangeNotifier {
     bytes.addAll(g.hr());
     bytes.addAll(g.row([
       PosColumn(text: 'Sous-total', width: 8),
-      PosColumn(text: fmt(subTotal), width: 4, styles: const PosStyles(align: PosAlign.right)),
+      PosColumn(
+          text: fmt(subTotal),
+          width: 4,
+          styles: const PosStyles(align: PosAlign.right)),
     ]));
     if (discount != 0) {
       bytes.addAll(g.row([
         PosColumn(text: 'Remise', width: 8),
-        PosColumn(text: fmt(discount), width: 4, styles: const PosStyles(align: PosAlign.right)),
+        PosColumn(
+            text: fmt(discount),
+            width: 4,
+            styles: const PosStyles(align: PosAlign.right)),
       ]));
     }
     bytes.addAll(g.row([
       PosColumn(text: 'Taxe', width: 8),
-      PosColumn(text: fmt(tax), width: 4, styles: const PosStyles(align: PosAlign.right)),
+      PosColumn(
+          text: fmt(tax),
+          width: 4,
+          styles: const PosStyles(align: PosAlign.right)),
     ]));
     if (shipping != 0) {
       bytes.addAll(g.row([
         PosColumn(text: 'Livraison', width: 8),
-        PosColumn(text: fmt(shipping), width: 4, styles: const PosStyles(align: PosAlign.right)),
+        PosColumn(
+            text: fmt(shipping),
+            width: 4,
+            styles: const PosStyles(align: PosAlign.right)),
       ]));
     }
     bytes.addAll(g.hr(ch: '-'));
@@ -765,7 +858,8 @@ class PrinterSettingsController extends ChangeNotifier {
         PosColumn(
           text: fmt(grandTotal),
           width: 4,
-          styles: const PosStyles(align: PosAlign.right, bold: true, height: PosTextSize.size2),
+          styles: const PosStyles(
+              align: PosAlign.right, bold: true, height: PosTextSize.size2),
         ),
       ]),
     );
@@ -811,7 +905,8 @@ class PrinterSettingsController extends ChangeNotifier {
       bytes.addAll(
         g.text(
           ticketFooterLine,
-          styles: const PosStyles(align: PosAlign.center, fontType: PosFontType.fontB),
+          styles: const PosStyles(
+              align: PosAlign.center, fontType: PosFontType.fontB),
         ),
       );
     }
@@ -824,10 +919,13 @@ class PrinterSettingsController extends ChangeNotifier {
       ),
     );
     if (serviceLabel.isNotEmpty) {
-      bytes.addAll(g.text('Service : $serviceLabel', styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text('Service : $serviceLabel',
+          styles: const PosStyles(align: PosAlign.center)));
     }
-    bytes.addAll(g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
-    bytes.addAll(g.text('Total : ${fmt(grandTotal)}', styles: const PosStyles(align: PosAlign.center, bold: true)));
+    bytes.addAll(
+        g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
+    bytes.addAll(g.text('Total : ${fmt(grandTotal)}',
+        styles: const PosStyles(align: PosAlign.center, bold: true)));
     _appendCut(bytes, g, autoCut: autoCut);
 
     return bytes;
@@ -865,11 +963,13 @@ class PrinterSettingsController extends ChangeNotifier {
     );
     bytes.addAll(g.feed(1));
     if (serviceLabel.isNotEmpty) {
-      bytes.addAll(g.text('Service : $serviceLabel', styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text('Service : $serviceLabel',
+          styles: const PosStyles(align: PosAlign.center)));
       bytes.addAll(g.feed(1));
     }
     if (ticketHeaderLine.isNotEmpty) {
-      bytes.addAll(g.text(ticketHeaderLine, styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text(ticketHeaderLine,
+          styles: const PosStyles(align: PosAlign.center)));
       bytes.addAll(g.feed(1));
     }
     bytes.addAll(
@@ -884,10 +984,12 @@ class PrinterSettingsController extends ChangeNotifier {
       ),
     );
     bytes.addAll(g.feed(1));
-    bytes.addAll(g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
+    bytes.addAll(
+        g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
     if (ticketFooterLine.isNotEmpty) {
       bytes.addAll(g.feed(1));
-      bytes.addAll(g.text(ticketFooterLine, styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text(ticketFooterLine,
+          styles: const PosStyles(align: PosAlign.center)));
     }
     bytes.addAll(g.feed(2));
     _appendCut(bytes, g, autoCut: autoCut);
@@ -906,6 +1008,7 @@ class PrinterSettingsController extends ChangeNotifier {
     required bool autoCut,
     required String ticketHeader,
     required String ticketFooter,
+    required bool showCustomerInfo,
   }) {
     final g = Generator(paperSize, profile);
     final now = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
@@ -914,8 +1017,8 @@ class PrinterSettingsController extends ChangeNotifier {
     final bytes = <int>[];
 
     bytes.addAll(
-        g.text(
-          companyName != null && companyName.trim().isNotEmpty
+      g.text(
+        companyName != null && companyName.trim().isNotEmpty
             ? companyName.trim()
             : 'Commande cuisine',
         styles: const PosStyles(
@@ -926,11 +1029,14 @@ class PrinterSettingsController extends ChangeNotifier {
         ),
       ),
     );
-    bytes.addAll(g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
+    bytes.addAll(
+        g.text('Date : $now', styles: const PosStyles(align: PosAlign.center)));
     if (warehouseName != null && warehouseName.trim().isNotEmpty) {
       bytes.addAll(g.text('Magasin : ${warehouseName.trim()}'));
     }
-    if (customerName != null && customerName.trim().isNotEmpty) {
+    if (showCustomerInfo &&
+        customerName != null &&
+        customerName.trim().isNotEmpty) {
       bytes.addAll(g.text('Client : ${customerName.trim()}'));
     }
     if (userLabel != null && userLabel.trim().isNotEmpty) {
@@ -940,7 +1046,8 @@ class PrinterSettingsController extends ChangeNotifier {
       bytes.addAll(g.text('Service : $serviceLabel'));
     }
     if (ticketHeaderLine.isNotEmpty) {
-      bytes.addAll(g.text(ticketHeaderLine, styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text(ticketHeaderLine,
+          styles: const PosStyles(align: PosAlign.center)));
     }
     bytes.addAll(g.hr());
 
@@ -978,7 +1085,8 @@ class PrinterSettingsController extends ChangeNotifier {
 
     if (ticketFooterLine.isNotEmpty) {
       bytes.addAll(g.hr(ch: '-'));
-      bytes.addAll(g.text(ticketFooterLine, styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text(ticketFooterLine,
+          styles: const PosStyles(align: PosAlign.center)));
     }
     _appendCut(bytes, g, autoCut: autoCut);
 
@@ -999,7 +1107,8 @@ class PrinterSettingsController extends ChangeNotifier {
     required String ticketFooter,
   }) {
     final g = Generator(paperSize, profile);
-    String fmt(double v) => _formatReceiptAmount(v, currencySymbol, currencyOnRight);
+    String fmt(double v) =>
+        _formatReceiptAmount(v, currencySymbol, currencyOnRight);
     final now = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
     final serverName = (userLabel ?? '').trim();
     final ticketHeaderLine = ticketHeader.trim();
@@ -1017,20 +1126,27 @@ class PrinterSettingsController extends ChangeNotifier {
         ),
       ),
     );
-    bytes.addAll(g.text('Imprime le : $now', styles: const PosStyles(align: PosAlign.center)));
+    bytes.addAll(g.text('Imprime le : $now',
+        styles: const PosStyles(align: PosAlign.center)));
     if (serverName.isNotEmpty) {
-      bytes.addAll(g.text('Serveur : $serverName', styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text('Serveur : $serverName',
+          styles: const PosStyles(align: PosAlign.center)));
     }
     if (serviceLabel.isNotEmpty) {
-      bytes.addAll(g.text('Service : $serviceLabel', styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text('Service : $serviceLabel',
+          styles: const PosStyles(align: PosAlign.center)));
     }
     if (ticketHeaderLine.isNotEmpty) {
-      bytes.addAll(g.text(ticketHeaderLine, styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text(ticketHeaderLine,
+          styles: const PosStyles(align: PosAlign.center)));
     }
     bytes.addAll(g.hr());
-    bytes.addAll(g.text('Ventes : ${orders.length}', styles: const PosStyles(align: PosAlign.left)));
-    bytes.addAll(g.text('Articles : ${register.itemsCount}', styles: const PosStyles(align: PosAlign.left)));
-    bytes.addAll(g.text('Total ventes : ${fmt(register.salesAmount)}', styles: const PosStyles(align: PosAlign.left)));
+    bytes.addAll(g.text('Ventes : ${orders.length}',
+        styles: const PosStyles(align: PosAlign.left)));
+    bytes.addAll(g.text('Articles : ${register.itemsCount}',
+        styles: const PosStyles(align: PosAlign.left)));
+    bytes.addAll(g.text('Total ventes : ${fmt(register.salesAmount)}',
+        styles: const PosStyles(align: PosAlign.left)));
 
     // Accumulate quantities and totals per product
     final Map<String, _ProductAggregate> aggregates = {};
@@ -1056,17 +1172,20 @@ class PrinterSettingsController extends ChangeNotifier {
         PosColumn(
           text: 'Vente / Produits',
           width: 8,
-          styles: const PosStyles(align: PosAlign.left, bold: true, fontType: PosFontType.fontB),
+          styles: const PosStyles(
+              align: PosAlign.left, bold: true, fontType: PosFontType.fontB),
         ),
         PosColumn(
           text: 'Qté',
           width: 2,
-          styles: const PosStyles(align: PosAlign.center, bold: true, fontType: PosFontType.fontB),
+          styles: const PosStyles(
+              align: PosAlign.center, bold: true, fontType: PosFontType.fontB),
         ),
         PosColumn(
           text: 'Total',
           width: 2,
-          styles: const PosStyles(align: PosAlign.right, bold: true, fontType: PosFontType.fontB),
+          styles: const PosStyles(
+              align: PosAlign.right, bold: true, fontType: PosFontType.fontB),
         ),
       ]),
     );
@@ -1086,12 +1205,14 @@ class PrinterSettingsController extends ChangeNotifier {
           PosColumn(
             text: entry.value.quantity.toString(),
             width: 2,
-            styles: const PosStyles(align: PosAlign.center, fontType: PosFontType.fontB),
+            styles: const PosStyles(
+                align: PosAlign.center, fontType: PosFontType.fontB),
           ),
           PosColumn(
             text: fmt(entry.value.total),
             width: 2,
-            styles: const PosStyles(align: PosAlign.right, fontType: PosFontType.fontB),
+            styles: const PosStyles(
+                align: PosAlign.right, fontType: PosFontType.fontB),
           ),
         ]),
       );
@@ -1099,7 +1220,8 @@ class PrinterSettingsController extends ChangeNotifier {
 
     if (ticketFooterLine.isNotEmpty) {
       bytes.addAll(g.hr(ch: '-'));
-      bytes.addAll(g.text(ticketFooterLine, styles: const PosStyles(align: PosAlign.center)));
+      bytes.addAll(g.text(ticketFooterLine,
+          styles: const PosStyles(align: PosAlign.center)));
     }
     _appendCut(bytes, g, autoCut: autoCut);
 
@@ -1112,8 +1234,7 @@ class PrinterSettingsController extends ChangeNotifier {
     CapabilityProfile profile,
     List<int> bytes, {
     required int port,
-  }
-  ) async {
+  }) async {
     switch (device.type) {
       case PrinterConnectionType.lan:
       case PrinterConnectionType.wifi:
@@ -1234,7 +1355,9 @@ class PrinterSettingsController extends ChangeNotifier {
       receivedAmount: 100,
       change: 0.5,
       serviceId: service?.id ?? _activeServiceId,
-      template: service?.isKitchen == true ? 'kitchen' : (service?.template ?? 'receipt'),
+      template: service?.isKitchen == true
+          ? 'kitchen'
+          : (service?.template ?? 'receipt'),
     );
   }
 
@@ -1262,7 +1385,8 @@ class PrinterSettingsController extends ChangeNotifier {
 
   PrintingService? _resolveService(int? serviceId) {
     final resolvedId = serviceId ?? _activeServiceId;
-    if (resolvedId == null) return _services.isNotEmpty ? _services.first : null;
+    if (resolvedId == null)
+      return _services.isNotEmpty ? _services.first : null;
     for (final service in _services) {
       if (service.id == resolvedId) return service;
     }
@@ -1324,6 +1448,9 @@ class PrinterSettingsController extends ChangeNotifier {
       _ticketHeader = _stringFrom(settings['ticketHeader']) ?? '';
       _ticketFooter =
           _stringFrom(settings['ticketFooter']) ?? 'Merci pour votre achat.';
+      _showCustomerInfo = _boolFrom(settings['showCustomerInfo']) ?? true;
+      _showCustomerPhone = _boolFrom(settings['showCustomerPhone']) ?? true;
+      _showCustomerEmail = _boolFrom(settings['showCustomerEmail']) ?? true;
       _selectedDevice = _deserializeDevice(settings['selectedDevice']);
       _showDiscoveredPrinters = _selectedDevice == null;
     } else {
@@ -1344,6 +1471,9 @@ class PrinterSettingsController extends ChangeNotifier {
       'manualPort': _manualPort,
       'ticketHeader': _ticketHeader,
       'ticketFooter': _ticketFooter,
+      'showCustomerInfo': _showCustomerInfo,
+      'showCustomerPhone': _showCustomerPhone,
+      'showCustomerEmail': _showCustomerEmail,
       'selectedDevice': _serializeDevice(_selectedDevice),
     };
     final stored = await _storage.read(null) ?? <String, dynamic>{};
@@ -1363,6 +1493,9 @@ class PrinterSettingsController extends ChangeNotifier {
     _manualPort = '9100';
     _ticketHeader = '';
     _ticketFooter = 'Merci pour votre achat.';
+    _showCustomerInfo = true;
+    _showCustomerPhone = true;
+    _showCustomerEmail = true;
     _selectedDevice = null;
     _showDiscoveredPrinters = true;
   }
@@ -1517,6 +1650,9 @@ class _PrinterSnapshot {
     required this.manualPort,
     required this.ticketHeader,
     required this.ticketFooter,
+    required this.showCustomerInfo,
+    required this.showCustomerPhone,
+    required this.showCustomerEmail,
   });
 
   final PrinterConnectionType connectionType;
@@ -1529,6 +1665,9 @@ class _PrinterSnapshot {
   final String manualPort;
   final String ticketHeader;
   final String ticketFooter;
+  final bool showCustomerInfo;
+  final bool showCustomerPhone;
+  final bool showCustomerEmail;
 
   int get manualPortValue => int.tryParse(manualPort) ?? 9100;
 }

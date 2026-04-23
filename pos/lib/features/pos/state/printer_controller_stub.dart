@@ -60,6 +60,9 @@ class PrinterSettingsController extends ChangeNotifier {
   String _manualPort = '9100';
   String _ticketHeader = '';
   String _ticketFooter = 'Merci pour votre achat.';
+  bool _showCustomerInfo = true;
+  bool _showCustomerPhone = true;
+  bool _showCustomerEmail = true;
   bool _hasLoadedInitialSettings = false;
   bool _showDiscoveredPrinters = true;
   List<PrintingService> _services = [];
@@ -81,9 +84,20 @@ class PrinterSettingsController extends ChangeNotifier {
   String get manualPort => _manualPort;
   String get ticketHeader => _ticketHeader;
   String get ticketFooter => _ticketFooter;
+  bool get showCustomerInfo => _showCustomerInfo;
+  bool get showCustomerPhone => _showCustomerPhone;
+  bool get showCustomerEmail => _showCustomerEmail;
   bool get showDiscoveredPrinters => _showDiscoveredPrinters;
   List<PrintingService> get services => List.unmodifiable(_services);
   int? get activeServiceId => _activeServiceId;
+  PrintingService? get activeService => _activeServiceId == null
+      ? null
+      : _services.firstWhere(
+          (service) => service.id == _activeServiceId,
+          orElse: () => _services.isNotEmpty
+              ? _services.first
+              : PrintingService.fallback(),
+        );
 
   bool get isTestEnabled => false;
   bool get canDiscover => false;
@@ -98,8 +112,8 @@ class PrinterSettingsController extends ChangeNotifier {
     final normalized =
         services.isNotEmpty ? services : [PrintingService.fallback()];
     _services = List<PrintingService>.from(normalized);
-    _activeServiceId =
-        preferredServiceId ?? (_services.isNotEmpty ? _services.first.id : null);
+    _activeServiceId = preferredServiceId ??
+        (_services.isNotEmpty ? _services.first.id : null);
     notifyListeners();
   }
 
@@ -180,6 +194,21 @@ class PrinterSettingsController extends ChangeNotifier {
     _ticketFooter = value;
   }
 
+  void toggleShowCustomerInfo(bool value) {
+    _showCustomerInfo = value;
+    notifyListeners();
+  }
+
+  void toggleShowCustomerPhone(bool value) {
+    _showCustomerPhone = value;
+    notifyListeners();
+  }
+
+  void toggleShowCustomerEmail(bool value) {
+    _showCustomerEmail = value;
+    notifyListeners();
+  }
+
   void showPrinterDiscovery() {
     if (_showDiscoveredPrinters) return;
     _showDiscoveredPrinters = true;
@@ -193,7 +222,8 @@ class PrinterSettingsController extends ChangeNotifier {
   Future<void> discoverPrinters() async {
     _isScanning = true;
     notifyListeners();
-    _setStatus('La recherche d\'imprimantes n\'est pas supportee sur Web.', true);
+    _setStatus(
+        'La recherche d\'imprimantes n\'est pas supportee sur Web.', true);
     _isScanning = false;
     notifyListeners();
   }
@@ -224,6 +254,8 @@ class PrinterSettingsController extends ChangeNotifier {
     required String currencySymbol,
     required bool currencyOnRight,
     required String? customerName,
+    String? customerPhone,
+    String? customerEmail,
     required String? userLabel,
     required String? companyName,
     required String? companyAddress,
@@ -268,6 +300,9 @@ class PrinterSettingsController extends ChangeNotifier {
       _ticketHeader = _stringFrom(settings['ticketHeader']) ?? '';
       _ticketFooter =
           _stringFrom(settings['ticketFooter']) ?? 'Merci pour votre achat.';
+      _showCustomerInfo = _boolFrom(settings['showCustomerInfo']) ?? true;
+      _showCustomerPhone = _boolFrom(settings['showCustomerPhone']) ?? true;
+      _showCustomerEmail = _boolFrom(settings['showCustomerEmail']) ?? true;
       _showDiscoveredPrinters = false;
     } else {
       _connectionType = PrinterConnectionType.lan;
@@ -279,6 +314,9 @@ class PrinterSettingsController extends ChangeNotifier {
       _manualPort = '9100';
       _ticketHeader = '';
       _ticketFooter = 'Merci pour votre achat.';
+      _showCustomerInfo = true;
+      _showCustomerPhone = true;
+      _showCustomerEmail = true;
       _showDiscoveredPrinters = true;
     }
     _hasLoadedInitialSettings = true;
@@ -296,6 +334,9 @@ class PrinterSettingsController extends ChangeNotifier {
       'manualPort': _manualPort,
       'ticketHeader': _ticketHeader,
       'ticketFooter': _ticketFooter,
+      'showCustomerInfo': _showCustomerInfo,
+      'showCustomerPhone': _showCustomerPhone,
+      'showCustomerEmail': _showCustomerEmail,
     };
     final stored = await _storage.read(null) ?? <String, dynamic>{};
     final services = _asStringKeyMap(stored['services']) ?? <String, dynamic>{};
@@ -366,5 +407,4 @@ class PrinterSettingsController extends ChangeNotifier {
     }
     return null;
   }
-
 }

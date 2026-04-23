@@ -10,4 +10,10 @@ class AppConfig {
   );
 
   static const Duration networkTimeout = Duration(seconds: 60);
+
+  /// Default URL opened from POS banner webview action.
+  static const String defaultWebViewUrl = String.fromEnvironment(
+    'POS_WEBVIEW_URL',
+    defaultValue: 'https://app.kincash.fr',
+  );
 }

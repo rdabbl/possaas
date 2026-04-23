@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -113,7 +113,8 @@ class PosController extends ChangeNotifier {
   List<ShippingMethod> get shippingMethods => _shippingMethods;
   ShippingMethod? get selectedShippingMethod => _selectedShippingMethod;
   List<Discount> get discounts => List.unmodifiable(_discounts);
-  List<PrintingService> get printingServices => List.unmodifiable(_printingServices);
+  List<PrintingService> get printingServices =>
+      List.unmodifiable(_printingServices);
   List<PrintingService> get activePrintingServices {
     final storeId = _selectedWarehouseId;
     final filtered = _printingServices.where((service) {
@@ -135,6 +136,7 @@ class PosController extends ChangeNotifier {
     }
     return services.isNotEmpty ? services.first : null;
   }
+
   Customer? get selectedCustomer => _selectedCustomer;
   Warehouse? get selectedWarehouse => _selectedWarehouse;
   int? get selectedCategoryId => _selectedCategoryId;
@@ -148,12 +150,14 @@ class PosController extends ChangeNotifier {
   bool get allowLoyaltyRedeem => _allowLoyaltyRedeem;
   int get selectedCustomerPoints => _selectedCustomer?.loyaltyPoints ?? 0;
   double get loyaltyPointValue => _loyaltyPointValue;
-  double get loyaltyAvailableAmount => selectedCustomerPoints * _loyaltyPointValue;
+  double get loyaltyAvailableAmount =>
+      selectedCustomerPoints * _loyaltyPointValue;
   double get loyaltyRedeemAmount => _effectiveLoyaltyRedeemAmount();
   double get loyaltyMaxRedeemAmount => _maxLoyaltyRedeemAmount();
   int get loyaltyEstimatedPoints => _estimateLoyaltyPoints();
-  int get loyaltyRedeemPoints =>
-      _loyaltyPointValue > 0 ? (loyaltyRedeemAmount / _loyaltyPointValue).floor() : 0;
+  int get loyaltyRedeemPoints => _loyaltyPointValue > 0
+      ? (loyaltyRedeemAmount / _loyaltyPointValue).floor()
+      : 0;
   List<double> get discountPresets {
     final candidates = _discountMode == DiscountMode.percentage
         ? _percentDiscountPresets()
@@ -191,6 +195,7 @@ class PosController extends ChangeNotifier {
       return true;
     }).toList());
   }
+
   int? get historyUserIdFilter => _historyUserFilter;
   int get historyHours => _historyHours;
   String? get historySourceFilter => _historySourceFilter;
@@ -204,6 +209,7 @@ class PosController extends ChangeNotifier {
       ..sort();
     return List.unmodifiable(values);
   }
+
   List<UserSummary> get historyUsers => List.unmodifiable(_historyUsers);
   List<OfflineSale> get offlineSales => List.unmodifiable(_offlineSales);
   bool get offlineMode => _offlineMode;
@@ -219,16 +225,20 @@ class PosController extends ChangeNotifier {
     }
     return _buildRegisterDetailsFromOrders(filteredRecentOrders);
   }
+
   bool get isHistoryLoading => _isHistoryLoading;
   bool get isCurrencySymbolRight => _isCurrencySymbolRight;
   List<Currency> get currencies => List.unmodifiable(_currencies);
-  int get pendingOfflineSalesCount =>
-      _offlineSales.where((sale) => sale.status == OfflineSaleStatus.pending).length;
-  int get failedOfflineSalesCount =>
-      _offlineSales.where((sale) => sale.status == OfflineSaleStatus.failed).length;
+  int get pendingOfflineSalesCount => _offlineSales
+      .where((sale) => sale.status == OfflineSaleStatus.pending)
+      .length;
+  int get failedOfflineSalesCount => _offlineSales
+      .where((sale) => sale.status == OfflineSaleStatus.failed)
+      .length;
   bool get isSyncingOfflineSales => _isSyncingOfflineSales;
-  int get ordersCount =>
-      _registerDetails.salesCount > 0 ? _registerDetails.salesCount : _recentOrders.length;
+  int get ordersCount => _registerDetails.salesCount > 0
+      ? _registerDetails.salesCount
+      : _recentOrders.length;
   int get itemsSold => _registerDetails.itemsCount > 0
       ? _registerDetails.itemsCount
       : _recentOrders.fold(0, (sum, order) => sum + (order.itemCount));
@@ -474,7 +484,8 @@ class PosController extends ChangeNotifier {
       } on ApiException catch (error) {
         final lower = error.message.toLowerCase();
         if (lower.contains('unauth')) {
-          _forceOffline('Mode hors ligne: authentification requise (${error.message}). Cache conserve.');
+          _forceOffline(
+              'Mode hors ligne: authentification requise (${error.message}). Cache conserve.');
           return;
         }
         rethrow;
@@ -490,12 +501,15 @@ class PosController extends ChangeNotifier {
     } on ApiException catch (error) {
       final lower = error.message.toLowerCase();
       if (lower.contains('unauth')) {
-        _forceOffline('Authentification requise (${error.message}). Passage en mode hors ligne (cache).');
+        _forceOffline(
+            'Authentification requise (${error.message}). Passage en mode hors ligne (cache).');
         return;
       }
-      _forceOffline('Impossible de rafraichir (${error.message}). Cache utilise.');
+      _forceOffline(
+          'Impossible de rafraichir (${error.message}). Cache utilise.');
     } catch (_) {
-      _forceOffline('Impossible de rafraichir. Cache utilise en mode hors ligne.');
+      _forceOffline(
+          'Impossible de rafraichir. Cache utilise en mode hors ligne.');
     }
   }
 
@@ -521,8 +535,9 @@ class PosController extends ChangeNotifier {
     _successMessage = null;
     notifyListeners();
     try {
-      final storeId =
-          _selectedWarehouseId ?? _selectedWarehouse?.id ?? (_warehouses.isNotEmpty ? _warehouses.first.id : null);
+      final storeId = _selectedWarehouseId ??
+          _selectedWarehouse?.id ??
+          (_warehouses.isNotEmpty ? _warehouses.first.id : null);
       if (storeId == null) {
         _errorMessage = 'Veuillez sélectionner un magasin.';
         notifyListeners();
@@ -576,7 +591,10 @@ class PosController extends ChangeNotifier {
 
   Future<void> _runAutoSync() async {
     if (_autoSyncInProgress) return;
-    if (_offlineMode || _isLoading || _isProcessingSale || _isSyncingOfflineSales) {
+    if (_offlineMode ||
+        _isLoading ||
+        _isProcessingSale ||
+        _isSyncingOfflineSales) {
       return;
     }
     _autoSyncInProgress = true;
@@ -622,9 +640,11 @@ class PosController extends ChangeNotifier {
         _errorMessage = null;
       } else if (remaining < pendingBefore) {
         final sent = pendingBefore - remaining;
-        _successMessage = '$sent commande(s) ont été envoyées. $remaining en attente (consultez les erreurs).';
+        _successMessage =
+            '$sent commande(s) ont été envoyées. $remaining en attente (consultez les erreurs).';
       } else {
-        _errorMessage = 'Synchronisation impossible. Vérifiez les commandes locales.';
+        _errorMessage =
+            'Synchronisation impossible. Vérifiez les commandes locales.';
       }
     } catch (error) {
       _errorMessage = 'Échec de synchronisation: $error';
@@ -747,7 +767,8 @@ class PosController extends ChangeNotifier {
       _errorMessage = error.message;
       final lower = error.message.toLowerCase();
       if (lower.contains('unauth') || lower.contains('authent')) {
-        _forceOffline('Mode hors ligne: authentification requise (${error.message}). Cache conserve.');
+        _forceOffline(
+            'Mode hors ligne: authentification requise (${error.message}). Cache conserve.');
       } else {
         _forceOffline('Mode hors ligne: ${error.message}');
       }
@@ -795,7 +816,8 @@ class PosController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<OrderSummary>> loadProductNamesForOrders(List<OrderSummary> orders) async {
+  Future<List<OrderSummary>> loadProductNamesForOrders(
+      List<OrderSummary> orders) async {
     final updated = <OrderSummary>[];
     for (final order in orders) {
       try {
@@ -809,7 +831,8 @@ class PosController extends ChangeNotifier {
         final names = await repository
             .fetchSaleProductNames(order.id)
             .timeout(const Duration(seconds: 8));
-        updated.add(_copyOrderWithNames(order, names.isNotEmpty ? names : order.productNames));
+        updated.add(_copyOrderWithNames(
+            order, names.isNotEmpty ? names : order.productNames));
       } catch (_) {
         updated.add(order);
       }
@@ -853,10 +876,12 @@ class PosController extends ChangeNotifier {
       grandTotal: order.grandTotal,
       paidAmount: order.paidAmount,
       itemCount: order.itemCount,
-      productNames:
-          details.productNames.isNotEmpty ? details.productNames : order.productNames,
-      itemsDetail:
-          details.itemsDetail.isNotEmpty ? details.itemsDetail : order.itemsDetail,
+      productNames: details.productNames.isNotEmpty
+          ? details.productNames
+          : order.productNames,
+      itemsDetail: details.itemsDetail.isNotEmpty
+          ? details.itemsDetail
+          : order.itemsDetail,
       createdAt: order.createdAt,
       isLocal: order.isLocal,
     );
@@ -1016,9 +1041,7 @@ class PosController extends ChangeNotifier {
   List<ProductOption> _normalizeOptions(
     List<ProductOption> options,
   ) {
-    final filtered = options
-        .where((o) => o.id > 0 && o.quantity > 0)
-        .toList();
+    final filtered = options.where((o) => o.id > 0 && o.quantity > 0).toList();
     filtered.sort((a, b) => a.id.compareTo(b.id));
     return filtered;
   }
@@ -1167,10 +1190,11 @@ class PosController extends ChangeNotifier {
         paymentStatusId: paymentStatusId,
         receivedAmount: receivedAmount,
       );
-      final shouldApplyLoyalty = loyaltyEnabled && customerId > 0 && paymentStatusId != 2;
+      final shouldApplyLoyalty =
+          loyaltyEnabled && customerId > 0 && paymentStatusId != 2;
       final effectiveGrandTotal = grandTotalOverride ?? grandTotal;
-      final canEarnPoints =
-          shouldApplyLoyalty && (paymentStatusId != 3 || receivedAmount >= effectiveGrandTotal);
+      final canEarnPoints = shouldApplyLoyalty &&
+          (paymentStatusId != 3 || receivedAmount >= effectiveGrandTotal);
       _applyLocalLoyaltyAdjustments(
         earned: canEarnPoints ? loyaltyEstimatedPoints : 0,
         redeemed: shouldApplyLoyalty ? loyaltyRedeemPoints : 0,
@@ -1195,6 +1219,7 @@ class PosController extends ChangeNotifier {
     required List<CartItem> items,
     required int queueNumber,
     required String serviceMode,
+    String? customerName,
     double receivedAmount = 0,
     int paymentTypeId = 0,
     String? saleStatus,
@@ -1228,10 +1253,12 @@ class PosController extends ChangeNotifier {
           items.fold<double>(0, (sum, item) => sum + item.subTotal);
       final taxTotal = itemsSubTotal * (_taxRate / 100);
       final grandTotal = itemsSubTotal + taxTotal;
-      final normalizedMode = serviceMode.trim().isEmpty
-          ? 'SUR PLACE'
-          : serviceMode.toUpperCase();
-      final note = 'BORNE #$queueNumber - $normalizedMode';
+      final normalizedMode =
+          serviceMode.trim().isEmpty ? 'SUR PLACE' : serviceMode.toUpperCase();
+      final normalizedCustomer = (customerName ?? '').trim();
+      final note = normalizedCustomer.isNotEmpty
+          ? 'BORNE #$queueNumber - $normalizedMode - CLIENT: $normalizedCustomer'
+          : 'BORNE #$queueNumber - $normalizedMode';
       await repository.submitSale(
         customerId: 0,
         cartItems: items,
@@ -1323,7 +1350,8 @@ class PosController extends ChangeNotifier {
       await _restoreSavedSelections();
       final lower = error.message.toLowerCase();
       if (lower.contains('unauth') || lower.contains('authent')) {
-        _forceOffline('Mode hors ligne: authentification requise (${error.message}). Cache conserve.');
+        _forceOffline(
+            'Mode hors ligne: authentification requise (${error.message}). Cache conserve.');
       } else {
         _forceOffline('Mode hors ligne: ${error.message}');
       }
@@ -1386,7 +1414,8 @@ class PosController extends ChangeNotifier {
     double? shippingValue,
     double? taxRateValue,
   }) async {
-    final itemsSubTotal = cartItems.fold<double>(0, (sum, item) => sum + item.subTotal);
+    final itemsSubTotal =
+        cartItems.fold<double>(0, (sum, item) => sum + item.subTotal);
     final discountTotal = discountAmountValue ?? discountAmount;
     final discountShare = itemsSubTotal > 0 ? discountTotal / itemsSubTotal : 0;
     final taxRate = taxRateValue ?? _taxRate;
@@ -1431,7 +1460,8 @@ class PosController extends ChangeNotifier {
 
   Future<void> _syncOfflineSales() async {
     if (_offlineSales.isEmpty || _isSyncingOfflineSales) return;
-    final hasPending = _offlineSales.any((sale) => sale.status == OfflineSaleStatus.pending);
+    final hasPending =
+        _offlineSales.any((sale) => sale.status == OfflineSaleStatus.pending);
     if (!hasPending) return;
     _isSyncingOfflineSales = true;
     try {
@@ -1530,8 +1560,7 @@ class PosController extends ChangeNotifier {
     if (frontStoreId != null && _selectedWarehouseId == null) {
       _selectedWarehouseId = int.tryParse('$frontStoreId');
     }
-    final loyaltyEnabled =
-        value['loyalty_enabled'] ?? value['loyaltyEnabled'];
+    final loyaltyEnabled = value['loyalty_enabled'] ?? value['loyaltyEnabled'];
     if (loyaltyEnabled != null) {
       _loyaltyEnabled = _parseBool(loyaltyEnabled);
       if (!_loyaltyEnabled) {
@@ -1654,8 +1683,7 @@ class PosController extends ChangeNotifier {
         orders.fold<double>(0, (sum, order) => sum + order.grandTotal);
     final totalPaid =
         orders.fold<double>(0, (sum, order) => sum + order.paidAmount);
-    final items =
-        orders.fold<int>(0, (sum, order) => sum + (order.itemCount));
+    final items = orders.fold<int>(0, (sum, order) => sum + (order.itemCount));
     return RegisterDetails(
       cashInHand: _cashInHand,
       totalCashAmount: totalPaid,
@@ -1675,8 +1703,7 @@ class PosController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final key = _historyResetKey;
     final stored = prefs.getString(key);
-    _historyResetAfter =
-        stored != null ? DateTime.tryParse(stored) : null;
+    _historyResetAfter = stored != null ? DateTime.tryParse(stored) : null;
   }
 
   Future<void> _persistHistoryResetPreference() async {
@@ -1722,9 +1749,8 @@ class PosController extends ChangeNotifier {
         'product_price': product.price,
         'product_cost': product.cost,
         'category_id': product.categoryId,
-        'option_links': product.options
-            .map((option) => option.toJson())
-            .toList(),
+        'option_links':
+            product.options.map((option) => option.toJson()).toList(),
         'stock': {'quantity': product.stockQuantity},
         'order_tax': product.taxValue,
         'tax_type': product.taxType,
@@ -1793,31 +1819,28 @@ class PosController extends ChangeNotifier {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is List) {
-        _products = decoded
-            .whereType<Map>()
-            .map((e) {
-              final map = e.cast<String, dynamic>();
-              // Backward-compat for older flat cache shape.
-              if (!map.containsKey('attributes')) {
-                map['attributes'] = {
-                  'name': map['name'],
-                  'code': map['code'],
-                  'product_price': map['price'],
-                  'product_cost': map['cost'],
-                  'category_id': map['categoryId'],
-                  'stock': {'quantity': map['stockQuantity']},
-                  'order_tax': map['taxValue'],
-                  'tax_type': map['taxType'],
-                  'product_unit': map['productUnitId'],
-                  'sale_unit': map['saleUnitId'],
-                  'stock_alert': map['stockAlert'],
-                  'product_unit_name': map['unitLabel'],
-                  'image_url': map['imageUrl'],
-                };
-              }
-              return Product.fromJson(map);
-            })
-            .toList();
+        _products = decoded.whereType<Map>().map((e) {
+          final map = e.cast<String, dynamic>();
+          // Backward-compat for older flat cache shape.
+          if (!map.containsKey('attributes')) {
+            map['attributes'] = {
+              'name': map['name'],
+              'code': map['code'],
+              'product_price': map['price'],
+              'product_cost': map['cost'],
+              'category_id': map['categoryId'],
+              'stock': {'quantity': map['stockQuantity']},
+              'order_tax': map['taxValue'],
+              'tax_type': map['taxType'],
+              'product_unit': map['productUnitId'],
+              'sale_unit': map['saleUnitId'],
+              'stock_alert': map['stockAlert'],
+              'product_unit_name': map['unitLabel'],
+              'image_url': map['imageUrl'],
+            };
+          }
+          return Product.fromJson(map);
+        }).toList();
         notifyListeners();
       }
     } catch (_) {}
@@ -2188,9 +2211,8 @@ class PosController extends ChangeNotifier {
         orElse: () => Customer(id: sale.customerId, name: 'Client local'),
       );
       final customerName = matched.name;
-      final items = sale.saleItems
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
+      final items =
+          sale.saleItems.map((e) => Map<String, dynamic>.from(e)).toList();
       final names = items
           .map((item) => item['name']?.toString() ?? '')
           .where((n) => n.trim().isNotEmpty)
@@ -2209,7 +2231,8 @@ class PosController extends ChangeNotifier {
             final options = optionsRaw is List
                 ? optionsRaw
                     .whereType<Map>()
-                    .map((i) => ProductOption.fromJson(i.cast<String, dynamic>()))
+                    .map((i) =>
+                        ProductOption.fromJson(i.cast<String, dynamic>()))
                     .where((o) => o.id > 0 && o.name.trim().isNotEmpty)
                     .toList()
                 : <ProductOption>[];
@@ -2224,15 +2247,16 @@ class PosController extends ChangeNotifier {
       final itemCount = details.isNotEmpty
           ? details.fold<int>(0, (sum, d) => sum + d.quantity.toInt())
           : names.length;
-      final statusLabel = sale.status == OfflineSaleStatus.pending ? 'LOCAL' : 'ERREUR';
+      final statusLabel =
+          sale.status == OfflineSaleStatus.pending ? 'LOCAL' : 'ERREUR';
       return OrderSummary(
-      id: sale.hashCode,
-      referenceCode: sale.id,
-      customerName: customerName,
-      userName: _activeUserLabel,
-      userId: null,
-      note: sale.notes,
-      status: statusLabel,
+        id: sale.hashCode,
+        referenceCode: sale.id,
+        customerName: customerName,
+        userName: _activeUserLabel,
+        userId: null,
+        note: sale.notes,
+        status: statusLabel,
         paymentStatus: sale.paymentStatusId.toString(),
         grandTotal: sale.grandTotal,
         paidAmount: sale.grandTotal,
