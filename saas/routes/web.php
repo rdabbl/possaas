@@ -45,6 +45,7 @@ use App\Http\Controllers\Manager\LoyaltyController as ManagerLoyaltyController;
 use App\Http\Controllers\Manager\ShippingController as ManagerShippingController;
 use App\Http\Controllers\Manager\PrintingServiceController as ManagerPrintingServiceController;
 use App\Http\Controllers\Manager\PaymentMethodController as ManagerPaymentMethodController;
+use App\Http\Controllers\Manager\CatalogTransferController as ManagerCatalogTransferController;
 
 Route::get('/', function () {
     return redirect()->route('admin.dashboard');
@@ -323,6 +324,10 @@ Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])
         Route::put('/users/{user}', [ManagerUserController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/duplicate', [ManagerUserController::class, 'duplicate'])->name('users.duplicate');
         Route::delete('/users/{user}', [ManagerUserController::class, 'destroy'])->name('users.destroy');
+
+        Route::get('/catalog-transfer', [ManagerCatalogTransferController::class, 'index'])->name('catalog_transfer.index');
+        Route::get('/catalog-transfer/export', [ManagerCatalogTransferController::class, 'export'])->name('catalog_transfer.export');
+        Route::post('/catalog-transfer/import', [ManagerCatalogTransferController::class, 'import'])->name('catalog_transfer.import');
     });
 });
 

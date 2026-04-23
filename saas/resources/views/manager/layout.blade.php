@@ -134,6 +134,7 @@
             <a href="{{ route('manager.product_option_categories.index') }}" class="{{ request()->routeIs('manager.product_option_categories.*') ? 'active' : '' }}">Product Option Categories</a>
             <a href="{{ route('manager.product_options.index') }}" class="{{ request()->routeIs('manager.product_options.*') ? 'active' : '' }}">Product Options</a>
             <a href="{{ route('manager.products.index') }}" class="{{ request()->routeIs('manager.products.*') ? 'active' : '' }}">Products</a>
+            <a href="{{ route('manager.catalog_transfer.index') }}" class="{{ request()->routeIs('manager.catalog_transfer.*') ? 'active' : '' }}">Catalog Transfer</a>
             <a href="{{ route('manager.stock.index') }}" class="{{ request()->routeIs('manager.stock.*') ? 'active' : '' }}">Stock</a>
             <a href="{{ route('manager.customers.index') }}" class="{{ request()->routeIs('manager.customers.*') ? 'active' : '' }}">Customers</a>
             <a href="{{ route('manager.taxes.index') }}" class="{{ request()->routeIs('manager.taxes.*') ? 'active' : '' }}">Taxes</a>

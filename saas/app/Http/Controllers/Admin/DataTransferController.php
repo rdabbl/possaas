@@ -45,58 +45,19 @@ class DataTransferController extends Controller
         'stock_movements',
     ];
 
-    /**
-     * Table dependencies: selecting a child table also requires these parent tables.
-     *
-     * @var array<string, array<int, string>>
-     */
-    private const TABLE_DEPENDENCIES = [
-        'managers' => ['plans'],
-        'stores' => ['managers', 'currencies'],
-        'users' => ['managers', 'stores'],
-        'roles' => ['managers'],
-        'role_user' => ['roles', 'users'],
-        'permission_role' => ['permissions', 'roles'],
-        'subscriptions' => ['managers', 'plans'],
-        'devices' => ['managers', 'stores'],
-        'categories' => ['managers'],
-        'product_option_categories' => ['managers'],
-        'product_options' => ['managers', 'product_option_categories'],
-        'products' => ['managers', 'categories', 'taxes'],
-        'product_variants' => ['managers', 'products'],
-        'product_option_product' => ['product_options', 'products'],
-        'customers' => ['managers'],
-        'payment_methods' => ['managers'],
-        'taxes' => ['managers'],
-        'discounts' => ['managers'],
-        'shipping_methods' => ['managers'],
-        'printing_services' => ['managers', 'stores'],
-        'translations' => ['languages'],
-        'sales' => ['managers', 'stores', 'devices', 'users', 'customers'],
-        'sale_items' => ['sales', 'products', 'product_variants'],
-        'payments' => ['sales', 'payment_methods'],
-        'stock_movements' => ['managers', 'products', 'stores', 'users'],
-    ];
-
     public function index()
     {
         $tables = $this->availableTables();
-        $dependencies = $this->availableDependencies($tables);
 
         return view('admin.data_transfer.index', [
             'tables' => $tables,
             'tableCount' => count($tables),
-            'dependencies' => $dependencies,
         ]);
     }
 
     public function export()
     {
-        $available = $this->availableTables();
-        $tables = $this->resolveSelectedTables(request()->input('tables'), $available);
-        if (empty($tables)) {
-            $tables = $available;
-        }
+        $tables = $this->availableTables();
 
         $payload = [
             'meta' => [
@@ -133,12 +94,8 @@ class DataTransferController extends Controller
 
     public function import(Request $request)
     {
-        $available = $this->availableTables();
-
         $validated = $request->validate([
             'snapshot' => ['required', 'file', 'mimes:json,txt', 'max:102400'],
-            'selected_tables' => ['required', 'array', 'min:1'],
-            'selected_tables.*' => ['string'],
         ]);
 
         $raw = file_get_contents($validated['snapshot']->getRealPath());
@@ -161,10 +118,7 @@ class DataTransferController extends Controller
             return back()->withErrors(['snapshot' => 'Snapshot data section is missing or invalid.']);
         }
 
-        $tables = $this->resolveSelectedTables($validated['selected_tables'], $available);
-        if (empty($tables)) {
-            return back()->withErrors(['selected_tables' => 'No valid tables selected for import.']);
-        }
+        $tables = $this->availableTables();
 
         DB::transaction(function () use ($tables, $data): void {
             Schema::disableForeignKeyConstraints();
@@ -203,7 +157,7 @@ class DataTransferController extends Controller
         });
 
         return redirect()->route('admin.data_transfer.index')
-            ->with('success', 'JSON import completed successfully for ' . count($tables) . ' table(s).');
+            ->with('success', 'JSON import completed successfully.');
     }
 
     /**
@@ -230,77 +184,5 @@ class DataTransferController extends Controller
         }
 
         return $row;
-    }
-
-    /**
-     * @param array<int, string> $available
-     * @return array<string, array<int, string>>
-     */
-    private function availableDependencies(array $available): array
-    {
-        $map = array_flip($available);
-        $result = [];
-        foreach (self::TABLE_DEPENDENCIES as $table => $deps) {
-            if (!isset($map[$table])) {
-                continue;
-            }
-
-            $filtered = array_values(array_filter(
-                $deps,
-                static fn (string $dep): bool => isset($map[$dep])
-            ));
-            if (!empty($filtered)) {
-                $result[$table] = $filtered;
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * @param mixed $selected
-     * @param array<int, string> $available
-     * @return array<int, string>
-     */
-    private function resolveSelectedTables(mixed $selected, array $available): array
-    {
-        if (!is_array($selected)) {
-            return [];
-        }
-
-        $map = array_flip($available);
-        $selectedSet = [];
-        foreach ($selected as $table) {
-            if (!is_string($table)) {
-                continue;
-            }
-            if (!isset($map[$table])) {
-                continue;
-            }
-            $selectedSet[$table] = true;
-            $this->expandDependencies($table, $selectedSet, $map);
-        }
-
-        // Preserve canonical order for FK-safe truncate/insert.
-        return array_values(array_filter(
-            $available,
-            static fn (string $table): bool => isset($selectedSet[$table])
-        ));
-    }
-
-    /**
-     * @param array<string, bool> $selectedSet
-     * @param array<string, int> $availableMap
-     */
-    private function expandDependencies(string $table, array &$selectedSet, array $availableMap): void
-    {
-        $deps = self::TABLE_DEPENDENCIES[$table] ?? [];
-        foreach ($deps as $dep) {
-            if (!isset($availableMap[$dep]) || isset($selectedSet[$dep])) {
-                continue;
-            }
-            $selectedSet[$dep] = true;
-            $this->expandDependencies($dep, $selectedSet, $availableMap);
-        }
     }
 }
