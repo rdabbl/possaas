@@ -38,11 +38,24 @@
 
     <div class="card">
         <h2 style="margin-top: 0;">{{ t("Product Stock") }}</h2>
+        <form method="GET" action="{{ route('manager.stock.index') }}" style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+            <label for="store_id_filter">{{ t("Store") }}</label>
+            <select id="store_id_filter" name="store_id">
+                @foreach ($stores as $store)
+                    <option value="{{ $store->id }}" {{ (int) $selectedStoreId === (int) $store->id ? 'selected' : '' }}>
+                        {{ $store->name }}
+                    </option>
+                @endforeach
+            </select>
+            <button class="btn" type="submit">{{ t("Apply") }}</button>
+        </form>
         <table>
             <thead>
                 <tr>
                     <th>{{ t("Product") }}</th>
                     <th>{{ t("Track Stock") }}</th>
+                    <th>{{ t("Current Quantity") }}</th>
+                    <th>{{ t("Set Quantity") }}</th>
                     <th>{{ t("Actions") }}</th>
                 </tr>
             </thead>
@@ -58,7 +71,21 @@
                                     <option value="1" {{ $product->track_stock ? 'selected' : '' }}>Yes</option>
                                     <option value="0" {{ !$product->track_stock ? 'selected' : '' }}>No</option>
                                 </select>
+                                <input type="hidden" name="store_id" value="{{ $selectedStoreId > 0 ? $selectedStoreId : '' }}">
                             </form>
+                        </td>
+                        <td>
+                            {{ number_format((float) ($product->stock_quantity ?? 0), 0) }}
+                        </td>
+                        <td>
+                            <input
+                                type="number"
+                                name="stock_quantity"
+                                min="0"
+                                step="1"
+                                form="product-stock-{{ $product->id }}"
+                                value="{{ (int) round((float) ($product->stock_quantity ?? 0)) }}"
+                            >
                         </td>
                         <td>
                             <button class="btn" type="submit" form="product-stock-{{ $product->id }}">Save</button>
