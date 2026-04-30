@@ -89,6 +89,10 @@ class PrinterSettingsController extends ChangeNotifier {
   bool _showDiscoveredPrinters = true;
   List<PrintingService> _services = [];
   int? _activeServiceId;
+  bool _autoPrintFromPos = true;
+  bool _autoPrintFromKiosk = true;
+  Set<String> _posTemplates = {'receipt'};
+  Set<String> _kioskTemplates = {'kiosk', 'kitchen'};
 
   UnmodifiableListView<PrinterDeviceInfo> get devices =>
       UnmodifiableListView(_devices);
@@ -111,6 +115,10 @@ class PrinterSettingsController extends ChangeNotifier {
   bool get showCustomerEmail => _showCustomerEmail;
   bool get showDiscoveredPrinters => _showDiscoveredPrinters;
   List<PrintingService> get services => List.unmodifiable(_services);
+  bool get autoPrintFromPos => _autoPrintFromPos;
+  bool get autoPrintFromKiosk => _autoPrintFromKiosk;
+  Set<String> get posTemplates => Set.unmodifiable(_posTemplates);
+  Set<String> get kioskTemplates => Set.unmodifiable(_kioskTemplates);
   int? get activeServiceId => _activeServiceId;
   PrintingService? get activeService => _activeServiceId == null
       ? null
@@ -169,6 +177,45 @@ class PrinterSettingsController extends ChangeNotifier {
     _selectedDevice = null;
     _hasLoadedInitialSettings = false;
     await _loadSettings();
+  }
+
+  void toggleAutoPrintFromPos(bool value) {
+    if (_autoPrintFromPos == value) return;
+    _autoPrintFromPos = value;
+    notifyListeners();
+  }
+
+  void toggleAutoPrintFromKiosk(bool value) {
+    if (_autoPrintFromKiosk == value) return;
+    _autoPrintFromKiosk = value;
+    notifyListeners();
+  }
+
+  void toggleTemplateForSource({
+    required bool fromKiosk,
+    required String template,
+    required bool enabled,
+  }) {
+    final normalized = template.trim().toLowerCase();
+    if (normalized.isEmpty) return;
+    final set = fromKiosk ? _kioskTemplates : _posTemplates;
+    if (enabled) {
+      set.add(normalized);
+    } else {
+      set.remove(normalized);
+    }
+    notifyListeners();
+  }
+
+  bool shouldPrintTemplate({
+    required bool fromKiosk,
+    required String template,
+  }) {
+    final normalized = template.trim().toLowerCase();
+    if (fromKiosk) {
+      return _autoPrintFromKiosk && _kioskTemplates.contains(normalized);
+    }
+    return _autoPrintFromPos && _posTemplates.contains(normalized);
   }
 
   Future<void> attachToUser(String? userLabel) async {
@@ -1451,6 +1498,11 @@ class PrinterSettingsController extends ChangeNotifier {
       _showCustomerInfo = _boolFrom(settings['showCustomerInfo']) ?? true;
       _showCustomerPhone = _boolFrom(settings['showCustomerPhone']) ?? true;
       _showCustomerEmail = _boolFrom(settings['showCustomerEmail']) ?? true;
+      _autoPrintFromPos = _boolFrom(settings['autoPrintFromPos']) ?? true;
+      _autoPrintFromKiosk = _boolFrom(settings['autoPrintFromKiosk']) ?? true;
+      _posTemplates = _stringSetFrom(settings['posTemplates'], {'receipt'});
+      _kioskTemplates =
+          _stringSetFrom(settings['kioskTemplates'], {'kiosk', 'kitchen'});
       _selectedDevice = _deserializeDevice(settings['selectedDevice']);
       _showDiscoveredPrinters = _selectedDevice == null;
     } else {
@@ -1474,6 +1526,10 @@ class PrinterSettingsController extends ChangeNotifier {
       'showCustomerInfo': _showCustomerInfo,
       'showCustomerPhone': _showCustomerPhone,
       'showCustomerEmail': _showCustomerEmail,
+      'autoPrintFromPos': _autoPrintFromPos,
+      'autoPrintFromKiosk': _autoPrintFromKiosk,
+      'posTemplates': _posTemplates.toList(),
+      'kioskTemplates': _kioskTemplates.toList(),
       'selectedDevice': _serializeDevice(_selectedDevice),
     };
     final stored = await _storage.read(null) ?? <String, dynamic>{};
@@ -1496,6 +1552,10 @@ class PrinterSettingsController extends ChangeNotifier {
     _showCustomerInfo = true;
     _showCustomerPhone = true;
     _showCustomerEmail = true;
+    _autoPrintFromPos = true;
+    _autoPrintFromKiosk = true;
+    _posTemplates = {'receipt'};
+    _kioskTemplates = {'kiosk', 'kitchen'};
     _selectedDevice = null;
     _showDiscoveredPrinters = true;
   }
@@ -1577,6 +1637,16 @@ class PrinterSettingsController extends ChangeNotifier {
   String _serviceKey(int? serviceId) {
     if (serviceId == null) return 'default';
     return serviceId.toString();
+  }
+
+  Set<String> _stringSetFrom(dynamic value, Set<String> fallback) {
+    if (value is List) {
+      return value
+          .map((e) => e.toString().trim().toLowerCase())
+          .where((e) => e.isNotEmpty)
+          .toSet();
+    }
+    return {...fallback};
   }
 
   PrinterConnectionType? _printerTypeFromString(dynamic raw) {

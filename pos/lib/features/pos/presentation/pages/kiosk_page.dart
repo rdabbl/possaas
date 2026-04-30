@@ -10,6 +10,7 @@ import '../../../../core/models/product_category.dart';
 import '../../../../core/models/product_option.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../models/printing_service.dart';
+import '../../state/appearance_controller.dart';
 import '../../state/pos_controller.dart';
 import '../../state/printer_controller.dart';
 import 'package:pos_nimirik/core/i18n/i18n.dart';
@@ -147,46 +148,68 @@ class _KioskPageState extends State<KioskPage> {
         final i18n = context.watch<TranslationController>();
         final isFrench = i18n.locale.startsWith('fr');
 
+        final appearance = context.watch<AppearanceController>();
+        final rawBg = appearance.backgroundImageUrl.trim();
+        final imageProvider = rawBg.isEmpty
+            ? null
+            : (rawBg.startsWith('http://') || rawBg.startsWith('https://'))
+                ? NetworkImage(rawBg) as ImageProvider
+                : AssetImage(rawBg);
+
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           body: SafeArea(
-            child: _showLanding
-                ? _KioskLandingView(
-                    isFrench: isFrench,
-                    onLanguageChanged: (index) {
-                      final locale = index == 1 ? 'fr' : 'en';
-                      context.read<TranslationController>().setLocale(locale);
-                    },
-                    onBack: () => Navigator.of(context).pop(),
-                    onSelectServiceMode: (mode) {
-                      _startOrderFlow(mode);
-                    },
-                  )
-                : _KioskOrderView(
-                    pos: pos,
-                    strings: _strings,
-                    serviceMode: _serviceMode,
-                    customerName: _customerName,
-                    cartCount: _cartCount,
-                    cartTotal: _cartTotal,
-                    cartItems: _cart,
-                    onBack: () => setState(() => _showLanding = true),
-                    onCategorySelected: (categoryId) async {
-                      await pos.selectCategory(categoryId);
-                    },
-                    onProductSelected: (product) =>
-                        _showProductDetails(product, pos),
-                    onOpenCart: () => _showCartSheet(pos),
-                    onSubmit: () async {
-                      if (_isSubmitting) return;
-                      setState(() => _isSubmitting = true);
-                      await _handleSubmit(pos);
-                      if (mounted) {
-                        setState(() => _isSubmitting = false);
-                      }
-                    },
-                    isSubmitting: _isSubmitting,
-                  ),
+            child: Container(
+              decoration: imageProvider == null
+                  ? null
+                  : BoxDecoration(
+                      image: DecorationImage(
+                        image: imageProvider,
+                        fit: BoxFit.cover,
+                        colorFilter: ColorFilter.mode(
+                          Colors.black.withOpacity(0.25),
+                          BlendMode.darken,
+                        ),
+                      ),
+                    ),
+              child: _showLanding
+                  ? _KioskLandingView(
+                      isFrench: isFrench,
+                      onLanguageChanged: (index) {
+                        final locale = index == 1 ? 'fr' : 'en';
+                        context.read<TranslationController>().setLocale(locale);
+                      },
+                      onBack: () => Navigator.of(context).pop(),
+                      onSelectServiceMode: (mode) {
+                        _startOrderFlow(mode);
+                      },
+                    )
+                  : _KioskOrderView(
+                      pos: pos,
+                      strings: _strings,
+                      serviceMode: _serviceMode,
+                      customerName: _customerName,
+                      cartCount: _cartCount,
+                      cartTotal: _cartTotal,
+                      cartItems: _cart,
+                      onBack: () => setState(() => _showLanding = true),
+                      onCategorySelected: (categoryId) async {
+                        await pos.selectCategory(categoryId);
+                      },
+                      onProductSelected: (product) =>
+                          _showProductDetails(product, pos),
+                      onOpenCart: () => _showCartSheet(pos),
+                      onSubmit: () async {
+                        if (_isSubmitting) return;
+                        setState(() => _isSubmitting = true);
+                        await _handleSubmit(pos);
+                        if (mounted) {
+                          setState(() => _isSubmitting = false);
+                        }
+                      },
+                      isSubmitting: _isSubmitting,
+                    ),
+            ),
           ),
         );
       },
@@ -283,15 +306,48 @@ class _KioskPageState extends State<KioskPage> {
     final resolved = services.isNotEmpty
         ? services
         : [PrintingService.fallback(storeId: pos.selectedWarehouse?.id ?? 0)];
-    final kioskTargets = resolved
-        .where((service) => service.template.trim().toLowerCase() == 'kiosk')
-        .toList();
     printer.syncServices(resolved);
+    final kioskTargets = resolved.where((service) {
+      final template = service.template.trim().toLowerCase();
+      return printer.shouldPrintTemplate(fromKiosk: true, template: template);
+    }).toList();
+    final taxAmount = _cartTotal * (pos.taxRate / 100);
+    final grandTotal = _cartTotal + taxAmount;
     for (final service in kioskTargets) {
-      await printer.printKioskQueueTicket(
-        queueNumber: queueNumber,
+      final template = service.template.trim().toLowerCase();
+      if (template == 'kiosk') {
+        await printer.printKioskQueueTicket(
+          queueNumber: queueNumber,
+          companyName: pos.companyName,
+          serviceId: service.id,
+        );
+        continue;
+      }
+      await printer.printSaleReceipt(
+        items: List<CartItem>.from(_cart),
+        subTotal: _cartTotal,
+        discount: 0,
+        tax: taxAmount,
+        shipping: 0,
+        grandTotal: grandTotal,
+        currencySymbol: pos.currencySymbol,
+        currencyOnRight: pos.isCurrencySymbolRight,
+        customerName: _customerName,
+        customerPhone: null,
+        customerEmail: null,
+        userLabel: tr('Borne'),
         companyName: pos.companyName,
+        companyAddress: pos.companyAddress,
+        companyEmail: pos.companyEmail,
+        companyPhone: pos.companyPhone,
+        warehouseName: pos.selectedWarehouse?.name,
+        companyLogoUrl: pos.companyLogo,
+        paymentType: tr('A payer en caisse'),
+        paymentStatus: tr('En attente'),
+        receivedAmount: 0,
+        change: 0,
         serviceId: service.id,
+        template: template,
       );
     }
     if (!mounted) return;

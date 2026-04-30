@@ -35,6 +35,7 @@ class AppearanceController extends ChangeNotifier {
   bool _swapSidePanels = false;
   bool _kioskEnabled = true;
   String _webViewUrl = AppConfig.defaultWebViewUrl;
+  String _backgroundImageUrl = '';
   final AppearanceSettingsStorage _storage;
   bool _isLoaded = false;
 
@@ -62,6 +63,7 @@ class AppearanceController extends ChangeNotifier {
   bool get swapSidePanels => _swapSidePanels;
   bool get kioskEnabled => _kioskEnabled;
   String get webViewUrl => _webViewUrl;
+  String get backgroundImageUrl => _backgroundImageUrl;
 
   ThemeData get theme {
     final colorScheme = ColorScheme.fromSeed(
@@ -75,13 +77,13 @@ class AppearanceController extends ChangeNotifier {
       useMaterial3: true,
       inputDecorationTheme: inputTheme,
       dialogTheme: DialogThemeData(
-        backgroundColor: const Color(0xFFFDFDFB),
+        backgroundColor: colorScheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Color(0xFFEFEFEF)),
+          side: BorderSide(color: colorScheme.outlineVariant),
         ),
-        titleTextStyle: const TextStyle(
-          color: Color(0xFF111827),
+        titleTextStyle: TextStyle(
+          color: colorScheme.onSurface,
           fontWeight: FontWeight.w700,
           fontSize: 18,
         ),
@@ -91,14 +93,14 @@ class AppearanceController extends ChangeNotifier {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFFFDFDFB),
-        contentTextStyle: const TextStyle(
-          color: Color(0xFF111827),
+        backgroundColor: colorScheme.surface,
+        contentTextStyle: TextStyle(
+          color: colorScheme.onSurface,
           fontWeight: FontWeight.w600,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFEFEFEF)),
+          side: BorderSide(color: colorScheme.outlineVariant),
         ),
         elevation: 8,
       ),
@@ -333,9 +335,17 @@ class AppearanceController extends ChangeNotifier {
     _persist();
   }
 
+  void updateBackgroundImageUrl(String value) {
+    final normalized = value.trim();
+    if (_backgroundImageUrl == normalized) return;
+    _backgroundImageUrl = normalized;
+    notifyListeners();
+    _persist();
+  }
+
   InputDecorationTheme _buildInputTheme(ColorScheme scheme) {
-    const yellowBorder = Color(0xFFF6D58F);
-    const yellowFill = Color(0xFFFFF6DE);
+    final yellowBorder = scheme.outlineVariant;
+    final yellowFill = scheme.surfaceVariant.withOpacity(0.35);
     final focusColor = scheme.primary;
 
     OutlineInputBorder outline({double width = 1.2}) {
@@ -406,6 +416,8 @@ class AppearanceController extends ChangeNotifier {
       _kioskEnabled = _boolFrom(stored['kioskEnabled']) ?? _kioskEnabled;
       final storedUrl = stored['webViewUrl']?.toString().trim() ?? '';
       _webViewUrl = storedUrl.isEmpty ? AppConfig.defaultWebViewUrl : storedUrl;
+      _backgroundImageUrl =
+          stored['backgroundImageUrl']?.toString().trim() ?? '';
     }
     _isLoaded = true;
     notifyListeners();
@@ -436,6 +448,7 @@ class AppearanceController extends ChangeNotifier {
         'swapSidePanels': _swapSidePanels,
         'kioskEnabled': _kioskEnabled,
         'webViewUrl': _webViewUrl,
+        'backgroundImageUrl': _backgroundImageUrl,
       };
 
   Future<void> _persist() async {

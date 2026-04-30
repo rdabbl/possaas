@@ -320,33 +320,55 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
                 ],
               );
 
+        final appearance = context.watch<AppearanceController>();
+        final rawBg = appearance.backgroundImageUrl.trim();
+        final imageProvider = rawBg.isEmpty
+            ? null
+            : (rawBg.startsWith('http://') || rawBg.startsWith('https://'))
+                ? NetworkImage(rawBg) as ImageProvider
+                : AssetImage(rawBg);
+
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           body: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                const outerPadding = 6.0;
-                return Padding(
-                  padding: const EdgeInsets.all(outerPadding),
-                  child: Center(
-                    child: ClipRect(
-                      child: SizedBox(
-                        width: constraints.maxWidth - (outerPadding * 2),
-                        height: constraints.maxHeight - (outerPadding * 2),
-                        child: FittedBox(
-                          fit: BoxFit.contain,
-                          alignment: Alignment.topCenter,
-                          child: SizedBox(
-                            width: _posDesignWidth,
-                            height: _posDesignHeight,
-                            child: content,
+            child: Container(
+              decoration: imageProvider == null
+                  ? null
+                  : BoxDecoration(
+                      image: DecorationImage(
+                        image: imageProvider,
+                        fit: BoxFit.cover,
+                        colorFilter: ColorFilter.mode(
+                          Colors.black.withOpacity(0.22),
+                          BlendMode.darken,
+                        ),
+                      ),
+                    ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  const outerPadding = 6.0;
+                  return Padding(
+                    padding: const EdgeInsets.all(outerPadding),
+                    child: Center(
+                      child: ClipRect(
+                        child: SizedBox(
+                          width: constraints.maxWidth - (outerPadding * 2),
+                          height: constraints.maxHeight - (outerPadding * 2),
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            alignment: Alignment.topCenter,
+                            child: SizedBox(
+                              width: _posDesignWidth,
+                              height: _posDesignHeight,
+                              child: content,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         );
@@ -525,6 +547,13 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _openKioskConfiguration() async {
+    await showDialog(
+      context: context,
+      builder: (_) => const _KioskConfigurationDialog(),
+    );
+  }
+
   Future<void> _openPrinterSettings() async {
     final printerController = context.read<PrinterSettingsController>();
     final posController = context.read<PosController>();
@@ -559,6 +588,11 @@ class _PosPageState extends State<PosPage> with WidgetsBindingObserver {
         icon: Icons.settings_applications_outlined,
         label: tr('Config POS'),
         onTap: _openPosConfiguration,
+      ),
+      _ActionMenuItem(
+        icon: Icons.storefront_outlined,
+        label: tr('Config borne'),
+        onTap: _openKioskConfiguration,
       ),
       _ActionMenuItem(
         icon: Icons.public,
@@ -3297,17 +3331,14 @@ class _CartActions extends StatelessWidget {
               final tax = subTotal * (result.taxRate / 100);
               final grandTotal = subTotal + tax + shipping;
               final services = _resolvePrintingServices(controller);
-              final receiptTargets = _servicesForTemplate(
-                services,
-                'receipt',
-                storeId: controller.selectedWarehouse?.id ?? 0,
-              );
               printerController.syncServices(services);
-              final receiptService = receiptTargets.isNotEmpty
-                  ? receiptTargets.first
-                  : PrintingService.fallback(
-                      storeId: controller.selectedWarehouse?.id ?? 0,
-                    );
+              final posTargets = services.where((service) {
+                final template = service.template.trim().toLowerCase();
+                return printerController.shouldPrintTemplate(
+                  fromKiosk: false,
+                  template: template,
+                );
+              }).toList();
 
               await controller.checkout(
                 notes: notesController.text.trim(),
@@ -3324,7 +3355,7 @@ class _CartActions extends StatelessWidget {
               if (!context.mounted || controller.errorMessage != null) return;
 
               if (shouldPrint) {
-                for (final service in receiptTargets) {
+                for (final service in posTargets) {
                   await printerController.printSaleReceipt(
                     items: cartSnapshot,
                     subTotal: subTotal,
@@ -3568,13 +3599,15 @@ class _HistorySection extends StatelessWidget {
       }).toList();
 
       final services = _resolvePrintingServices(controller);
-      final receiptTargets = _servicesForTemplate(
-        services,
-        'receipt',
-        storeId: controller.selectedWarehouse?.id ?? 0,
-      );
       printerController.syncServices(services);
-      for (final service in receiptTargets) {
+      final posTargets = services.where((service) {
+        final template = service.template.trim().toLowerCase();
+        return printerController.shouldPrintTemplate(
+          fromKiosk: false,
+          template: template,
+        );
+      }).toList();
+      for (final service in posTargets) {
         await printerController.printSaleReceipt(
           items: items,
           subTotal: parseDouble(source['subtotal']),
@@ -4902,6 +4935,87 @@ class _AppearanceSettingsDialogState extends State<_AppearanceSettingsDialog> {
   }
 }
 
+class _KioskConfigurationDialog extends StatefulWidget {
+  const _KioskConfigurationDialog();
+
+  @override
+  State<_KioskConfigurationDialog> createState() =>
+      _KioskConfigurationDialogState();
+}
+
+class _KioskConfigurationDialogState extends State<_KioskConfigurationDialog> {
+  late String _background;
+  static const _assetBackground = 'lib/features/pos/presentation/1.png';
+
+  @override
+  void initState() {
+    super.initState();
+    _background = context.read<AppearanceController>().backgroundImageUrl;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(tr('Config borne')),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tr('Image de fond POS / Borne'),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: Text(tr('Aucune')),
+                selected: _background.trim().isEmpty,
+                onSelected: (_) => setState(() => _background = ''),
+              ),
+              ChoiceChip(
+                label: Text(tr('Image par défaut')),
+                selected: _background.trim() == _assetBackground,
+                onSelected: (_) =>
+                    setState(() => _background = _assetBackground),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            initialValue: _background,
+            decoration: InputDecoration(
+              labelText: tr('URL image (http/https) ou asset'),
+            ),
+            onChanged: (value) => _background = value,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            tr('Ex: https://site.com/bg.jpg ou lib/features/pos/presentation/1.png'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(tr('Annuler')),
+        ),
+        FilledButton(
+          onPressed: () {
+            context.read<AppearanceController>().updateBackgroundImageUrl(
+                  _background,
+                );
+            Navigator.of(context).pop();
+          },
+          child: Text(tr('Enregistrer')),
+        ),
+      ],
+    );
+  }
+}
+
 class _PosConfigurationDialog extends StatefulWidget {
   const _PosConfigurationDialog({required this.onTestReset});
 
@@ -5576,6 +5690,8 @@ class _PrinterSettingsDialog extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               _TicketContentSection(controller: controller),
+              const SizedBox(height: 12),
+              _AutoPrintRoutingSection(controller: controller),
               if (controller.statusMessage != null) ...[
                 const SizedBox(height: 8),
                 _PrinterStatusBanner(
@@ -5635,6 +5751,92 @@ class _PrinterSettingsDialog extends StatelessWidget {
           label: Text(tr('Ticket exemple')),
         ),
       ],
+    );
+  }
+}
+
+class _AutoPrintRoutingSection extends StatelessWidget {
+  const _AutoPrintRoutingSection({required this.controller});
+
+  final PrinterSettingsController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final templates = {
+      'receipt',
+      'kitchen',
+      'bar',
+      'kiosk',
+      ...controller.services
+          .map((service) => service.template.trim().toLowerCase())
+          .where((value) => value.isNotEmpty),
+    }.toList()
+      ..sort();
+
+    Widget buildTemplateChips({
+      required bool fromKiosk,
+      required Set<String> selected,
+    }) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: templates.map((template) {
+          final enabled = selected.contains(template);
+          return FilterChip(
+            label: Text(template),
+            selected: enabled,
+            onSelected: (value) => controller.toggleTemplateForSource(
+              fromKiosk: fromKiosk,
+              template: template,
+              enabled: value,
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.22),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tr('Déclenchement automatique des impressions'),
+            style: Theme.of(context)
+                .textTheme
+                .titleSmall
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: controller.autoPrintFromPos,
+            onChanged: controller.toggleAutoPrintFromPos,
+            title: Text(tr('Imprimer quand la vente vient du POS')),
+          ),
+          buildTemplateChips(
+            fromKiosk: false,
+            selected: controller.posTemplates,
+          ),
+          const SizedBox(height: 10),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: controller.autoPrintFromKiosk,
+            onChanged: controller.toggleAutoPrintFromKiosk,
+            title: Text(tr('Imprimer quand la commande vient de la borne')),
+          ),
+          buildTemplateChips(
+            fromKiosk: true,
+            selected: controller.kioskTemplates,
+          ),
+        ],
+      ),
     );
   }
 }
