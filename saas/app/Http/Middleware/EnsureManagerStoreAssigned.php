@@ -24,7 +24,7 @@ class EnsureManagerStoreAssigned
             'manager.stores.store',
         ];
         if (!$user->store_id && !in_array($routeName, $allowedWithoutStore, true)) {
-            return redirect()->route('manager.no_store');
+            return redirect()->route('manager.stores.index');
         }
 
         return $next($request);
