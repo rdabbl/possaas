@@ -5118,6 +5118,50 @@ class _PosConfigurationDialogState extends State<_PosConfigurationDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Builder(
+                builder: (_) {
+                  final duration = pos.planDurationDays;
+                  final remaining = pos.planRemainingDays;
+                  final expiresAt = pos.planExpiresAt;
+                  final durationLabel =
+                      duration == null ? '-' : '$duration ${tr('jours')}';
+                  String remainingLabel = '-';
+                  if (remaining != null) {
+                    if (remaining < 0) {
+                      remainingLabel =
+                          '${tr('Expiré')} (${remaining.abs()} ${tr('jours')})';
+                    } else {
+                      remainingLabel = '$remaining ${tr('jours')}';
+                    }
+                  }
+                  final expiryDateLabel = expiresAt == null
+                      ? '-'
+                      : DateFormat('dd/MM/yyyy').format(expiresAt.toLocal());
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tr('Plan'),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${tr('Durée')}: $durationLabel | ${tr('Reste')}: $remainingLabel',
+                      ),
+                      Text('${tr('Expire le')}: $expiryDateLabel'),
+                    ],
+                  );
+                },
+              ),
+            ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(tr('Afficher le champ Client')),

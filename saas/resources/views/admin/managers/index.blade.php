@@ -17,6 +17,7 @@
                     <th>{{ t("Name") }}</th>
                     <th>{{ t("Username") }}</th>
                     <th>{{ t("Plan") }}</th>
+                    <th>{{ t("Plan Duration (days)") }}</th>
                     <th>{{ t("Expires In") }}</th>
                     <th>{{ t("Active") }}</th>
                     <th>{{ t("Max Stores") }}</th>
@@ -40,6 +41,7 @@
                         <td>{{ $manager->name }}</td>
                         <td>{{ $manager->username }}</td>
                         <td>{{ $manager->plan?->name ?? $manager->plan_name ?? t("No Plan") }}</td>
+                        <td>{{ $manager->plan?->duration_days ?? '—' }}</td>
                         <td>
                             @php
                                 $expiresAt = $manager->latestSubscription?->ends_at;

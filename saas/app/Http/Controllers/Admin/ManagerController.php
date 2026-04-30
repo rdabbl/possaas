@@ -132,13 +132,12 @@ class ManagerController extends Controller
 
         $manager->update($data);
 
-        $store = Store::where('manager_id', $manager->id)->orderBy('id')->first();
         $managerUser ??= new User([
             'manager_id' => $manager->id,
             'is_super_admin' => false,
         ]);
         $managerUser->manager_id = $manager->id;
-        $managerUser->store_id = $managerUser->store_id ?? $store?->id;
+        $managerUser->store_id = null;
         $managerUser->name = $manager->name;
         $managerUser->username = $manager->username;
         $managerUser->email = $data['email'];

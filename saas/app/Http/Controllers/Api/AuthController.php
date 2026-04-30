@@ -70,7 +70,7 @@ class AuthController extends BaseApiController
         }
 
         if ($user->manager_id) {
-            $manager = Manager::find($user->manager_id);
+            $manager = Manager::with(['plan', 'latestSubscription.plan'])->find($user->manager_id);
         }
 
         $currency = $store?->currency;
@@ -102,6 +102,18 @@ class AuthController extends BaseApiController
             $payload['loyalty_points_per_item'] = $manager->loyalty_points_per_item ?? 0;
             $payload['loyalty_amount_per_point'] = $manager->loyalty_amount_per_point ?? 0;
             $payload['loyalty_point_value'] = $manager->loyalty_point_value ?? 0;
+
+            $subscription = $manager->latestSubscription;
+            $plan = $subscription?->plan ?? $manager->plan;
+            $planDurationDays = $plan?->duration_days;
+            $expiresAt = $subscription?->ends_at;
+            if (!$expiresAt && $planDurationDays) {
+                $expiresAt = $manager->created_at?->copy()->addDays($planDurationDays);
+            }
+            $payload['plan_name'] = $plan?->name ?? $manager->plan_name;
+            $payload['plan_duration_days'] = $planDurationDays;
+            $payload['plan_expires_at'] = $expiresAt?->toIso8601String();
+            $payload['plan_remaining_days'] = $expiresAt ? now()->diffInDays($expiresAt, false) : null;
         }
 
         return response()->json($payload);

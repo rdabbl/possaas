@@ -81,6 +81,9 @@ class PosController extends ChangeNotifier {
   String _companyEmail = '';
   String _companyPhone = '';
   String _companyLogo = '';
+  int? _planDurationDays;
+  int? _planRemainingDays;
+  DateTime? _planExpiresAt;
   double _cashInHand = 0;
   String? _errorMessage;
   String? _successMessage;
@@ -175,6 +178,9 @@ class PosController extends ChangeNotifier {
   String get companyEmail => _companyEmail;
   String get companyPhone => _companyPhone;
   String get companyLogo => _companyLogo;
+  int? get planDurationDays => _planDurationDays;
+  int? get planRemainingDays => _planRemainingDays;
+  DateTime? get planExpiresAt => _planExpiresAt;
   double get cashInHand => _cashInHand;
   List<OrderSummary> get recentOrders => List.unmodifiable(_recentOrders);
   List<OrderSummary> get filteredRecentOrders {
@@ -1556,6 +1562,20 @@ class PosController extends ChangeNotifier {
     final logo = value['logo'] ?? value['logo_url'] ?? value['logoUrl'];
     if (logo != null) {
       _companyLogo = normalizeMediaUrl(logo.toString()) ?? '';
+    }
+    final planDuration =
+        value['plan_duration_days'] ?? value['planDurationDays'];
+    if (planDuration != null) {
+      _planDurationDays = int.tryParse('$planDuration');
+    }
+    final planRemaining =
+        value['plan_remaining_days'] ?? value['planRemainingDays'];
+    if (planRemaining != null) {
+      _planRemainingDays = int.tryParse('$planRemaining');
+    }
+    final planExpiresAtRaw = value['plan_expires_at'] ?? value['planExpiresAt'];
+    if (planExpiresAtRaw != null) {
+      _planExpiresAt = DateTime.tryParse(planExpiresAtRaw.toString());
     }
     if (frontStoreId != null && _selectedWarehouseId == null) {
       _selectedWarehouseId = int.tryParse('$frontStoreId');
