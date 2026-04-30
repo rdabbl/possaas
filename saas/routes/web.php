@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\ProductOptionController as AdminProductOptionCont
 use App\Http\Controllers\Admin\LanguageController as AdminLanguageController;
 use App\Http\Controllers\Admin\ShippingController as AdminShippingController;
 use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
+use App\Http\Controllers\Admin\PrintingServiceController as AdminPrintingServiceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\TranslationController as AdminTranslationController;
 use App\Http\Controllers\Admin\DataTransferController as AdminDataTransferController;
@@ -43,6 +44,7 @@ use App\Http\Controllers\Manager\LoyaltyController as ManagerLoyaltyController;
 use App\Http\Controllers\Manager\ShippingController as ManagerShippingController;
 use App\Http\Controllers\Manager\PaymentMethodController as ManagerPaymentMethodController;
 use App\Http\Controllers\Manager\CatalogTransferController as ManagerCatalogTransferController;
+use App\Http\Controllers\Manager\PrintingServiceController as ManagerPrintingServiceController;
 
 Route::get('/', function () {
     return redirect()->route('admin.dashboard');
@@ -108,6 +110,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::get('/payment-methods/create', [PaymentMethodController::class, 'create'])->name('payment_methods.create');
     Route::post('/payment-methods', [PaymentMethodController::class, 'store'])->name('payment_methods.store');
     Route::delete('/payment-methods/{paymentMethod}', [PaymentMethodController::class, 'destroy'])->name('payment_methods.destroy');
+    Route::resource('printing-services', AdminPrintingServiceController::class)->names('printing_services');
 
     Route::get('/currencies', [AdminCurrencyController::class, 'index'])->name('currencies.index');
     Route::get('/currencies/create', [AdminCurrencyController::class, 'create'])->name('currencies.create');
@@ -224,6 +227,8 @@ Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])
 
         Route::get('/payment-methods', [ManagerPaymentMethodController::class, 'index'])->name('payment_methods.index');
         Route::put('/payment-methods/{paymentMethod}', [ManagerPaymentMethodController::class, 'update'])->name('payment_methods.update');
+        Route::resource('printing-services', ManagerPrintingServiceController::class)
+            ->names('printing_services');
 
         Route::get('/categories', [ManagerCategoryController::class, 'index'])->name('categories.index');
         Route::get('/categories/create', [ManagerCategoryController::class, 'create'])->name('categories.create');
