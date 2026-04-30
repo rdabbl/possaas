@@ -251,7 +251,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 obscureText: _obscurePassword,
                                 keyboardType: TextInputType.number,
-                                inputFormatters: const [
+                                inputFormatters: [
                                   FilteringTextInputFormatter.digitsOnly,
                                   LengthLimitingTextInputFormatter(4),
                                 ],
