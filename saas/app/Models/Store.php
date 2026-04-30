@@ -41,18 +41,9 @@ class Store extends Model
         return $this->belongsTo(Currency::class);
     }
 
-    public function devices()
-    {
-        return $this->hasMany(Device::class);
-    }
-
     public function sales()
     {
         return $this->hasMany(Sale::class);
     }
 
-    public function printingServices()
-    {
-        return $this->hasMany(PrintingService::class);
-    }
 }

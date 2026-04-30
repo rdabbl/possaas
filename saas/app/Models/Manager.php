@@ -49,11 +49,6 @@ class Manager extends Model
         return $this->hasMany(Store::class);
     }
 
-    public function devices()
-    {
-        return $this->hasMany(Device::class);
-    }
-
     public function users()
     {
         return $this->hasMany(User::class);

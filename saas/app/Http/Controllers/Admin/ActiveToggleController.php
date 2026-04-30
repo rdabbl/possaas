@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Currency;
 use App\Models\Customer;
-use App\Models\Device;
 use App\Models\Discount;
 use App\Models\Language;
 use App\Models\Manager;
@@ -29,7 +28,6 @@ class ActiveToggleController extends Controller
             'managers' => Manager::class,
             'plans' => Plan::class,
             'stores' => Store::class,
-            'devices' => Device::class,
             'payment_methods' => PaymentMethod::class,
             'currencies' => Currency::class,
             'categories' => Category::class,

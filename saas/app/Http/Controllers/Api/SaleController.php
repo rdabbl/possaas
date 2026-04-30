@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Payment;
 use App\Models\PaymentMethod;
-use App\Models\PrintingService;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Customer;
@@ -107,7 +106,7 @@ class SaleController extends BaseApiController
             ],
             'device_id' => [
                 'nullable',
-                Rule::exists('devices', 'id')->where('manager_id', $manager->id),
+                'integer',
             ],
             'user_id' => ['nullable', 'integer'],
             'customer_id' => [
@@ -363,13 +362,6 @@ class SaleController extends BaseApiController
             }
 
             $sale->load(['items', 'payments']);
-            $services = PrintingService::where('manager_id', $manager->id)
-                ->where('store_id', $store->id)
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->get();
-            $sale->setAttribute('printing_services', $services);
 
             return response()->json($sale, 201);
         });

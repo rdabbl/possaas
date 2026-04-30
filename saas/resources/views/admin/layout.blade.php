@@ -231,12 +231,6 @@
                     </span>
                     {{ t("Stores") }}
                 </a>
-                <a href="{{ route('admin.devices.index') }}" class="{{ request()->routeIs('admin.devices.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>
-                    </span>
-                    {{ t("Devices") }}
-                </a>
                 <a href="{{ route('admin.payment_methods.index') }}" class="{{ request()->routeIs('admin.payment_methods.*') ? 'active' : '' }}">
                     <span class="nav-icon">
                         <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>
@@ -261,57 +255,6 @@
                     </span>
                     {{ t("Translations") }}
                 </a>
-            </div>
-            <div class="nav-section">
-                <div class="nav-title">{{ t("Manager Menu") }}</div>
-                <a href="{{ route('admin.categories.index') }}" class="{{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><path d="M20.59 13.41L11 3.83V2h-3v3l9.59 9.59a2 2 0 0 0 2.83 0l.17-.17a2 2 0 0 0 0-2.83z"></path><circle cx="7.5" cy="7.5" r="1.5"></circle></svg>
-                    </span>
-                    {{ t("Categories") }}
-                </a>
-                <a href="{{ route('admin.product_option_categories.index') }}" class="{{ request()->routeIs('admin.product_option_categories.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
-                    </span>
-                    {{ t("Product Option Categories") }}
-                </a>
-                <a href="{{ route('admin.product_options.index') }}" class="{{ request()->routeIs('admin.product_options.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><path d="M6 2h12"></path><path d="M9 2v6l-5 9a4 4 0 0 0 3.5 6h9a4 4 0 0 0 3.5-6l-5-9V2"></path></svg>
-                    </span>
-                    {{ t("Product Options") }}
-                </a>
-                <a href="{{ route('admin.products.index') }}" class="{{ request()->routeIs('admin.products.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3.27 6.96L12 12l8.73-5.04"></path><path d="M12 22V12"></path></svg>
-                    </span>
-                    {{ t("Products") }}
-                </a>
-                <a href="{{ route('admin.customers.index') }}" class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    </span>
-                    {{ t("Customers") }}
-                </a>
-                <a href="{{ route('admin.taxes.index') }}" class="{{ request()->routeIs('admin.taxes.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg>
-                    </span>
-                    {{ t("Taxes") }}
-                </a>
-                <a href="{{ route('admin.discounts.index') }}" class="{{ request()->routeIs('admin.discounts.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"></path><path d="M16 5h6v6"></path><path d="M10 14l12-12"></path></svg>
-                    </span>
-                    {{ t("Discounts") }}
-                </a>
-                <a href="{{ route('admin.shipping.index') }}" class="{{ request()->routeIs('admin.shipping.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><path d="M3 7h11v9H3z"></path><path d="M14 10h4l3 3v3h-7z"></path><circle cx="7" cy="19" r="2"></circle><circle cx="17" cy="19" r="2"></circle></svg>
-                    </span>
-                    {{ t("Shipping") }}
-                </a>
                 <a href="{{ route('admin.roles.index') }}" class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
                     <span class="nav-icon">
                         <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"></path></svg>
@@ -323,12 +266,6 @@
                         <svg viewBox="0 0 24 24"><path d="M21 8v6"></path><path d="M3 8v6"></path><rect x="7" y="8" width="10" height="10" rx="2"></rect><path d="M12 8V5a3 3 0 0 1 6 0"></path></svg>
                     </span>
                     {{ t("Permissions") }}
-                </a>
-                <a href="{{ route('admin.printing.index') }}" class="{{ request()->routeIs('admin.printing.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><rect x="6" y="14" width="12" height="8" rx="1"></rect><rect x="4" y="9" width="16" height="6" rx="2"></rect></svg>
-                    </span>
-                    {{ t("Printing") }}
                 </a>
                 <a href="{{ route('admin.reports.index') }}" class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
                     <span class="nav-icon">

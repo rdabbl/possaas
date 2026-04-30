@@ -2,14 +2,12 @@
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ActiveToggleController;
-use App\Http\Controllers\Admin\DeviceController as AdminDeviceController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\ProductOptionCategoryController as AdminProductOptionCategoryController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
-use App\Http\Controllers\Admin\PrintingController as AdminPrintingController;
 use App\Http\Controllers\Admin\StoreController as AdminStoreController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\ManagerController;
@@ -43,7 +41,6 @@ use App\Http\Controllers\Manager\TaxController as ManagerTaxController;
 use App\Http\Controllers\Manager\DiscountController as ManagerDiscountController;
 use App\Http\Controllers\Manager\LoyaltyController as ManagerLoyaltyController;
 use App\Http\Controllers\Manager\ShippingController as ManagerShippingController;
-use App\Http\Controllers\Manager\PrintingServiceController as ManagerPrintingServiceController;
 use App\Http\Controllers\Manager\PaymentMethodController as ManagerPaymentMethodController;
 use App\Http\Controllers\Manager\CatalogTransferController as ManagerCatalogTransferController;
 
@@ -106,10 +103,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::get('/stores/create', [AdminStoreController::class, 'create'])->name('stores.create');
     Route::post('/stores', [AdminStoreController::class, 'store'])->name('stores.store');
     Route::delete('/stores/{store}', [AdminStoreController::class, 'destroy'])->name('stores.destroy');
-
-    Route::get('/devices', [AdminDeviceController::class, 'index'])->name('devices.index');
-    Route::get('/devices/create', [AdminDeviceController::class, 'create'])->name('devices.create');
-    Route::post('/devices', [AdminDeviceController::class, 'store'])->name('devices.store');
 
     Route::get('/payment-methods', [PaymentMethodController::class, 'index'])->name('payment_methods.index');
     Route::get('/payment-methods/create', [PaymentMethodController::class, 'create'])->name('payment_methods.create');
@@ -186,8 +179,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'super_admin'])->gro
     Route::get('/permissions/{permission}/edit', [AdminPermissionController::class, 'edit'])->name('permissions.edit');
     Route::put('/permissions/{permission}', [AdminPermissionController::class, 'update'])->name('permissions.update');
 
-    Route::get('/printing', [AdminPrintingController::class, 'index'])->name('printing.index');
-
     Route::get('/reports', [AdminReportController::class, 'index'])->name('reports.index');
 
     Route::get('/languages', [AdminLanguageController::class, 'index'])->name('languages.index');
@@ -230,13 +221,6 @@ Route::prefix('manager')->name('manager.')->middleware(['auth', 'manager_user'])
         Route::post('/stores', [ManagerStoreController::class, 'store'])->name('stores.store');
         Route::get('/stores/{store}/edit', [ManagerStoreController::class, 'edit'])->name('stores.edit');
         Route::put('/stores/{store}', [ManagerStoreController::class, 'update'])->name('stores.update');
-
-        Route::get('/printing-services', [ManagerPrintingServiceController::class, 'index'])->name('printing_services.index');
-        Route::get('/printing-services/create', [ManagerPrintingServiceController::class, 'create'])->name('printing_services.create');
-        Route::post('/printing-services', [ManagerPrintingServiceController::class, 'store'])->name('printing_services.store');
-        Route::get('/printing-services/{printingService}/edit', [ManagerPrintingServiceController::class, 'edit'])->name('printing_services.edit');
-        Route::put('/printing-services/{printingService}', [ManagerPrintingServiceController::class, 'update'])->name('printing_services.update');
-        Route::delete('/printing-services/{printingService}', [ManagerPrintingServiceController::class, 'destroy'])->name('printing_services.destroy');
 
         Route::get('/payment-methods', [ManagerPaymentMethodController::class, 'index'])->name('payment_methods.index');
         Route::put('/payment-methods/{paymentMethod}', [ManagerPaymentMethodController::class, 'update'])->name('payment_methods.update');

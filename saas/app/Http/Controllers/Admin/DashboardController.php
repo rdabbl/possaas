@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Device;
 use App\Models\Discount;
 use App\Models\Language;
 use App\Models\PaymentMethod;
@@ -32,7 +31,6 @@ class DashboardController extends Controller
             'plans' => Plan::count(),
             'subscriptions' => Subscription::count(),
             'stores' => Store::count(),
-            'devices' => Device::count(),
             'payment_methods' => PaymentMethod::count(),
             'currencies' => Currency::count(),
             'categories' => Category::count(),
@@ -53,7 +51,6 @@ class DashboardController extends Controller
             ['label' => 'Plans', 'route' => route('admin.plans.index'), 'count' => $stats['plans']],
             ['label' => 'Subscriptions', 'route' => route('admin.subscriptions.index'), 'count' => $stats['subscriptions']],
             ['label' => 'Stores', 'route' => route('admin.stores.index'), 'count' => $stats['stores']],
-            ['label' => 'Devices', 'route' => route('admin.devices.index'), 'count' => $stats['devices']],
             ['label' => 'Payment Methods', 'route' => route('admin.payment_methods.index'), 'count' => $stats['payment_methods']],
             ['label' => 'Currencies', 'route' => route('admin.currencies.index'), 'count' => $stats['currencies']],
             ['label' => 'Categories', 'route' => route('admin.categories.index'), 'count' => $stats['categories']],
@@ -65,7 +62,6 @@ class DashboardController extends Controller
             ['label' => 'Discounts', 'route' => route('admin.discounts.index'), 'count' => $stats['discounts']],
             ['label' => 'Roles', 'route' => route('admin.roles.index'), 'count' => $stats['roles']],
             ['label' => 'Permissions', 'route' => route('admin.permissions.index'), 'count' => $stats['permissions']],
-            ['label' => 'Printing', 'route' => route('admin.printing.index'), 'count' => null],
             ['label' => 'Reports', 'route' => route('admin.reports.index'), 'count' => null],
             ['label' => 'Languages', 'route' => route('admin.languages.index'), 'count' => $stats['languages']],
             ['label' => 'Translations', 'route' => route('admin.translations.index'), 'count' => $stats['translations']],

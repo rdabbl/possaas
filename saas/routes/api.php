@@ -3,11 +3,9 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CurrencyController;
-use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\DiscountController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\ProductController;
-use App\Http\Controllers\Api\PrintingServiceController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StockMovementController;
@@ -24,7 +22,6 @@ Route::get('/health', function () {
 });
 
 Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/devices/auth', [DeviceController::class, 'authenticateDevice']);
 Route::get('/languages', [LanguageController::class, 'index']);
 Route::get('/translations', [TranslationController::class, 'index']);
 Route::get('/media/{path}', [MediaController::class, 'show'])->where('path', '.*');
@@ -35,10 +32,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/stores', [StoreController::class, 'index']);
     Route::post('/stores', [StoreController::class, 'store']);
     Route::put('/stores/{store}', [StoreController::class, 'update']);
-
-    Route::get('/devices', [DeviceController::class, 'index']);
-    Route::post('/devices', [DeviceController::class, 'store']);
-    Route::post('/devices/register', [DeviceController::class, 'register']);
 
     Route::get('/products', [ProductController::class, 'index']);
     Route::post('/products', [ProductController::class, 'store']);
@@ -84,6 +77,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shipping-methods', [ShippingMethodController::class, 'index']);
 
     Route::get('/currencies', [CurrencyController::class, 'index']);
-
-    Route::get('/printing-services', [PrintingServiceController::class, 'index']);
 });

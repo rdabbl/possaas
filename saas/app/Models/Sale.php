@@ -12,7 +12,6 @@ class Sale extends Model
     protected $fillable = [
         'manager_id',
         'store_id',
-        'device_id',
         'user_id',
         'customer_id',
         'number',
@@ -46,11 +45,6 @@ class Sale extends Model
     public function store()
     {
         return $this->belongsTo(Store::class);
-    }
-
-    public function device()
-    {
-        return $this->belongsTo(Device::class);
     }
 
     public function user()
