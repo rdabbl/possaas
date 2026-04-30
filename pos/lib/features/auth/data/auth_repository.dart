@@ -28,7 +28,7 @@ class AuthRepository {
       ApiEndpoints.authLogin,
       body: {
         'username': identifier,
-        'password': password,
+        'pin': password,
       },
     );
     debugPrint(

@@ -16,12 +16,24 @@ class AuthController extends BaseApiController
     {
         $data = $request->validate([
             'username' => ['required', 'string'],
-            'password' => ['required', 'string'],
+            'pin' => ['nullable', 'digits:4', 'required_without:password'],
+            'password' => ['nullable', 'string', 'required_without:pin'],
         ]);
 
         $user = User::where('username', $data['username'])->first();
 
-        if (!$user || !Hash::check($data['password'], $user->password)) {
+        $pin = $data['pin'] ?? null;
+        $password = $data['password'] ?? null;
+        $isValid = false;
+
+        if ($user && $pin) {
+            $isValid = !empty($user->pin) && Hash::check($pin, $user->pin);
+        } elseif ($user && $password) {
+            // Backward compatibility for older POS clients.
+            $isValid = Hash::check($password, $user->password);
+        }
+
+        if (!$user || !$isValid) {
             throw ValidationException::withMessages([
                 'username' => ['The provided credentials are incorrect.'],
             ]);

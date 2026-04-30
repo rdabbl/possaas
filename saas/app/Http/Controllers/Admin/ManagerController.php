@@ -4,10 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
-use App\Models\Customer;
 use App\Models\Plan;
 use App\Models\Manager;
-use App\Models\Store;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
@@ -39,6 +37,7 @@ class ManagerController extends Controller
             'username' => ['required', 'string', 'max:255', 'unique:managers,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
+            'pin' => ['required', 'digits:4'],
             'is_active' => ['nullable', 'boolean'],
             'max_stores' => ['nullable', 'integer', 'min:0'],
             'max_devices' => ['nullable', 'integer', 'min:0'],
@@ -63,40 +62,14 @@ class ManagerController extends Controller
 
         $manager = Manager::create($data);
 
-        $store = null;
-        $storeCount = Store::where('manager_id', $manager->id)->count();
-        if ($storeCount === 0) {
-            $currency = null;
-            if (!empty($manager->currency)) {
-                $currency = Currency::where('code', strtoupper($manager->currency))->first();
-            }
-            $currency ??= Currency::where('is_active', true)->orderBy('id')->first();
-
-            $storeName = $manager->name;
-            $store = Store::create([
-                'manager_id' => $manager->id,
-                'currency_id' => $currency?->id,
-                'name' => $storeName,
-                'code' => null,
-                'stock_enabled' => true,
-                'is_currency_right' => true,
-                'is_active' => true,
-            ]);
-
-            Customer::create([
-                'manager_id' => $manager->id,
-                'name' => $storeName . ' - CLIENT',
-                'is_active' => true,
-            ]);
-        }
-
         User::create([
             'manager_id' => $manager->id,
-            'store_id' => $store?->id,
+            'store_id' => null,
             'name' => $manager->name,
             'username' => $manager->username,
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
+            'pin' => Hash::make($data['pin']),
             'is_active' => true,
             'is_super_admin' => false,
         ]);
@@ -130,6 +103,7 @@ class ManagerController extends Controller
             'username' => ['required', 'string', 'max:255', 'unique:managers,username,' . $manager->id],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . ($managerUser?->id ?? 'NULL')],
             'password' => ['nullable', 'string', 'min:6'],
+            'pin' => ['nullable', 'digits:4'],
             'is_active' => ['nullable', 'boolean'],
             'max_stores' => ['nullable', 'integer', 'min:0'],
             'max_devices' => ['nullable', 'integer', 'min:0'],
@@ -171,6 +145,9 @@ class ManagerController extends Controller
         $managerUser->is_active = $manager->is_active;
         if (!empty($data['password'])) {
             $managerUser->password = Hash::make($data['password']);
+        }
+        if (!empty($data['pin'])) {
+            $managerUser->pin = Hash::make($data['pin']);
         }
         $managerUser->save();
 

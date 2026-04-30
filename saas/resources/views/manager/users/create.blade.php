@@ -23,6 +23,10 @@
                 <input name="password" type="password" required>
             </div>
             <div class="field">
+                <label>{{ t("POS PIN (4 digits)") }}</label>
+                <input name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" value="{{ old('pin') }}" required>
+            </div>
+            <div class="field">
                 <label>{{ t("Store") }}</label>
                 <select name="store_id" required>
                     @foreach ($stores as $store)

@@ -24,6 +24,10 @@
                 <input name="password" type="password">
             </div>
             <div class="field">
+                <label>{{ t("New POS PIN (4 digits, optional)") }}</label>
+                <input name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" value="{{ old('pin') }}">
+            </div>
+            <div class="field">
                 <label>{{ t("Active") }}</label>
                 <select name="is_active">
                     <option value="1" {{ old('is_active', $manager->is_active ? 1 : 0) == 1 ? 'selected' : '' }}>Yes</option>

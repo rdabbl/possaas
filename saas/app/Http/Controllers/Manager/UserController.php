@@ -125,6 +125,7 @@ class UserController extends Controller
             'username' => ['required', 'string', 'max:255', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
+            'pin' => ['required', 'digits:4'],
             'is_active' => ['nullable', 'boolean'],
             'allow_loyalty_redeem' => ['nullable', 'boolean'],
             'roles' => ['nullable', 'array'],
@@ -138,6 +139,7 @@ class UserController extends Controller
             'username' => $data['username'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
+            'pin' => Hash::make($data['pin']),
             'is_active' => $data['is_active'] ?? true,
             'is_super_admin' => false,
             'allow_loyalty_redeem' => $data['allow_loyalty_redeem'] ?? null,
@@ -199,6 +201,7 @@ class UserController extends Controller
             'username' => ['required', 'string', 'max:255', 'unique:users,username,' . $user->id],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'password' => ['nullable', 'string', 'min:6'],
+            'pin' => ['nullable', 'digits:4'],
             'is_active' => ['nullable', 'boolean'],
             'allow_loyalty_redeem' => ['nullable', 'boolean'],
             'roles' => ['nullable', 'array'],
@@ -214,6 +217,9 @@ class UserController extends Controller
         $user->allow_loyalty_redeem = $data['allow_loyalty_redeem'] ?? null;
         if (!empty($data['password'])) {
             $user->password = Hash::make($data['password']);
+        }
+        if (!empty($data['pin'])) {
+            $user->pin = Hash::make($data['pin']);
         }
         $user->save();
 
@@ -268,6 +274,7 @@ class UserController extends Controller
             'username' => $newUsername,
             'email' => $newEmail,
             'password' => Hash::make(Str::random(12)),
+            'pin' => Hash::make((string) random_int(1000, 9999)),
             'is_active' => false,
             'is_super_admin' => false,
             'allow_loyalty_redeem' => $user->allow_loyalty_redeem,
