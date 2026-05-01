@@ -24,11 +24,13 @@ class AuthRepository {
     required String password,
   }) async {
     debugPrint('[AuthRepository] login request started for "$identifier"');
+    final trimmedPassword = password.trim();
+    final usesPin = RegExp(r'^\d{4}$').hasMatch(trimmedPassword);
     final response = await apiClient.post(
       ApiEndpoints.authLogin,
       body: {
         'username': identifier,
-        'pin': password,
+        if (usesPin) 'pin': trimmedPassword else 'password': password,
       },
     );
     debugPrint(

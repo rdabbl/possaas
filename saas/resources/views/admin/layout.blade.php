@@ -231,6 +231,12 @@
                     </span>
                     {{ t("Stores") }}
                 </a>
+                <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </span>
+                    {{ t("Users") }}
+                </a>
                 <a href="{{ route('admin.payment_methods.index') }}" class="{{ request()->routeIs('admin.payment_methods.*') ? 'active' : '' }}">
                     <span class="nav-icon">
                         <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>
@@ -278,12 +284,6 @@
                         <svg viewBox="0 0 24 24"><path d="M3 3v18h18"></path><path d="M7 14l3-3 4 4 5-6"></path></svg>
                     </span>
                     {{ t("Reports") }}
-                </a>
-                <a href="{{ route('admin.data_transfer.index') }}" class="{{ request()->routeIs('admin.data_transfer.*') ? 'active' : '' }}">
-                    <span class="nav-icon">
-                        <svg viewBox="0 0 24 24"><path d="M12 3v12"></path><path d="M8 11l4 4 4-4"></path><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path></svg>
-                    </span>
-                    {{ t("Data Transfer") }}
                 </a>
             </div>
         </nav>

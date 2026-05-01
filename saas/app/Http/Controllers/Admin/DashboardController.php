@@ -20,6 +20,7 @@ use App\Models\Customer;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Subscription;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -31,6 +32,7 @@ class DashboardController extends Controller
             'plans' => Plan::count(),
             'subscriptions' => Subscription::count(),
             'stores' => Store::count(),
+            'users' => User::count(),
             'payment_methods' => PaymentMethod::count(),
             'currencies' => Currency::count(),
             'categories' => Category::count(),
@@ -51,6 +53,7 @@ class DashboardController extends Controller
             ['label' => 'Plans', 'route' => route('admin.plans.index'), 'count' => $stats['plans']],
             ['label' => 'Subscriptions', 'route' => route('admin.subscriptions.index'), 'count' => $stats['subscriptions']],
             ['label' => 'Stores', 'route' => route('admin.stores.index'), 'count' => $stats['stores']],
+            ['label' => 'Users', 'route' => route('admin.users.index'), 'count' => $stats['users']],
             ['label' => 'Payment Methods', 'route' => route('admin.payment_methods.index'), 'count' => $stats['payment_methods']],
             ['label' => 'Currencies', 'route' => route('admin.currencies.index'), 'count' => $stats['currencies']],
             ['label' => 'Categories', 'route' => route('admin.categories.index'), 'count' => $stats['categories']],
@@ -66,7 +69,6 @@ class DashboardController extends Controller
             ['label' => 'Languages', 'route' => route('admin.languages.index'), 'count' => $stats['languages']],
             ['label' => 'Translations', 'route' => route('admin.translations.index'), 'count' => $stats['translations']],
             ['label' => 'Shipping', 'route' => route('admin.shipping.index'), 'count' => null],
-            ['label' => 'Data Transfer', 'route' => route('admin.data_transfer.index'), 'count' => null],
         ];
 
         return view('admin.dashboard', compact('cards'));
